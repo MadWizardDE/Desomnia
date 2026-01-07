@@ -109,7 +109,7 @@ jobs:
           if-no-files-found: error
 
   build-windows-installer:
-    name: Build Desomnia installer
+    name: Build Windows installer
     runs-on: windows-latest
     needs: [ build-plugins, build-windows ]
 
@@ -162,7 +162,7 @@ jobs:
           $VERSION = "${{ env.VERSION_DESOMNIA }}" -replace '^v',''
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           & $iscc "installer\setup.iss" `
-            "/DMyAppVersion=$VERSION}" `
+            "/DMyAppVersion=$VERSION" `
             "/DDisableBridge" `
             "/O${{ runner.temp }}\installer"
 
