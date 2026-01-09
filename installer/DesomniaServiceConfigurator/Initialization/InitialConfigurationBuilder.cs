@@ -25,7 +25,7 @@ namespace MadWizard.Desomnia.Service.Installer.Configuration
             else
             {
                 document = new XDocument(new XDeclaration("1.0", "UTF-8", null),
-                    new XElement("DesomniaConfig", new XAttribute("version", 1)));
+                    new XElement("SystemMonitor", new XAttribute("version", 1)));
             }
 
             XElement root = document.Root!;
