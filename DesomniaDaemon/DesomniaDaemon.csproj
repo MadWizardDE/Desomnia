@@ -8,6 +8,7 @@
     <AssemblyName>desomniad</AssemblyName>
     <RootNamespace>MadWizard.Desomnia.Daemon</RootNamespace>
     <LangVersion>preview</LangVersion>
+	<RollForward>LatestMajor</RollForward>
   </PropertyGroup>
 
   <ItemGroup>
