@@ -1,5 +1,5 @@
 $env:VERSION_NET = "9.0"
-$env:VERSION_DESOMNIA = "3.0.0-alpha2"
+$env:VERSION_DESOMNIA = "3.0.0-alpha4"
 
 . "./functions.ps1"
 
@@ -18,7 +18,7 @@ $env:VERSION_DESOMNIA = "3.0.0-alpha2"
 . "./buildServiceConfigurator.ps1" -TargetDirectory "./components"
 . "./buildSetup.ps1"
 
-# Remove-Item -Path "./components" -Recurse -Force
+Remove-Item -Path "./components" -Recurse -Force
 
 exit 0
 

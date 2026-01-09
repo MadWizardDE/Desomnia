@@ -48,7 +48,6 @@ jobs:
             -f net${{ env.VERSION_NET }}${{ matrix.os }} \
             -c Release \
             --no-self-contained \
-            -p:DebugType=None \
             -p:DebugSymbols=false \
             -p:PublishSingleFile=false
 
@@ -58,6 +57,16 @@ jobs:
           name: plugin-${{ matrix.name }}
           path:  ${{ runner.temp }}/publish/
           if-no-files-found: error
+
+  build-linux:
+    name: Build DesomniaDaemon
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        arch: [ arm64, x64 ]
+
+  # build and publish docker image
 
   build-windows:
     name: Build DesomniaService
@@ -84,7 +93,6 @@ jobs:
             -c Release \
             -r win-${{ matrix.arch }} \
             --no-self-contained \
-            -p:DebugType=None \
             -p:DebugSymbols=false \
             -p:PublishSingleFile=false
 
@@ -96,7 +104,6 @@ jobs:
             -c Release \
             -r win-${{ matrix.arch }} \
             --no-self-contained \
-            -p:DebugType=None \
             -p:DebugSymbols=false \
             -p:PublishSingleFile=true \
             -p:PublishReadyToRun=true
@@ -134,7 +141,6 @@ jobs:
             -c Release `
             -r win-x64 `
             --no-self-contained `
-            -p:DebugType=None `
             -p:DebugSymbols=false `
             -p:PublishSingleFile=true `
             -p:PublishReadyToRun=true
