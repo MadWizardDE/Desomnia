@@ -1,5 +1,6 @@
+param([string]$Version = "")
+
 $env:VERSION_NET = "9.0"
-$env:VERSION_DESOMNIA = "3.0.0-alpha4"
 
 . "./functions.ps1"
 
@@ -16,7 +17,7 @@ $env:VERSION_DESOMNIA = "3.0.0-alpha4"
 
 # Build Installer
 . "./buildServiceConfigurator.ps1" -TargetDirectory "./components"
-. "./buildSetup.ps1"
+. "./buildSetup.ps1" -Version $Version
 
 Remove-Item -Path "./components" -Recurse -Force
 

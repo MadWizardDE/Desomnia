@@ -1,3 +1,5 @@
+param([string]$Version)
+
 # Path to Inno Setup script
 $setupScript = "..\setup.iss"
 
@@ -5,7 +7,7 @@ $setupScript = "..\setup.iss"
 $compiler = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
 # $arguments = "/DDisableBridge"
-$arguments = "/DMyAppVersion=$env:VERSION_DESOMNIA"
+$arguments = "/DMyAppVersion=$Version"
 
 # Run Inno Setup
 Write-Host "Building installer from '$setupScript'..."

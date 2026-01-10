@@ -6,9 +6,21 @@
 
 #define MyAppId "{B5C0DEEA-FFF1-49B8-B923-4E680E4A552D}"
 #define MyAppName "Desomnia"
-;#define MyAppVersion "3.0.0-alpha1"
+; #define MyAppVersion ""
 #define MyAppPublisher "MadWizardDE"
 #define MyAppURL "https://madwizard.de/"
+
+#ifdef MyAppVersion
+  #if MyAppVersion != ""
+    #define MyOutputBaseFilename "Desomnia_" + MyAppVersion
+  #else
+    #define MyOutputBaseFilename "Desomnia"
+  #endif
+#else
+  #define MyAppVersion ""
+  #define MyOutputBaseFilename "Desomnia"
+#endif
+
 
 ;#include <idp.iss>
 
@@ -38,7 +50,7 @@ AllowNoIcons=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=bin
-OutputBaseFilename=Desomnia_{#MyAppVersion}
+OutputBaseFilename={#MyOutputBaseFilename}
 SolidCompression=yes
 WizardStyle=classic
 SetupIconFile=..\DesomniaService\Properties\moon.ico
@@ -201,9 +213,11 @@ var
 begin
   DummyLabel := TLabel.Create(WizardForm);
   DummyLabel.Caption := 'Version';
+    
   VersionLabel := TNewLinkLabel.Create(WizardForm);
   //VersionLabel.Caption := 'Version {#MyAppVersion}';
-  VersionLabel.Caption := 'Version <a href="https://github.com/MadWizardDE/Desomnia/releases/tag/v{#MyAppVersion}">{#MyAppVersion}</a>';
+  if not ('{#MyAppVersion}' = '') then
+    VersionLabel.Caption := 'Version <a href="https://github.com/MadWizardDE/Desomnia/releases/tag/v{#MyAppVersion}">{#MyAppVersion}</a>';
   //VersionLabel.Font.Color := clGreen;
   //VersionLabel.Font.Style := fsBold;
 
