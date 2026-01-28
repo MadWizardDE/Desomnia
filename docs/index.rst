@@ -1,5 +1,9 @@
 .. include:: ../README.rst
 
-.. toctree::
+----
 
-   concepts/intro
+.. toctree::
+   :maxdepth: 2
+   :caption: Basic Concepts
+
+   /concepts/intro

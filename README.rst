@@ -111,8 +111,6 @@ HyperV support
 
 This plugin allows Desomnia to interact with virtual machines running on the Hyper-V platform. It gives you the ability to monitor usage of their respective netwrok services (to determine the actual usage of the host system) and start or stop them on demand.
 
-.. _construction-interactive-taskbar-icon:
-
 🚧 Interactive Taskbar Icon
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -137,8 +135,6 @@ For those who are enthusiastic users of `DuoStream <https://github.com/DuoStream
 - Stop instances after they become idle, to reduce power consumption of the GPU and to reduce the overall footprint of system resources.
 - The system will stay awake until the last session disconnects.
 
-.. _etc:
-
 etc.
 ~~~~
 
@@ -152,14 +148,12 @@ You can configure Desomnia to create a log of the reasons why the local system w
 How to get started
 ------------------
 
-.. _window-windows:
-
 🪟 Windows
 ~~~~~~~~~~
 
 A considerable amount of development time was invested to provide you with a sophisticated installer, that allows you to set everything up and running in a minute.
 
-It does the work for you, to register Desomnia as a system service, download and install all necessary dependencies and guide you through a basic configuration of the parameters. Nevertheless, you are encouraged to dive into the 🚧 `Wiki <https://github.com/MadWizardDE/Desomnia/wiki>`__ to discover, what Desomnia can do for you and how to configure it.
+It does the work for you, to register Desomnia as a system service, download and install all necessary dependencies and guide you through a basic configuration of the parameters. Nevertheless, you are encouraged to 🚧 `Read the Docs <https://desomnia.readthedocs.io/>`__ to discover, what Desomnia can do for you and how to configure it.
 
 If it happens that you don't like Desomnia, the uninstaller will help you to remove everything from your system completely. For your convenience, you can run the installer again (or hit "Modify" in the system settings) to add/remove some of the optional features later on.
 

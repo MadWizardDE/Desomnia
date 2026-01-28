@@ -37,5 +37,5 @@ epub_show_urls = 'footnote'
 html_static_path = ['_static']
 
 def setup(app):
-    app.add_css_file('custom.css')   # Sphinx 1.8+
+    app.add_css_file('css/custom.css')   # Sphinx 1.8+
     # app.add_js_file('custom.js')   # if you want JS too

@@ -1,0 +1,14 @@
+.wy-nav-content
+{
+  max-width: 1000px;
+}
+
+.wy-nav-side
+{
+  padding-bottom: 0 !important
+}
+
+.switch-menus
+{
+    display: none !important; /* hide version switcher */
+}
