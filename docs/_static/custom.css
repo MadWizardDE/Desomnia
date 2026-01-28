@@ -42,3 +42,37 @@
 {
   display: none; /* Remove adverts */
 }
+
+*:where(h2, h3)
+{
+  &:has(+ dl)
+  {
+    display: inline;
+  }
+
+  & + dl
+  {
+    display: inline-flex !important;
+    align-items: baseline;
+
+    opacity: 50%;
+
+    .colon
+    {
+      display: none;
+    }
+
+    dd
+    {
+      margin-left: 12px !important;
+      margin-right: 12px !important;
+    }
+  }
+
+}
+
+/* h2 + dl
+{
+  display: inline;
+} */
+
