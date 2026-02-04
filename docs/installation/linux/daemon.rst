@@ -46,7 +46,7 @@ In order for systemd to manage the automatic start and stop of the service, we n
 
     You can use that ``ExecStartPre`` statement, to make sure that the log folder is cleaned every time when the application starts. I use this mostly for debugging purposes.
 
-After you created or changed the configuration file, you have to reload systemd with ``systemctl daemon-reload``. If you want that Desomnia is started with the system, you have to enable it with ``systemctl enable desomnia``. In any case you can start Desomnia with ``systemctl start desomnia`` and stop it gracefully with ``systemctl stop desomnia``.
+After you created or changed the configuration file, you have to reload systemd with ``systemctl daemon-reload``. If you want that Desomnia is started with the system, you can enable it with ``systemctl enable desomnia``. In any case you will start Desomnia with ``systemctl start desomnia`` and stop it gracefully with ``systemctl stop desomnia``.
 
 To see the latest INFO logging, use ``journalctl -u desomnia -f -n 80``. Here you can see which hosts have received a Magic Packet recently and why.
 

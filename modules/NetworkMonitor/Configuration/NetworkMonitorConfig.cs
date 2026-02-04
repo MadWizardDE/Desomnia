@@ -40,7 +40,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: AutoDiscoveryOptions
-        public AutoDiscoveryType    AutoDetect  { get; set; } = AutoDiscoveryType.None;
+        public AutoDiscoveryType    AutoDetect  { get; set; } = AutoDiscoveryType.Nothing;
         private TimeSpan            AutoTimeout { get; set; } = TimeSpan.FromSeconds(5);
         private TimeSpan?           AutoLatency { get; set; }
 

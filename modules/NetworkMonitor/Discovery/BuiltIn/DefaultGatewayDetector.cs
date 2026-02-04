@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
             {
                 Name = "DefaultGateway",
 
-                AutoDetect = AutoDiscoveryType.None, // don't look for dynamic IPs, because we have no hostname
+                AutoDetect = AutoDiscoveryType.Nothing, // don't look for dynamic IPs, because we have no hostname
             };
 
             if (network.FindHostByIP(info.IPAddresses) is NetworkRouter router)

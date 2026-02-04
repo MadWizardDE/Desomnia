@@ -1,0 +1,19 @@
+.admonition-style .admonition-title::before 
+{
+    content: '⌨️' !important;
+}
+
+.admonition-work-in-progress 
+{
+    background: WhiteSmoke !important;
+
+    .admonition-title
+    {
+        background: LightGray !important;
+
+        &::before 
+        {
+            content: '🚧' !important;
+        }
+    }
+}

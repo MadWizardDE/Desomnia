@@ -18,7 +18,7 @@ Modes of operation
 
 There are three practical scenarios in which Desomnia can be deployed, to support you on your quest to optimize the energy consumption of your network:
 
-1. **Local Resource Monitor**: You have a powerful system, that should stay awake when selected services and resources are in use. Desomnia will replace the built-in sleep management and prevent suspension as long as resources are in use, starting and stopping individual resources approriately, until the system as a whole is considered idle and sent to sleep. [🪟 *Windows-only – for now*]
+1. **Local Sleep Management**: You have a powerful system, that should stay awake when selected services and resources are in use. Desomnia will replace the built-in sleep management and prevent suspension as long as resources are in use, starting and stopping individual resources approriately, until the system as a whole is considered idle and sent to sleep. [🪟 *Windows-only – for now*]
 
 2. **Automatic Wake-on-LAN client**: You have any number of servers in your network that should wake up the moment you try to establish a connection to them. Desomnia will monitor your outgoing network traffic in order to determine when to send a Magic Packet to their respective MAC address. This works with any IP service, but it can also be narrowed down to a single TCP or UDP service.
 
@@ -169,9 +169,9 @@ The easiest way to get an instance of Desomnia running is inside a 🐋 `Docker 
 System Requirements
 -------------------
 
-- Windows 8 / 10 / 11 or Linux or macOS
-- .NET Runtime 9 / 10
-- `npcap <https://npcap.com/>`__ on Windows / libpcap (optional, needed for NetworkMonitor)
+- Windows 8 / 10 / 11 *or* Linux *or* macOS
+- .NET Runtime 9 / 10 *or* Docker (Linux-only)
+- `npcap <https://npcap.com/>`_ on Windows *or* `libpcap <https://github.com/the-tcpdump-group/libpcap>`_ on Linux/macOS (optional, needed for NetworkMonitor)
 
 I you like my work, consider to:
 

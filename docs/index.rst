@@ -13,14 +13,16 @@
    :maxdepth: 2
    :caption: Guides
 
-   /guides/quick
-   /guides/wakeonlan
+   /guides/wake
+   /guides/sleep
 
 .. toctree::
    :maxdepth: 2
    :caption: Basic Concepts
 
    /concepts/intro
+   /concepts/resources
+   /concepts/events
    /concepts/logging
 
 
@@ -28,11 +30,12 @@
    :maxdepth: 2
    :caption: Core Modules
 
+   /modules/system/monitor
    /modules/network/monitor
    /modules/network_session/monitor
-   /modules/power/monitor
-   /modules/process/monitor
    /modules/session/monitor
+   /modules/process/monitor
+   /modules/power/monitor
 
 .. toctree::
    :maxdepth: 2

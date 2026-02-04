@@ -1,4 +1,2 @@
 Introduction
 ============
-
-Hallo Welt!

@@ -9,7 +9,7 @@
     [Flags]
     public enum AutoDiscoveryType
     {
-        None = 0,
+        Nothing = 0,
 
         MAC = 1 << 1,
 

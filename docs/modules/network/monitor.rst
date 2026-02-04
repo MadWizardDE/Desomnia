@@ -5,6 +5,7 @@ Network Monitor
 
 .. toctree::
    auto
+   interface
    ipv6
    promiscuous
    performance

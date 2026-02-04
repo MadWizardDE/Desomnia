@@ -1,164 +1,142 @@
 Reference
 =========
 
-This reference has been created to allow you to easily see all the available configuration options of Desomnia at a glance, as opposed to the rather prosaic explanations on the other pages.
+This reference is made for you to easily see at a glance all the available parameters of the ARPergefactor, in contrast to their rather prosaic explanation on the other pages.
 
-.. include:: /concepts/time.rst
+XML configuration options
+=========================
 
-NetworkMonitor
---------------
+⏳ **Please note**: For every attribute describing a span of time, you may decide to use one of the following formats:
 
-Desomnia provides support for monitoring any number of installed network interfaces. You can specify which configuration should be used with which interface by using the ``interface`` and/or ``network`` attribute. If none of them is declared, the configuration will be valid for all interfaces with a gateway configured. See :doc:`interface` to learn more about this.
+- an easily readable notation with English time units "h" for hours, "min" for minutes, "s" for seconds and "ms" for milliseconds; for exmple: ``3h20min`` or ``100ms``
+- the `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601#Durations>`__ notation for durations: ``PT3H20M0.1S``
+- the C# TimeSpan Format: ``03:20:0.1``
+
+This choice has no further technical implications and is merely an expression of personal taste.
+
+Application
+-----------
 
 .. code:: xml
 
-  <SystemMonitor version="1">
+   <ExpergefactorConfig version="2" scope="network">
 
-    <NetworkMonitor interface="eth0" network="192.168.178.0/24"
+     <Network interface="eth0">
+       <!-- define your hosts and network level filters here -->
+     </Network>
 
-      autoDetect="Router|IPv4|IPv6|..." 
-      autoLatency="1h"
-      autoTimeout="5s"
-
-      demandTimeout="5s"
-      demandForward="true"
-      demandParallel="1"
-
-      advertise="lazy"
-      advertiseIfStopped="true"
-
-      sweepDelay="5min"
-      sweepFrequency="1min"
-
-      knockMethod="plain"
-      knockPort="62201"
-      knockProtocol="UDP"
-      knockDelay="500ms"
-      knockRepeat="false"
-      knockTimeout="10s"
-      knockSecret=""
-      knockSecretAuth=""
-      knockEncoding="UTF-8"
-
-      pingTimeout="500ms" 
-      pingFrequency=""
-      
-      wakeType="auto"
-      wakePort="9"
-      wakeRepeat="false"
-      wakeTimeout="10s" 
-
-      watchMode="normal"
-      watchDeviceTimeout="10s"
-      watchUDPPort=""
-      watchYield="false">
-
-      <!-- network entities -->
-
-      <Host ... />
-      <LocalHost ... /> <!-- or use it inline -->
-      <RemoteHost ... />
-      <Router ... />
-
-      <HostRange ... />
-      <DnamicHostRange ... />
-
-      <!-- global packet filters -->
-
-      <HostFilterRule ... />
-      <HostRangeFilterRule ... />
-      <ForeignHostFilterRule ... />
-      <ServiceFilterRules ... />
-      <ServiceFilterRule ... />
-      <HTTPFilterRule ... />
-      <PingFilterRule ... />
-
-    </NetworkMonitor>
-
-    <NetworkMonitor interface="eth1">
+     <Network interface="eth1">
        <!-- optionally, watch additional network interfaces -->
-    </NetworkMonitor>
+     </Network>
 
-  </SystemMonitor>
+   </ExpergefactorConfig>
+
+version
+~~~~~~~
+
+This attribute denotes the version of the **configuration file** format. The current format that this documentation describes is version "2". The old version "1" is not supported anymore. Future (incompatible) changes to the configuration file format will be reflected in a higher version number, so that configuration files with an older version can still be supported, if you install a newer version of ARPergefactor.
+
+scope
+~~~~~
+
+Defines the operational mode of ARPergefactor; possible values are:
+
+- ``network``: The application will be look for connection attempts to watched hosts on the whole broadcast domain, actively reacting to address resolution requests in order to gather additional metadata if necessary. Preferably use this mode on a low-power and always-on device with wired ethernet connection, like a Raspberry PI.
+- ``host``: The application will be restrained to the network node on which it is installed. Only outgoing connection attempts will trigger a potential WakeRequest and impersonation will only affect the local IP cache. Use this mode, if you are a guest inside a foreign network or if an always-on device is not available to you.
+
+You have to configure this explicitly, there is no default mode.
+
+Network
+-------
+
+.. code:: xml
+
+   <Network interface="eth0" 
+     autoDetect="Router|IPv4|IPv6" 
+     autoLatency="1h"
+     autoTimeout="5s"
+     pingTimeout="500ms" 
+     wakeTimeout="10s" 
+     wakeLatency="5s"
+     wakeType="auto"
+     wakeForward="true"
+     watchUDPPort="9">
+
+     <Host ... />
+     <WatchHost ... />
+     <Router ... />
+
+   </Network>
 
 interface
-+++++++++
+~~~~~~~~~
 
-Describes the name of the network interface to capture traffic on. 
+Describes the name of the network interface to capture traffic on.
 
-network
-+++++++
-
-Describes the network to capture traffic on. You can specify a single IP address or describe a whole subnet in the `CIDR`_ notation. The local network device must be configured accordingly for this configuration to become active.
+- **Linux**: You usually use the designated device name, like ``eth0``, ``eth1``, etc.
+- **Windows**: You can either use the name of the device like ``Ethernet``, as it appears inside the settings app, or use the unambiguously id ``{1BD73899-523C-4911-967A-FE797ACF6C44}`` of the network interface.
 
 autoDetect
-++++++++++
+~~~~~~~~~~
 
-:default: nothing
-
-Desomnia can try to automatically discover the shape of your network. The values **MAC**, **IPv4**, **IPv6** and **Services** are inherited by all the configured hosts, while **Router** and **SleepProxy** tell Desomnia to discover the respective network entities. You can freely combine all the different values with the pipe operator or separate them by comma. The outcome of the discovery process will vary according to the installed plugins and the possibilities of your individual network.
-
-- **nothing**: do no auto-configuration
-..
-- **MAC**: Try to discover the MAC address of the configured hosts and routers
-- **IPv4**: Try to discover the IPv4 address of the configured hosts and routers
-- **IPv6**: Try to discover the IPv6 address(es) of the configured hosts and routers
-..
-- **Router**: Try to discover the network routers
-- **VPN**: Try to discover the available VPN devices, connected to your router (if possible)
-..
-- 🚧 **SleepProxy**: Try to discover the sleep proxies on the network, to register the local services before sleep
-- 🚧 **Services**: Try to discover services of the remote hosts
-..
-- **everything**: all of the above
+Configure for all hosts on the network to auto detect IP addresses, if not overridden on a per host basis. Also you can specify here, to find available network routers automatically. The possible values are ``IPv4``, ``IPv6`` and ``Router``, which you can freely combine with the pipe operator or separate them by comma. This is an optional feature, so there is no default value.
 
 autoLatency
-+++++++++++
+~~~~~~~~~~~
 
-  Defines the time span during which expired IP addresses may still linger in the cache of the application. Effectively this sets a timer at which interval all automatically detected IP addresses are discarded and fresh ones will be queried from the available name resolution authorities. This is an optional feature, so there is no default value.
+Defines the time span during which expired IP addresses may still linger in the cache of the application. Effectively this sets a timer at which interval all automatically detected IP addresses are discarded and fresh ones will be queried from the available name resolution authorities. This is an optional feature, so there is no default value.
 
 autoTimeout
-+++++++++++
+~~~~~~~~~~~
 
-  Defines the timeout, after which a single request to a name resolution authority (e.g. DNS, WINS, etc.) will be cancelled and the host considered as unknown. The default value is 5 seconds.
+Defines the timeout, after which a single request to a name resolution authority (e.g. DNS, WINS, etc.) will be cancelled and the host considered as unknown. The default value is 5 seconds.
 
 pingTimeout
+~~~~~~~~~~~
 
-  Defines the timeout, after which a single host will be considered as unreachable, after a ARP request, NDP solicitation of ICMP echo request remain without reply. The default value is ``500ms``. Decrease this value to accelerate WakeRequests in general. Increase this timeout to reduce the possibility of unnecessarily executed WakeRequests on a lagging network.
+Defines the timeout, after which a single host will be considered as unreachable, after a ARP request, NDP solicitation of ICMP echo request remain without reply. The default value is ``500ms``. Decrease this value to accelerate WakeRequests in general. Increase this timeout to reduce the possibility of unnecessarily executed WakeRequests on a lagging network.
 
 poseTimeout
+~~~~~~~~~~~
 
-  Defines the timeout, after which ARPergefactor will stop to impersonate a host during a WakeRequest and treat the request as failed, if it won't receive any unfiltered unicast IP packet during that time.
+Defines the timeout, after which ARPergefactor will stop to impersonate a host during a WakeRequest and treat the request as failed, if it won't receive any unfiltered unicast IP packet during that time.
 
 poseLatency
+~~~~~~~~~~~
 
-  Defines the time span, after which ARPergefactor will eagerly start to impersonate a host at the latest, since it received the last response from it. This effectively sets a timer, at which the availability of the host will be queried with either ARP or NDP requests. If the host is found to be unresponsive, all it's known IP addresses will be claimed as our own and advertised via ARP and NDP, until we again receive any response from that host.
+Defines the time span, after which ARPergefactor will eagerly start to impersonate a host at the latest, since it received the last response from it. This effectively sets a timer, at which the availability of the host will be queried with either ARP or NDP requests. If the host is found to be unresponsive, all it's known IP addresses will be claimed as our own and advertised via ARP and NDP, until we again receive any response from that host.
 
-  If the host sends a Magic Packet including it's own MAC address, it will be treated as a hint to skip the timer and check the availability of the host immediately after waiting ``poseTimeout``, to give the host time to complete it's suspension.
+If the host sends a Magic Packet including it's own MAC address, it will be treated as a hint to skip the timer and check the availability of the host immediately after waiting ``poseTimeout``, to give the host time to complete it's suspension.
 
 wakeTimeout
+~~~~~~~~~~~
 
-  Defines the timeout, after which a WakeRequest will be considered as failed, if we haven't received any response from the target host after the Magic Packet has been sent. There will be a warning in the log file, if this happens. Also buffered packets will only be forwarded to the target host, if the WakeRequest succeeds. The default value is 10 seconds.
+Defines the timeout, after which a WakeRequest will be considered as failed, if we haven't received any response from the target host after the Magic Packet has been sent. There will be a warning in the log file, if this happens. Also buffered packets will only be forwarded to the target host, if the WakeRequest succeeds. The default value is 10 seconds.
 
 wakeLatency
+~~~~~~~~~~~
 
-  Defines the time span during which no WakeRequest will be started for a given host, after the last packet originating from that host has been observed. This is primarily used to reduce the amount of noise on the link and in the logfile, so that actual WakeRequests can be tracked more easily. The default value is 5 seconds.
+Defines the time span during which no WakeRequest will be started for a given host, after the last packet originating from that host has been observed. This is primarily used to reduce the amount of noise on the link and in the logfile, so that actual WakeRequests can be tracked more easily. The default value is 5 seconds.
 
 wakeType
+~~~~~~~~
 
-  The same options can be applied here as for the host.
+The same options can be applied here as for the host.
 
 wakePort
+~~~~~~~~
 
-  Specifies the port number for Magic Packets encapsulated in UDP packets, if ``wakeType`` was configured with ``network``. The default is ``9``. Typical port numbers used for this are ``7`` (Echo) or ``9`` (Discard). If ``wakeType`` is configure with ``link``, this attribute has no meaning.
+Specifies the port number for Magic Packets encapsulated in UDP packets, if ``wakeType`` was configured with ``network``. The default is ``9``. Typical port numbers used for this are ``7`` (Echo) or ``9`` (Discard). If ``wakeType`` is configure with ``link``, this attribute has no meaning.
 
 wakeForward
+~~~~~~~~~~~
 
-  This determines, if packets received for a particular watched host should be queued during an ongoing WakeRequest and forwarded to that host, if it can successfully be waken with the configured ``wakeTimeout``. The default value is ``true``, to improve responsiveness of the connection handshake, instead of relying on the client application to resend it's request until the target host is awake. This can also reduce the likeliness of connection timeouts in the client application. You can set this option to ``false``, if you experience problems with that.
+This determines, if packets received for a particular watched host should be queued during an ongoing WakeRequest and forwarded to that host, if it can successfully be waken with the configured ``wakeTimeout``. The default value is ``true``, to improve responsiveness of the connection handshake, instead of relying on the client application to resend it's request until the target host is awake. This can also reduce the likeliness of connection timeouts in the client application. You can set this option to ``false``, if you experience problems with that.
 
 watchUDPPort
+~~~~~~~~~~~~
 
-  ARPergefactor typically uses an `EtherType <https://en.wikipedia.org/wiki/EtherType>`__ of ``0x0842`` to send and receive Magic Packets for WakeOnLAN requests, to prevent interference with actual network services. Use this attribute, to make it aware of Magic Packets encapsulated in (probably broadcasted) UDP packets on a given port. This is an optional feature, so there is no default. Typical port numbers used for this are ``7`` (Echo) or ``9`` (Discard).
+ARPergefactor typically uses an `EtherType <https://en.wikipedia.org/wiki/EtherType>`__ of ``0x0842`` to send and receive Magic Packets for WakeOnLAN requests, to prevent interference with actual network services. Use this attribute, to make it aware of Magic Packets encapsulated in (probably broadcasted) UDP packets on a given port. This is an optional feature, so there is no default. Typical port numbers used for this are ``7`` (Echo) or ``9`` (Discard).
 
 Host
 ----
@@ -213,8 +191,8 @@ Configure a static IPv6 address for this host. Use the format: ``2001:0db8:85a3:
 
 ⚠️ You probably don't want to configure this manually, see [[Auto configuration]] and [[IPv6 Support]]
 
-RemoteHost
-----------
+WatchHost
+---------
 
 For watched hosts, you configure these additional properties:
 
