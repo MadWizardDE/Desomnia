@@ -16,10 +16,10 @@ namespace MadWizard.Desomnia.NetworkSession.Configuration
         public IPAddress? ClientIPAddress => ClientIP != null ? IPAddress.Parse(ClientIP) : null;
         public Regex? FilePathPattern => FilePath != null ? new Regex(FilePath) : null;
 
-        public FilterType Type { get; set; } = FilterType.MustNot;
+        public FilterRuleType Type { get; set; } = FilterRuleType.MustNot;
     }
 
-    public enum FilterType
+    public enum FilterRuleType
     {
         MustNot = 0,
         Must

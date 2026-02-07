@@ -1,9 +1,12 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.NetworkSession.Configuration;
+using MadWizard.Desomnia.NetworkSession.Configuration.Options;
 using MadWizard.Desomnia.NetworkSession.Manager;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
+using static System.Collections.Specialized.BitVector32;
 
 namespace MadWizard.Desomnia.NetworkSession
 {
@@ -14,6 +17,8 @@ namespace MadWizard.Desomnia.NetworkSession
         public required ILogger<NetworkSessionMonitor> Logger { private get; init; }
 
         public required IEnumerable<NetworkSessionFilterRule> Rules { private get; init; }
+
+        public required WatchOptions Options { private get; init; }
 
         void IStartable.Start()
         {
@@ -27,20 +32,30 @@ namespace MadWizard.Desomnia.NetworkSession
                 if (session.IdleTime > interval)
                     continue;
 
-                var filteredFiles = session.OpenFiles.Where(file => !ShouldFilterFile(file, Rules));
-
-                if (filteredFiles.Any())
+                if (session.OpenFiles.Any())
                 {
-                    if (SHOW_SHARE_USAGE)
-                    {
-                        var shares = new HashSet<INetworkShare>();
-                        foreach (var file in filteredFiles)
-                            shares.Add(file.Share);
+                    var filteredFiles = session.OpenFiles.Where(file => !ShouldFilter(file.Session, file, Rules));
 
-                        foreach (var share in shares)
-                            yield return new NetworkSessionUsage(session, share);
+                    if (filteredFiles.Any())
+                    {
+                        if (SHOW_SHARE_USAGE)
+                        {
+                            var shares = new HashSet<INetworkShare>();
+                            foreach (var file in filteredFiles)
+                                shares.Add(file.Share);
+
+                            foreach (var share in shares)
+                                yield return new NetworkSessionUsage(session, share);
+                        }
+                        else
+                        {
+                            yield return new NetworkSessionUsage(session);
+                        }
                     }
-                    else
+                }
+                else if (Options.Passive)
+                {
+                    if (!ShouldFilter(session, null, Rules))
                     {
                         yield return new NetworkSessionUsage(session);
                     }
@@ -48,51 +63,70 @@ namespace MadWizard.Desomnia.NetworkSession
             }
         }
 
-        private static bool ShouldFilterFile(INetworkFile file, IEnumerable<NetworkSessionFilterRule> filters)
+        #region Filter
+        private static bool ShouldFilter(INetworkSession session, INetworkFile? file, IEnumerable<NetworkSessionFilterRule> rules)
         {
-            foreach (var rule in filters)
-                if (ShouldFilterFile(file, rule))
-                    return true;
+            bool needMatch = rules.Any(rule => rule.Type == FilterRuleType.Must);
 
-            return false;
+            foreach (var rule in rules)
+            {
+                if (ShouldFilter(session, file, rule))
+                {
+                    if (rule.Type == FilterRuleType.MustNot)
+                    {
+                        return true;
+                    }
+
+                    if (rule.Type == FilterRuleType.Must)
+                    {
+                        needMatch = false; // no need to find a match anymore
+                    }
+                }
+            }
+
+            return needMatch;
         }
 
-        private static bool ShouldFilterFile(INetworkFile file, NetworkSessionFilterRule rule)
+        private static bool ShouldFilter(INetworkSession session, INetworkFile? file, NetworkSessionFilterRule rule)
         {
             int match = 0, mismatch = 0;
 
-            if (rule.UserName is string ruleUserName && file.Session.UserName is string userName)
+            if (rule.UserName is string ruleUserName && session.UserName is string userName)
             {
                 var _ = string.Equals(ruleUserName, userName, StringComparison.InvariantCultureIgnoreCase) ? match++ : mismatch++;
             }
 
-            if (rule.ClientName is string ruleClientName && file.Session.Client.Name is string clientName)
+            if (rule.ClientName is string ruleClientName && session.Client.Name is string clientName)
             {
                 var _ = string.Equals(ruleClientName, clientName, StringComparison.InvariantCultureIgnoreCase) ? match++ : mismatch++;
             }
 
-            if (rule.ClientIPAddress is IPAddress ruleIPAddress && file.Session.Client.Address is IPAddress address)
+            if (rule.ClientIPAddress is IPAddress ruleIPAddress && session.Client.Address is IPAddress address)
             {
                 var _ = ruleIPAddress.Equals(address) ? match++ : mismatch++;
             }
 
-            if (rule.ShareName is string ruleShareName && file.Share.Name is string shareName)
+            if (file != null)
             {
-                var _ = string.Equals(ruleShareName, shareName, StringComparison.InvariantCultureIgnoreCase) ? match++ : mismatch++;
-            }
+                if (rule.ShareName is string ruleShareName && file.Share.Name is string shareName)
+                {
+                    var _ = string.Equals(ruleShareName, shareName, StringComparison.InvariantCultureIgnoreCase) ? match++ : mismatch++;
+                }
 
-            if (rule.FilePathPattern is Regex pattern)
-            {
-                var _ = pattern.IsMatch(file.Path) ? match++ : mismatch++;
+                if (rule.FilePathPattern is Regex pattern)
+                {
+                    var _ = pattern.IsMatch(file.Path) ? match++ : mismatch++;
+                }
             }
 
             return rule.Type switch
             {
-                FilterType.Must => mismatch != 0,
-                FilterType.MustNot => match != 0,
+                FilterRuleType.Must => mismatch != 0,
+                FilterRuleType.MustNot => match != 0,
 
                 _ => throw new NotImplementedException("unknown filter rule type"),
             };
         }
+        #endregion
     }
 }

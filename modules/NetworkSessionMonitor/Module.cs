@@ -13,6 +13,7 @@ namespace MadWizard.Desomnia.NetworkSession
             {
                 builder.RegisterType<NetworkSessionMonitor>()
                     .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(INetworkSessionManager))))
+                    .WithParameter(TypedParameter.From(Config.NetworkSessionMonitor.MakeWatchOptions()))
                     .WithParameter(TypedParameter.From(Config.NetworkSessionMonitor.FilterRule))
                     .AsImplementedInterfaces()
                     .SingleInstance()
