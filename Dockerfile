@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/runtime:10.0-noble
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-    libpcap0.8 \
+    libpcap0.8t64 \
     iproute2 \
  && rm -rf /var/lib/apt/lists/*
 
