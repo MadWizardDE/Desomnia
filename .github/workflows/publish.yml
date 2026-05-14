@@ -102,13 +102,18 @@ jobs:
 
     strategy:
       matrix:
-        platform: [ linux/amd64, linux/arm64 ]
+        platform: [ linux/amd64, linux/arm64, linux/arm/v7 ]
 
         include:
           - platform: linux/amd64
             runner: ubuntu-24.04
+            arch: x64
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
+            arch: arm64
+          - platform: linux/arm/v7
+            runner: ubuntu-24.04
+            arch: arm
 
     steps:
       - name: Prepare
@@ -142,7 +147,7 @@ jobs:
       - name: Download daemon
         uses: actions/download-artifact@v4
         with:
-          name: linux-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'x64' }}
+          name: linux-${{ matrix.arch }}
           path: ${{ runner.temp }}/context
           merge-multiple: true
 
