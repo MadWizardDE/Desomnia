@@ -19,7 +19,7 @@ Make sure the following are in place before writing your first configuration:
 - **Wake-on-LAN is enabled** on the target host. This typically requires enabling it in the BIOS / UEFI firmware of the target machine and ensuring that the network adapter remains powered while the system is suspended. The exact setting is often labelled *Wake-on-LAN*, *Wake on Magic Packet*, or *Power On By PCI-E*, depending on the firmware vendor.
 - You have the **MAC address** of the target host. Magic Packets are addressed by MAC, not by IP, so this is always required. If the host is currently awake, run ``arp -a`` from any machine on the same network, or look it up in your router's device list.
 
-.. include:: _wol/wakeonlan.rst
+.. include:: checks/wol.rst
 
 Minimum working configuration
 ------------------------------
@@ -65,4 +65,7 @@ If the host does not wake up, check the following:
 Filtering unwanted wake-ups
 ----------------------------
 
-.. include:: _wol/service-filtering.rst
+.. include:: filtering/service.rst
+   :end-before: .. proxy ..
+
+.. include:: filtering/ping.rst

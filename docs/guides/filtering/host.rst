@@ -1,5 +1,5 @@
-Filtering by source host
-~~~~~~~~~~~~~~~~~~~~~~~~~
+Filter by source host
+~~~~~~~~~~~~~~~~~~~~~
 
 In client mode, all observed traffic originates from a single machine — your own. In proxy mode, Desomnia sees connection attempts from every device on the network. This makes source host filtering an important tool for reducing noise.
 

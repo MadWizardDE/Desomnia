@@ -53,6 +53,8 @@ Connections to port 8080 are ignored; all other connections to this host can sti
 .. note::
    ``type="MustNot"`` is the default for all filter rules when no type is set explicitly. The two approaches — whitelisting with ``type="Must"`` and blacklisting with ``type="MustNot"`` — can be mixed, but the interaction can be difficult to reason about: as soon as at least one ``type="Must"`` rule is present, the filter switches to whitelist mode and ``type="MustNot"`` rules act only as exclusions within that whitelist.
 
+.. proxy ..
+
 Shorter notation with ``<Service>``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -72,21 +74,3 @@ Each ``<Service>`` element is equivalent to a ``<ServiceFilterRule>`` with ``typ
 .. admonition:: Work in progress
 
    In a future version of Desomnia, declared services will be advertised via mDNS while the host is suspended, enabling full compatibility with Apple's *Sleep Proxy* protocol. Currently the main benefit of ``<Service>`` over ``<ServiceFilterRule>`` is the shorter notation.
-
-Filtering ping traffic
-~~~~~~~~~~~~~~~~~~~~~~
-
-Some operating systems and network tools send ICMP echo requests (pings) to check whether a host is reachable. These operate at the IP layer, before any TCP or UDP connection is established, and can trigger an unwanted wake-up if they happen to target a watched host.
-
-If you have already configured at least one ``type="Must"`` service filter, or used ``<Service>`` declarations, ping traffic is automatically excluded — no further configuration is needed.
-
-Without any inclusive service filter, you can suppress pings explicitly:
-
-.. code:: xml
-
-   <NetworkMonitor>
-     <PingFilterRule />
-     <RemoteHost name="server" MAC="00:1A:2B:3C:4D:5E" IPv4="192.168.1.10" />
-   </NetworkMonitor>
-
-Placing the rule at the ``<NetworkMonitor>`` level applies it to all watched hosts. To limit it to a specific host, place the rule inside the corresponding ``<RemoteHost>`` element.

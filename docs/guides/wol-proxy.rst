@@ -31,7 +31,7 @@ Make sure the following are in place before writing your first configuration:
 - You have the **MAC address** of each target host. If a host is currently awake, run ``arp -a`` from any machine on the same network, or look it up in your router's device list.
 - The always-on device must be on the **same network segment** as the hosts it will wake. Wake-on-LAN Magic Packets do not cross routers by default.
 
-.. include:: _wol/wakeonlan.rst
+.. include:: checks/wol.rst
 
 Minimum working configuration
 ------------------------------
@@ -76,13 +76,14 @@ If the host does not wake up, check the following:
 Filtering unwanted wake-ups
 ----------------------------
 
-.. include:: _wol/service-filtering.rst
+.. include:: filtering/service.rst
+
+.. include:: filtering/host.rst
+
+.. include:: filtering/ping.rst
 
 .. caution::
    When using a ``<PingFilterRule>`` in promiscuous mode, Desomnia needs to :ref:`spoof the addresses of watched hosts <network-monitor-spoofing>` in order to intercept and inspect ping requests. If you have already configured ``type="Must"`` service filters (or ``<Service>`` declarations), a ``<PingFilterRule>`` is not needed — ping traffic is excluded automatically.
-
-.. include:: _wol/host-filtering.rst
-
 
 Combining service and host filters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
