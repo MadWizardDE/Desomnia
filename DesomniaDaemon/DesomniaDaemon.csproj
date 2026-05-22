@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Tmds.DBus" Version="0.93.0" />
   </ItemGroup>
 
   <ItemGroup>
