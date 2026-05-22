@@ -44,8 +44,11 @@ try
             var builder = new DesomniaDaemonBuilder(useFHS: configPath.StartsWith(FHS_CONFIG_PATH));
 
             builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
+
             builder.RegisterModule<MadWizard.Desomnia.Daemon.PlatformModule>();
+
             builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
+            builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
             builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
 
             builder.RegisterPluginModules();

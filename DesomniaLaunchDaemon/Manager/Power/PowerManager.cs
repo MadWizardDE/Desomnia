@@ -9,27 +9,32 @@ namespace MadWizard.Desomnia.Power.Manager
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
 
-        public void Suspend(bool hibernate = false)
+        public async Task Suspend()
         {
             throw new NotImplementedException("Suspend");
         }
 
-        public void Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Hibernate()
+        {
+            throw new NotImplementedException("Hibernate");
+        }
+
+        public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             throw new NotImplementedException("Shutdown");
         }
 
-        public void Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             throw new NotImplementedException("Reboot");
         }
 
-        IPowerRequest IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
         {
             throw new NotImplementedException("CreatePowerRequest");
         }
 
-        IEnumerator<IPowerRequest> IEnumerable<IPowerRequest>.GetEnumerator()
+        async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
             yield break; // TODO: implement PowerRequests enumeration
         }

@@ -19,7 +19,7 @@ namespace MadWizard.Desomnia.PowerRequest
 
         IEnumerable<UsageToken> IInspectable.Inspect(TimeSpan interval)
         {
-            var filteredRequests = power.Where(ShouldMonitorRequest);
+            var filteredRequests = power.ToBlockingEnumerable().Where(ShouldMonitorRequest);
 
             if (Rules.Any())
             {

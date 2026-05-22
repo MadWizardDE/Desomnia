@@ -7,50 +7,64 @@ namespace MadWizard.Desomnia.Power.Manager
     // Power inhibitor locks are not available via sysfs — CreateRequest returns a no-op placeholder.
     // Suspended/ResumeSuspended events are only fired around suspend calls made by this daemon;
     // externally-triggered suspends are not observable without D-Bus.
-    public class SysfsPowerManager : IPowerManager
+    public class SysPowerManager : IPowerManager
     {
         private const string SysPowerState = "/sys/power/state";
 
-        public required ILogger<SysfsPowerManager> Logger { private get; init; }
+        public required ILogger<SysPowerManager> Logger { private get; init; }
 
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
 
-        public void Suspend(bool hibernate = false)
+        private string PowerState
         {
-            string state = hibernate ? "disk" : "mem";
-            string acpi  = hibernate ? "S4 (hibernate)" : "S1-S3 (sleep)";
+            set
+            {
+                var supported = !File.ReadAllText(SysPowerState).Contains(value) 
+                    ? throw new NotSupportedException($"Power state {value} is not supported by this system.") 
+                    : true;
 
-            string supported = File.ReadAllText(SysPowerState);
-            if (!supported.Contains(state))
-                throw new NotSupportedException($"ACPI state {acpi} is not supported by this system.");
-
-            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
-
-            Suspended?.Invoke(this, EventArgs.Empty);
-            File.WriteAllText(SysPowerState, state); // blocks until resume
-            ResumeSuspended?.Invoke(this, EventArgs.Empty);
+                Suspended?.Invoke(this, EventArgs.Empty);
+                File.WriteAllText(SysPowerState, value); // blocks until resume
+                ResumeSuspended?.Invoke(this, EventArgs.Empty);
+            }
         }
 
-        public void Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Suspend()
+        {
+            Logger.LogDebug("Requested ACPI state: {acpi}", "S1-S3 (sleep)");
+
+            PowerState = "mem";
+        }
+
+        public async Task Hibernate()
+        {
+            Logger.LogDebug("Requested ACPI state: {acpi}", "S4 (hibernate)");
+
+            PowerState = "disk";
+        }
+
+        public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             Logger.LogDebug("Requested ACPI state: S5 (shutdown)");
+
             if (message != null)
                 Logger.LogInformation("Shutdown message: {message}", message);
 
-            ExecuteShutdown("-P", timeout);
+            await ExecuteShutdown("-P", timeout);
         }
 
-        public void Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             Logger.LogDebug("Requested ACPI state: S0 (reboot)");
+
             if (message != null)
                 Logger.LogInformation("Reboot message: {message}", message);
 
-            ExecuteShutdown("-r", timeout);
+            await ExecuteShutdown("-r", timeout);
         }
 
-        private void ExecuteShutdown(string flag, TimeSpan? timeout)
+        private async Task ExecuteShutdown(string flag, TimeSpan? timeout)
         {
             // shutdown(8) uses minutes; round up, minimum 1 minute for any non-zero delay.
             string time = timeout.HasValue
@@ -65,28 +79,20 @@ namespace MadWizard.Desomnia.Power.Manager
             using var process = System.Diagnostics.Process.Start(startInfo)
                 ?? throw new Exception("Failed to start shutdown command.");
 
-            process.WaitForExit();
+            await process.WaitForExitAsync();
 
             if (process.ExitCode != 0)
                 throw new Exception($"shutdown exited with code {process.ExitCode}.");
         }
 
-        IPowerRequest IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
         {
-            Logger.LogWarning("Sleep inhibitor requested but sysfs power manager does not support inhibitor locks; ignoring.");
-            return new NullPowerRequest(reason);
+            throw new NotSupportedException($"Sleep inhibition is not supported by this system.");
         }
 
-        IEnumerator<IPowerRequest> IEnumerable<IPowerRequest>.GetEnumerator()
+        async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
             yield break;
-        }
-
-        private sealed class NullPowerRequest(string? reason) : IPowerRequest
-        {
-            public string Name => "Desomnia";
-            public string? Reason => reason;
-            public void Dispose() { }
         }
     }
 }

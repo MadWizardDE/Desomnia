@@ -1,0 +1,25 @@
+﻿using Tmds.DBus;
+
+namespace MadWizard.Desomnia.Power.Manager
+{
+    // D-Bus proxy interface for org.freedesktop.login1.Manager (systemd-logind).
+    [DBusInterface("org.freedesktop.login1.Manager")]
+    interface ILogin1Manager : IDBusObject
+    {
+        Task SuspendAsync   (bool interactive);
+        Task HibernateAsync (bool interactive);
+        Task PowerOffAsync  (bool interactive);
+        Task RebootAsync    (bool interactive);
+
+        Task ScheduleShutdownAsync(string type, ulong usec);
+
+        // Returns a Unix fd whose lifetime IS the inhibitor lock — close it to release.
+        Task<CloseSafeHandle> InhibitAsync(string what, string who, string why, string mode);
+
+        // a(ssssuu): what, who, why, mode, uid, pid
+        Task<(string what, string who, string why, string mode, uint uid, uint pid)[]> ListInhibitorsAsync();
+
+        // PrepareForSleep(b active): active=true → about to sleep, active=false → resumed
+        Task<IDisposable> WatchPrepareForSleepAsync(Action<bool> handler, Action<Exception>? onError = null);
+    }
+}

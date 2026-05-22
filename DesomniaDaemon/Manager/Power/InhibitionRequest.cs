@@ -2,12 +2,12 @@ using Runtime = System.Runtime.InteropServices;
 
 namespace MadWizard.Desomnia.Power.Manager
 {
-    internal sealed class LogindInhibitorRequest : IPowerRequest
+    internal sealed class InhibitionRequest : IPowerRequest
     {
         private readonly Runtime.SafeHandle? _handle;
 
         // For requests created by this daemon via Inhibit() — holds the fd open.
-        internal LogindInhibitorRequest(string name, string? reason, Runtime.SafeHandle handle)
+        internal InhibitionRequest(string name, string? reason, Runtime.SafeHandle handle)
         {
             Name = name;
             Reason = reason;
@@ -15,7 +15,7 @@ namespace MadWizard.Desomnia.Power.Manager
         }
 
         // For external inhibitors read from ListInhibitors() — no fd to close.
-        internal LogindInhibitorRequest(string name, string? reason)
+        internal InhibitionRequest(string name, string? reason)
         {
             Name = name;
             Reason = reason;

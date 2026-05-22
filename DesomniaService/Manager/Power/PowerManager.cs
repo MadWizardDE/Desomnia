@@ -40,7 +40,10 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public void Suspend(bool hibernate = false)
+        async Task IPowerManager.Hibernate()    => await Suspend(true);
+        async Task IPowerManager.Suspend()      => await Suspend(false);
+
+        async Task Suspend(bool hibernate = false)
         {
             var acpi = hibernate ? "S4 (hibernate)" : "S1-S3 (sleep)";
 
@@ -59,7 +62,7 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public void Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             EnableShutdownPrivilege();
 
@@ -73,7 +76,7 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public void Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             EnableShutdownPrivilege();
 
@@ -87,12 +90,12 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        IPowerRequest IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
         {
             return new PowerRequest(PowerRequestsType.SystemRequired, reason);
         }
 
-        IEnumerator<IPowerRequest> IEnumerable<IPowerRequest>.GetEnumerator()
+        async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
             Dictionary<PowerRequestsType, List<PowerRequest>> requestsByType = [];
 
@@ -149,7 +152,7 @@ namespace MadWizard.Desomnia.Power.Manager
                     }
                 }
 
-                process.WaitForExit();
+                await process.WaitForExitAsync();
 
                 if (requestsByType.TryGetValue(PowerRequestsType.SystemRequired, out var systemRequests))
                     foreach (var systemReuqest in systemRequests)
