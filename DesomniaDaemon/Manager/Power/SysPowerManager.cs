@@ -24,9 +24,13 @@ namespace MadWizard.Desomnia.Power.Manager
                     ? throw new NotSupportedException($"Power state {value} is not supported by this system.") 
                     : true;
 
+                Logger.LogDebug("/sys/power/state = '{state}'", value);
+
                 Suspended?.Invoke(this, EventArgs.Empty);
                 File.WriteAllText(SysPowerState, value); // blocks until resume
                 ResumeSuspended?.Invoke(this, EventArgs.Empty);
+
+                Logger.LogDebug("/sys/power/state = null");
             }
         }
 

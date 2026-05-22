@@ -41,17 +41,21 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async Task IHostedService.StartAsync(CancellationToken token)
         {
+            Logger.LogTrace("Start watching signal: PrepareForSleep");
+
             _sleepSignal = await LoginManager.WatchPrepareForSleepAsync(PrepareForSleep);
         }
 
         private void PrepareForSleep(bool active)
         {
+            Logger.LogDebug("PrepareForSleep = {active}", active);
+
             if (active)
             {
                 Suspended?.Invoke(this, EventArgs.Empty);
             }
             else
-            { 
+            {
                 ResumeSuspended?.Invoke(this, EventArgs.Empty);
             }
         }
@@ -122,6 +126,8 @@ namespace MadWizard.Desomnia.Power.Manager
         async Task IHostedService.StopAsync(CancellationToken token)
         {
             _sleepSignal?.Dispose();
+
+            Logger.LogTrace("Stopped watching signal: PrepareForSleep");
         }
 
         public void Dispose()
