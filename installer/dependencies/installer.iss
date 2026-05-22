@@ -7,7 +7,7 @@ const
   UninstallStringName = 'UninstallString';
 
 const
-  NPCAP_VERSION = '1.85';
+  NPCAP_VERSION = '1.88';
   
 var
   IsReinstall: Boolean;
