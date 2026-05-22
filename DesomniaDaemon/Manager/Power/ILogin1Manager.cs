@@ -4,7 +4,7 @@ namespace MadWizard.Desomnia.Power.Manager
 {
     // D-Bus proxy interface for org.freedesktop.login1.Manager (systemd-logind).
     [DBusInterface("org.freedesktop.login1.Manager")]
-    interface ILogin1Manager : IDBusObject
+    public interface ILogin1Manager : IDBusObject
     {
         Task SuspendAsync   (bool interactive);
         Task HibernateAsync (bool interactive);
