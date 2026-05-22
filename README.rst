@@ -205,5 +205,5 @@ If you like this project, consider supporting it:
 .. TODO: Create Discord server
 
 .. |Discord| image:: https://img.shields.io/badge/chat-on%20discord-7289da.svg
-   :target: https://discord.gg/RzrBjcy2
+   :target: https://discord.gg/6x6n7pcG39
    :alt: Discord
