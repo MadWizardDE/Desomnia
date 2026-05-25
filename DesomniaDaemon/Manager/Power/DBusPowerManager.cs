@@ -7,7 +7,7 @@ namespace MadWizard.Desomnia.Power.Manager
     public class DBusPowerManager(InhibitionOperation watchOperation, InhibitionMode watchMode) 
         : IPowerManager, IHostedService, IDisposable
     {
-        const string InhibitionName = "Desomnia";
+        const string InhibitionName = "Desomnia Sleep Management";
 
         public required ILogger<DBusPowerManager> Logger { private get; init; }
 
