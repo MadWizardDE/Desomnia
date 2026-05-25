@@ -4,11 +4,13 @@ using System.Diagnostics;
 namespace MadWizard.Desomnia.Power.Manager
 {
     // Fallback implementation that uses /sys/power/state directly (no D-Bus / logind required).
-    // Power inhibitor locks are not available via sysfs — CreateRequest returns a no-op placeholder.
+    // Power inhibitor locks are not available via sysfs — CreateRequest throws a NotSupportedException.
     // Suspended/ResumeSuspended events are only fired around suspend calls made by this daemon;
     // externally-triggered suspends are not observable without D-Bus.
+
     public class SysPowerManager : IPowerManager
     {
+        private const string ShutdownCommand = "shutdown";
         private const string SysPowerState = "/sys/power/state";
 
         public required ILogger<SysPowerManager> Logger { private get; init; }
@@ -30,7 +32,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 File.WriteAllText(SysPowerState, value); // blocks until resume
                 ResumeSuspended?.Invoke(this, EventArgs.Empty);
 
-                Logger.LogDebug("/sys/power/state = null");
+                Logger.LogDebug("/sys/power/state = '{state}'", "");
             }
         }
 
@@ -52,41 +54,39 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             Logger.LogDebug("Requested ACPI state: S5 (shutdown)");
 
-            if (message != null)
-                Logger.LogInformation("Shutdown message: {message}", message);
-
-            await ExecuteShutdown("-P", timeout);
+            await ExecuteShutdown("-P", timeout, message);
         }
 
         public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
             Logger.LogDebug("Requested ACPI state: S0 (reboot)");
 
-            if (message != null)
-                Logger.LogInformation("Reboot message: {message}", message);
-
-            await ExecuteShutdown("-r", timeout);
+            await ExecuteShutdown("-r", timeout, message);
         }
 
-        private async Task ExecuteShutdown(string flag, TimeSpan? timeout)
+        private async Task ExecuteShutdown(string flag, TimeSpan? timeout, string? message = null)
         {
-            // shutdown(8) uses minutes; round up, minimum 1 minute for any non-zero delay.
-            string time = timeout.HasValue
+            string time = timeout.HasValue // shutdown(8) uses minutes; round up, minimum 1 minute for any non-zero delay.
                 ? $"+{Math.Max(1, (int)Math.Ceiling(timeout.Value.TotalMinutes))}"
                 : "now";
 
-            var startInfo = new ProcessStartInfo("shutdown") { UseShellExecute = false, CreateNoWindow = true };
-            startInfo.ArgumentList.Add("--no-wall");
+            var startInfo = new ProcessStartInfo(ShutdownCommand) { UseShellExecute = false, CreateNoWindow = true };
+            //startInfo.ArgumentList.Add("--no-wall");
             startInfo.ArgumentList.Add(flag);
             startInfo.ArgumentList.Add(time);
 
-            using var process = System.Diagnostics.Process.Start(startInfo)
-                ?? throw new Exception("Failed to start shutdown command.");
+            if (message is not null)
+            {
+                startInfo.ArgumentList.Add($"\"${message}\"");
+            }
+
+            using var process = System.Diagnostics.Process.Start(startInfo) 
+                ?? throw new Exception($"Failed to start '${ShutdownCommand}' command.");
 
             await process.WaitForExitAsync();
 
             if (process.ExitCode != 0)
-                throw new Exception($"shutdown exited with code {process.ExitCode}.");
+                throw new Exception($"'${ShutdownCommand}' exited with code {process.ExitCode}.");
         }
 
         async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)

@@ -60,19 +60,18 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public async Task Hibernate()
-        {
-            Logger.LogDebug("Requested ACPI state: {state}", "S4 (hibernate)");
-
-            await LoginManager.HibernateAsync(false);
-        }
-
-
         public async Task Suspend()
         {
             Logger.LogDebug("Requested ACPI state: {state}", "S1-S3 (sleep)");
 
-            await LoginManager.SuspendAsync(false);
+            await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
+        }
+
+        public async Task Hibernate()
+        {
+            Logger.LogDebug("Requested ACPI state: {state}", "S4 (hibernate)");
+
+            await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
         }
 
         public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
@@ -82,10 +81,10 @@ namespace MadWizard.Desomnia.Power.Manager
             if (message != null)
                 Logger.LogInformation("Shutdown message: {message}", message);
 
-            if (timeout.HasValue)
-                await LoginManager.ScheduleShutdownAsync("poweroff", ToLogindUsec(timeout.Value));
+            if (!timeout.HasValue)
+                await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
             else
-                await LoginManager.PowerOffAsync(false);
+                await LoginManager.ScheduleShutdownAsync("poweroff", ToLogindUsec(timeout.Value));
         }
 
         public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
@@ -95,10 +94,10 @@ namespace MadWizard.Desomnia.Power.Manager
             if (message != null)
                 Logger.LogInformation("Reboot message: {message}", message);
 
-            if (timeout.HasValue)
-                await LoginManager.ScheduleShutdownAsync("reboot", ToLogindUsec(timeout.Value));
+            if (!timeout.HasValue)
+                await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
             else
-                await LoginManager.RebootAsync(false);
+                await LoginManager.ScheduleShutdownAsync("reboot", ToLogindUsec(timeout.Value));
         }
 
         async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)

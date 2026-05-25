@@ -6,10 +6,14 @@ namespace MadWizard.Desomnia.Power.Manager
     [DBusInterface("org.freedesktop.login1.Manager")]
     public interface ILogin1Manager : IDBusObject
     {
-        Task SuspendAsync   (bool interactive);
-        Task HibernateAsync (bool interactive);
-        Task PowerOffAsync  (bool interactive);
-        Task RebootAsync    (bool interactive);
+        const ulong SD_LOGIND_ROOT_CHECK_INHIBITORS = 0x01;
+        const ulong SD_LOGIND_SKIP_INHIBITORS       = 0x10;
+
+        Task SuspendWithFlagsAsync      (ulong flags);
+        Task HibernateWithFlagsAsync    (ulong flags);
+
+        Task PowerOffWithFlagsAsync     (ulong flags);
+        Task RebootWithFlagsAsync       (ulong flags);
 
         Task ScheduleShutdownAsync(string type, ulong usec);
 
