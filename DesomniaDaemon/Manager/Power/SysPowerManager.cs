@@ -10,19 +10,23 @@ namespace MadWizard.Desomnia.Power.Manager
 
     public class SysPowerManager : IPowerManager
     {
-        private const string ShutdownCommand = "shutdown";
+        // see: https://www.kernel.org/doc/Documentation/power/states.txt
         private const string SysPowerState = "/sys/power/state";
+
+        private const string ShutdownCommand = "shutdown";
 
         public required ILogger<SysPowerManager> Logger { private get; init; }
 
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
 
+        private string[] AvailablePowerStates => File.ReadAllText(SysPowerState).Split(' ');
+
         private string PowerState
         {
             set
             {
-                var supported = !File.ReadAllText(SysPowerState).Contains(value) 
+                var supported = !AvailablePowerStates.Contains(value)
                     ? throw new NotSupportedException($"Power state {value} is not supported by this system.") 
                     : true;
 
@@ -66,7 +70,7 @@ namespace MadWizard.Desomnia.Power.Manager
 
         private async Task ExecuteShutdown(string flag, TimeSpan? timeout, string? message = null)
         {
-            string time = timeout.HasValue // shutdown(8) uses minutes; round up, minimum 1 minute for any non-zero delay.
+            string time = timeout.HasValue // Shutdown(8) uses minutes; round up, minimum 1 minute for any non-zero Delay.
                 ? $"+{Math.Max(1, (int)Math.Ceiling(timeout.Value.TotalMinutes))}"
                 : "now";
 

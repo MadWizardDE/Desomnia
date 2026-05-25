@@ -7,6 +7,8 @@ using System.ServiceProcess;
 
 namespace MadWizard.Desomnia.Power.Manager
 {
+    // see: https://learn.microsoft.com/en-us/windows/win32/power/system-power-states
+
     public class PowerManager : IPowerManager
     {
         public required ILogger<PowerManager> Logger { private get; init; }

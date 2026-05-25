@@ -3,6 +3,7 @@ using MadWizard.Desomnia.Daemon.Configuration;
 using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
+using Microsoft.Extensions.Configuration.Xml;
 
 namespace MadWizard.Desomnia.Daemon
 {
@@ -16,6 +17,8 @@ namespace MadWizard.Desomnia.Daemon
             if (Config.UseDBus && HasSystemDBus())
             {
                 builder.RegisterType<DBusPowerManager>()
+                    .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.WatchOperation))
+                    .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.WatchMode))
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();
@@ -33,6 +36,12 @@ namespace MadWizard.Desomnia.Daemon
                 .AsImplementedInterfaces()
                 .InstancePerNetwork()
                 .AsSelf();
+        }
+
+        protected override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
+        {
+            source.AddEnumAttribute("watchOperation")
+                  .AddEnumAttribute("watchMode");
         }
     }
 }

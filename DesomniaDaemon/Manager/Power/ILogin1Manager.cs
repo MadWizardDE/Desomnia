@@ -3,6 +3,7 @@
 namespace MadWizard.Desomnia.Power.Manager
 {
     // D-Bus proxy interface for org.freedesktop.login1.Manager (systemd-logind).
+    // see: https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.login1.html
     [DBusInterface("org.freedesktop.login1.Manager")]
     public interface ILogin1Manager : IDBusObject
     {
@@ -23,7 +24,7 @@ namespace MadWizard.Desomnia.Power.Manager
         // a(ssssuu): what, who, why, mode, uid, pid
         Task<(string what, string who, string why, string mode, uint uid, uint pid)[]> ListInhibitorsAsync();
 
-        // PrepareForSleep(b active): active=true → about to sleep, active=false → resumed
+        // PrepareForSleep(b active): active=true → about to Sleep, active=false → resumed
         Task<IDisposable> WatchPrepareForSleepAsync(Action<bool> handler, Action<Exception>? onError = null);
     }
 }

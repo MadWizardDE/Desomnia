@@ -4,7 +4,8 @@ using Tmds.DBus;
 
 namespace MadWizard.Desomnia.Power.Manager
 {
-    public class DBusPowerManager : IPowerManager, IHostedService, IDisposable
+    public class DBusPowerManager(InhibitionOperation watchOperation, InhibitionMode watchMode) 
+        : IPowerManager, IHostedService, IDisposable
     {
         public required ILogger<DBusPowerManager> Logger { private get; init; }
 
@@ -19,6 +20,8 @@ namespace MadWizard.Desomnia.Power.Manager
                 {
                     field = new Connection(Address.System);
                     field.ConnectAsync().GetAwaiter().GetResult();
+
+                    Logger.LogTrace("Connection to D-Bus established.");
                 }
 
                 return field;
@@ -41,9 +44,9 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async Task IHostedService.StartAsync(CancellationToken token)
         {
-            Logger.LogTrace("Start watching signal: PrepareForSleep");
-
             _sleepSignal = await LoginManager.WatchPrepareForSleepAsync(PrepareForSleep);
+
+            Logger.LogTrace("Watching signal: '{Signal}'", "PrepareForSleep");
         }
 
         private void PrepareForSleep(bool active)
@@ -106,7 +109,12 @@ namespace MadWizard.Desomnia.Power.Manager
 
             var handle = await LoginManager.InhibitAsync("sleep", "Desomnia", reason, "block");
 
-            return new InhibitionRequest("Desomnia", reason, handle);
+            return new InhibitionRequest("Desomnia", reason, 
+                InhibitionOperation.Sleep, 
+                InhibitionMode.Block) 
+            {
+                Handle = handle
+            };
         }
 
         async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
@@ -115,9 +123,17 @@ namespace MadWizard.Desomnia.Power.Manager
 
             foreach (var (what, who, why, mode, uid, pid) in inhibitors)
             {
-                if (what.Contains("sleep"))
+                var inhibition = new InhibitionRequest(who, why,
+                        Inhibition.OfOperation(what),
+                        Inhibition.OfMode(mode))
                 {
-                    yield return new InhibitionRequest(who, why);
+                    UID = uid,
+                    PID = pid
+                };
+
+                if (watchOperation.HasFlag(inhibition.Operation) && watchMode.HasFlag(inhibition.Mode))
+                {
+                    yield return inhibition;
                 }
             }
         }
@@ -126,12 +142,14 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             _sleepSignal?.Dispose();
 
-            Logger.LogTrace("Stopped watching signal: PrepareForSleep");
+            Logger.LogTrace("Stopped watching signal: '{Signal}'", "PrepareForSleep");
         }
 
         public void Dispose()
         {
             SystemBusConnection.Dispose();
+
+            Logger.LogTrace("Disconnected from D-Bus.");
         }
 
         private static ulong ToLogindUsec(TimeSpan timeout)
