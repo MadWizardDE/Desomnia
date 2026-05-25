@@ -7,10 +7,9 @@ namespace MadWizard.Desomnia.Power.Manager
     public class DBusPowerManager(InhibitionOperation watchOperation, InhibitionMode watchMode) 
         : IPowerManager, IHostedService, IDisposable
     {
-        public required ILogger<DBusPowerManager> Logger { private get; init; }
+        const string InhibitionName = "Desomnia";
 
-        public event EventHandler? Suspended;
-        public event EventHandler? ResumeSuspended;
+        public required ILogger<DBusPowerManager> Logger { private get; init; }
 
         private Connection      SystemBusConnection
         {
@@ -31,14 +30,20 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             get
             {
+                const string serviceName    = "org.freedesktop.login1";
+                const string objectPath     = "/org/freedesktop/login1";
+
                 if (field == null)
                 {
-                    field = SystemBusConnection.CreateProxy<ILogin1Manager>("org.freedesktop.login1", "/org/freedesktop/login1");
+                    field = SystemBusConnection.CreateProxy<ILogin1Manager>(serviceName, objectPath);
                 }
 
                 return field;
             }
         }
+
+        public event EventHandler? Suspended;
+        public event EventHandler? ResumeSuspended;
 
         private IDisposable? _sleepSignal;
 
@@ -107,9 +112,9 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             Logger.LogDebug("Creating sleep inhibitor: {reason}", reason);
 
-            var handle = await LoginManager.InhibitAsync("sleep", "Desomnia", reason, "block");
+            var handle = await LoginManager.InhibitAsync("sleep", InhibitionName, reason, "block");
 
-            return new InhibitionRequest("Desomnia", reason, 
+            return new InhibitionRequest(InhibitionName, reason,
                 InhibitionOperation.Sleep, 
                 InhibitionMode.Block) 
             {
