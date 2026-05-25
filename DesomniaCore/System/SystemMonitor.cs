@@ -130,7 +130,7 @@ namespace MadWizard.Desomnia
         {
             if (reason == null)
             {
-                reason = $"No Standby because: " + (eventRef.Tokens.Any() ? string.Join(", ", eventRef.Tokens) : "?");
+                reason = eventRef.Tokens.Any() ? string.Join(", ", eventRef.Tokens) : "?";
             }
 
             if (SleeplessIfUsage != false || eventRef.Tokens.OfType<SleeplessToken>().Any())
