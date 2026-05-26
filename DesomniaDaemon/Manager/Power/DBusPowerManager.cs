@@ -73,6 +73,9 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Suspend()
         {
+            if (await LoginManager.CanSuspend() != "yes")
+                throw new NotSupportedException("ACPI state S1-S3 (sleep) not available");
+
             Logger.LogDebug("Requested ACPI state: {state}", "S1-S3 (sleep)");
 
             try
@@ -87,6 +90,9 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Hibernate()
         {
+            if (await LoginManager.CanHibernate() != "yes")
+                throw new NotSupportedException("ACPI state S4 (hibernate) not available");
+
             Logger.LogDebug("Requested ACPI state: {state}", "S4 (hibernate)");
 
             try
@@ -123,6 +129,9 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
+            if (await LoginManager.CanReboot() != "yes")
+                throw new NotSupportedException("ACPI state S0 (reboot) not available");
+
             Logger.LogDebug("Requested ACPI state: S0 (reboot)");
 
             if (message != null)
