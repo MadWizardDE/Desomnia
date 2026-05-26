@@ -1,6 +1,6 @@
 ﻿using Tmds.DBus;
 
-namespace MadWizard.Desomnia.Power.Manager
+namespace MadWizard.Desomnia.Daemon.DBus.Manager
 {
     // D-Bus proxy interface for org.freedesktop.login1.Manager (systemd-logind).
     // see: https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.login1.html

@@ -1,3 +1,4 @@
+using MadWizard.Desomnia.Daemon.DBus.Manager;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Tmds.DBus;
@@ -5,42 +6,13 @@ using Tmds.DBus;
 namespace MadWizard.Desomnia.Power.Manager
 {
     public class DBusPowerManager(InhibitionOperation watchOperation, InhibitionMode watchMode) 
-        : IPowerManager, IHostedService, IDisposable
+        : IPowerManager, IHostedService
     {
         const string InhibitionName = "Desomnia Sleep Management";
 
         public required ILogger<DBusPowerManager> Logger { private get; init; }
 
-        private Connection      SystemBusConnection
-        {
-            get
-            {
-                if (field == null)
-                {
-                    field = new Connection(Address.System);
-                    field.ConnectAsync().GetAwaiter().GetResult();
-
-                    Logger.LogTrace("Connection to D-Bus established.");
-                }
-
-                return field;
-            }
-        }
-        private ILogin1Manager  LoginManager
-        {
-            get
-            {
-                const string serviceName    = "org.freedesktop.login1";
-                const string objectPath     = "/org/freedesktop/login1";
-
-                if (field == null)
-                {
-                    field = SystemBusConnection.CreateProxy<ILogin1Manager>(serviceName, objectPath);
-                }
-
-                return field;
-            }
-        }
+        public required ILogin1Manager LoginManager { private get; set; }
 
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
@@ -51,10 +23,12 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             _sleepSignal = await LoginManager.WatchPrepareForSleepAsync(PrepareForSleep);
 
-            Logger.LogTrace("Watching LoginManager signal: {signal}", "PrepareForSleep");
+            Logger.LogTrace("Watching LoginManager signals: {signal}", "PrepareForSleep");
 
-            Logger.LogTrace("Watching Inhibition operations: {operation}", watchOperation);
-            Logger.LogTrace("Watching Inhibition modes: {mode}", watchMode);
+            if (watchOperation != InhibitionOperation.None)
+                Logger.LogTrace("Watching Inhibition operations: {operation}", watchOperation);
+            if (watchMode != InhibitionMode.None)
+                Logger.LogTrace("Watching Inhibition modes: {mode}", watchMode);
         }
 
         private void PrepareForSleep(bool active)
@@ -71,6 +45,7 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
+        #region IPowerManager implementation
         public async Task Suspend()
         {
             const string acpi = "S1-S3 (sleep)";
@@ -188,10 +163,16 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
+            Logger.LogTrace("before list");
+
             var inhibitors = await LoginManager.ListInhibitorsAsync();
+
+            Logger.LogTrace("after list");
 
             foreach (var (what, who, why, mode, uid, pid) in inhibitors)
             {
+                Logger.LogTrace("next foreach");
+
                 var inhibition = new InhibitionRequest(who, why,
                         Inhibition.OfOperation(what),
                         Inhibition.OfMode(mode))
@@ -206,19 +187,13 @@ namespace MadWizard.Desomnia.Power.Manager
                 }
             }
         }
+        #endregion
 
         async Task IHostedService.StopAsync(CancellationToken token)
         {
             _sleepSignal?.Dispose();
 
-            Logger.LogTrace("Stopped watching signal: '{Signal}'", "PrepareForSleep");
-        }
-
-        public void Dispose()
-        {
-            SystemBusConnection.Dispose();
-
-            Logger.LogTrace("Disconnected from D-Bus.");
+            Logger.LogTrace("Stopped watching.");
         }
 
         private static ulong ToLogindUsec(TimeSpan timeout)
