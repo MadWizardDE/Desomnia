@@ -1,4 +1,5 @@
-using MadWizard.Desomnia.Daemon.DBus.Manager;
+using MadWizard.Desomnia.Daemon.DBus;
+using MadWizard.Desomnia.Daemon.DBus.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Tmds.DBus;
@@ -12,6 +13,7 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public required ILogger<DBusPowerManager> Logger { private get; init; }
 
+        [DBusService("/org/freedesktop/login1")]
         public required ILogin1Manager LoginManager { private get; set; }
 
         public event EventHandler? Suspended;
@@ -163,16 +165,10 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
-            Logger.LogTrace("before list");
-
             var inhibitors = await LoginManager.ListInhibitorsAsync();
-
-            Logger.LogTrace("after list");
 
             foreach (var (what, who, why, mode, uid, pid) in inhibitors)
             {
-                Logger.LogTrace("next foreach");
-
                 var inhibition = new InhibitionRequest(who, why,
                         Inhibition.OfOperation(what),
                         Inhibition.OfMode(mode))

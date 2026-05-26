@@ -1,5 +1,7 @@
 using Autofac;
 using MadWizard.Desomnia.Daemon.Configuration;
+using MadWizard.Desomnia.Daemon.DBus;
+using MadWizard.Desomnia.Daemon.DBus.Interface;
 using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
@@ -17,6 +19,14 @@ namespace MadWizard.Desomnia.Daemon
             // Implementing Power-Manager
             if (Config.UseDBus && HasSystemDBus())
             {
+                builder.RegisterType<DBusManager>()
+                    .AsImplementedInterfaces()
+                    .SingleInstance()
+                    .AsSelf();
+
+                // TODO: this is only a quick fix
+                builder.Register<ILogin1Manager>(ctx => ctx.Resolve<DBusManager>().LoginManager);
+
                 builder.RegisterType<DBusPowerManager>()
                     .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.WatchOperation))
                     .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.WatchMode))

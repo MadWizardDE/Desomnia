@@ -1,8 +1,8 @@
 ﻿using Tmds.DBus;
 
-namespace MadWizard.Desomnia.Daemon.DBus.Manager
+namespace MadWizard.Desomnia.Daemon.DBus.Interface
 {
-    // D-Bus proxy interface for org.freedesktop.login1.Manager (systemd-logind).
+    // D-Bus proxy interface for org.freedesktop.login1.Interface (systemd-logind).
     // see: https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.login1.html
     [DBusInterface("org.freedesktop.login1.Manager")]
     public interface ILogin1Manager : IDBusObject
