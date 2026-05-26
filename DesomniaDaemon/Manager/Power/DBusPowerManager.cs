@@ -72,14 +72,28 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             Logger.LogDebug("Requested ACPI state: {state}", "S1-S3 (sleep)");
 
-            await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
+            try
+            {
+                await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+            }
+            catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+            {
+                await LoginManager.SuspendWithFlagsAsync(0);
+            }
         }
 
         public async Task Hibernate()
         {
             Logger.LogDebug("Requested ACPI state: {state}", "S4 (hibernate)");
 
-            await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
+            try
+            {
+                await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+            }
+            catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+            {
+                await LoginManager.HibernateWithFlagsAsync(0);
+            }
         }
 
         public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
@@ -90,7 +104,16 @@ namespace MadWizard.Desomnia.Power.Manager
                 Logger.LogInformation("Shutdown message: {message}", message);
 
             if (!timeout.HasValue)
-                await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
+            {
+                try
+                {
+                    await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                }
+                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                {
+                    await LoginManager.PowerOffWithFlagsAsync(0);
+                }
+            }
             else
                 await LoginManager.ScheduleShutdownAsync("poweroff", ToLogindUsec(timeout.Value));
         }
@@ -103,7 +126,16 @@ namespace MadWizard.Desomnia.Power.Manager
                 Logger.LogInformation("Reboot message: {message}", message);
 
             if (!timeout.HasValue)
-                await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS);
+            {
+                try
+                {
+                    await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                }
+                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                {
+                    await LoginManager.RebootWithFlagsAsync(0);
+                }
+            }
             else
                 await LoginManager.ScheduleShutdownAsync("reboot", ToLogindUsec(timeout.Value));
         }
