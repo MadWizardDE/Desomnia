@@ -1,5 +1,5 @@
-Local Resource Management
-=========================
+Local Sleep Management
+======================
 
 :OS: 🪟 Windows
 
