@@ -15,8 +15,8 @@ namespace MadWizard.Desomnia.Daemon.DBus
                 if (field == null)
                 {
                     field = new Connection(Address.System);
-                    field.ConnectAsync().GetAwaiter().GetResult();
                     field.StateChanged += SystemBusConnection_StateChanged;
+                    field.ConnectAsync().GetAwaiter().GetResult();
                 }
 
                 return field;
@@ -46,19 +46,25 @@ namespace MadWizard.Desomnia.Daemon.DBus
                 case ConnectionState.Created:
                     Logger.LogTrace("D-Bus connection created.");
                     break;
+
                 case ConnectionState.Connecting:
                     Logger.LogTrace("Connecting to D-Bus...");
                     break;
                 case ConnectionState.Connected:
                     var info = args.ConnectionInfo;
-                    Logger.LogTrace("Connection to D-Bus established" 
-                        + (info.RemoteIsBus ? $": '{info.LocalName}'" : "."));
+                    Logger.LogTrace("Connection to D-Bus established." 
+                        + (info.RemoteIsBus ? $" ('{info.LocalName}')" : ""));
                     break;
+
                 case ConnectionState.Disconnecting:
-                    Logger.LogTrace(args.DisconnectReason, "Disconnecting from D-Bus...");
+                    Logger.LogTrace("Disconnecting from D-Bus...");
                     break;
                 case ConnectionState.Disconnected:
-                    Logger.LogTrace(args.DisconnectReason, "Disconnected from D-Bus.");
+                    if (args.DisconnectReason is not null)
+                        Logger.LogError(args.DisconnectReason, "Disconnected from D-Bus.");
+                    else
+                        Logger.LogTrace("Disconnected from D-Bus.");
+
                     break;
             }
         }
@@ -67,6 +73,8 @@ namespace MadWizard.Desomnia.Daemon.DBus
         {
             SystemBusConnection.StateChanged -= SystemBusConnection_StateChanged;
             SystemBusConnection.Dispose();
+
+            Logger.LogTrace("Disconnected from D-Bus.");
         }
     }
 }

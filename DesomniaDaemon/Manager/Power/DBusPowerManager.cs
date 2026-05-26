@@ -158,7 +158,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 Handle = await LoginManager.InhibitAsync("sleep", InhibitionName, reason, "block")
             };
 
-            Logger.LogTrace("Created inhibitor: {request}", request);
+            Logger.LogTrace("Created {request}", request);
 
             return request;
         }
