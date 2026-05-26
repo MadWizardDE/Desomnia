@@ -7,17 +7,17 @@ using MadWizard.Desomnia.Network.Logging;
 using Microsoft.Extensions.Hosting;
 using NLog;
 
-//await MadWizard.Desomnia.Test.Debugger.UntilAttached();
-
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
 
+bool debug = false;
 bool autoReload = false;
 string? autoReloadPath = null;
 Parser.Default.ParseArguments<CommandLineOptions>(args)
     .WithParsed(options =>
     {
+        debug = options.Debug;
         autoReload = options.AutoReload;
         autoReloadPath = options.AutoReloadPath;
     })
@@ -25,6 +25,11 @@ Parser.Default.ParseArguments<CommandLineOptions>(args)
     {
         Environment.Exit(1);
     });
+
+if (debug)
+{
+    await MadWizard.Desomnia.Test.Debugger.UntilAttached();
+}
 
 const string FHS_CONFIG_PATH = "/etc/desomnia"; // Filesystem Hierarchy Standard
 

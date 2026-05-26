@@ -4,6 +4,9 @@ namespace MadWizard.Desomnia.Daemon.Options
 {
     internal class CommandLineOptions
     {
+        [Option("debug", Required = false, Default = false, HelpText = "Enable debugging.")]
+        public bool Debug { get; set; }
+
         [Option('a', "auto-reload", Required = false, Default = false, HelpText = "Enable automatic reloading after config file changed.")]
         public bool AutoReload { get; set; }
 
