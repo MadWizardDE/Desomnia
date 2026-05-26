@@ -1,75 +1,84 @@
 ﻿using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 
-namespace MadWizard.Desomnia.Manager.Network
+namespace MadWizard.Desomnia.Network.Manager
 {
     /**
      * On Linux hosts, Wake-on-LAN cannot be enabled persistently.
      * Therefore the daemon will try to enable it each time, before going to sleep.
      */
-    internal class WakeOnLANEnabler : INetworkService
+    internal class WakeOnLANEnabler(EthtoolOperator? ethtool = null) : INetworkService
     {
         public required ILogger<WakeOnLANEnabler> Logger { private get; init; }
 
-        public required EthtoolOperator Ethtool { private get; init; }
-
-        private EthtoolFlags SupportedFlags
+        private EthtoolFlags? SupportedFlags
         {
-            get
-            {
-                return ParseFlags(Ethtool["Supports Wake-on"]);
-            }
+            get => ParseFlags(ethtool?["Supports Wake-on"]);
         }
-        private EthtoolFlags Flags
+        private EthtoolFlags? Flags
         {
-            get
-            {
-                return ParseFlags(Ethtool["Wake-on"]);
-            }
+            get => ParseFlags(ethtool?["Wake-on"]);
 
-            set
-            {
-                Ethtool["wol"] = FlagsToString(value);
-            }
+            set => ethtool?["wol"] = FlagsToString(value ?? throw new ArgumentNullException());
         }
 
-        private EthtoolFlags _flagsOnSuspend;
+        private EthtoolFlags? _flagsToReset;
+
+        void INetworkService.Startup()
+        {
+            if (ethtool is not null)
+            {
+                Logger.LogDebug("Automatically enabling Wake-on-LAN on demand");
+            }
+            else
+            {
+                Logger.LogWarning("Automatically enabling Wake-on-LAN is not possible ('ethtool' is not installed)");
+            }
+        }
 
         void INetworkService.Suspend()
         {
             try
             {
-                if (!(_flagsOnSuspend = Flags).HasFlag(EthtoolFlags.MagicPacket))
+                if (Flags is EthtoolFlags flags && !flags.HasFlag(EthtoolFlags.MagicPacket))
                 {
-                    if (!SupportedFlags.HasFlag(EthtoolFlags.MagicPacket))
+                    if (!SupportedFlags?.HasFlag(EthtoolFlags.MagicPacket) ?? false)
                     {
                         Logger.LogWarning("Wake-on-LAN (by Magic Packet) is not supported.");
                     }
                     else
                     {
-                        Flags |= EthtoolFlags.MagicPacket;
+                        Flags = flags | EthtoolFlags.MagicPacket;
+
+                        _flagsToReset = flags;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Wake-on-LAN (by Magic Packet) could not be enabled.");
+                Logger.LogError(ex, "Wake-on-LAN could not be enabled.");
             }
         }
 
         void INetworkService.Resume()
         {
-            try
+            if (_flagsToReset is EthtoolFlags flags)
             {
-                Flags |= _flagsOnSuspend;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Wake-on-LAN could not be resetted.");
+                try
+                {
+                    Flags |= flags;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Wake-on-LAN could not be resetted.");
+                }
+                finally
+                {
+                    _flagsToReset = null;
+                }
             }
         }
 
-        void INetworkService.Startup() { }  // don't call Resume() here
         void INetworkService.Shutdown() { } // don't call Suspend() here
 
         [Flags]
@@ -88,7 +97,7 @@ namespace MadWizard.Desomnia.Manager.Network
         }
 
         #region EthtoolFlags-Mapping
-        // Canonical letter order matches Ethtool's own output order.
+        // Canonical letter order matches ethtool's own output order.
         private static readonly Dictionary<char, EthtoolFlags> Mapping = new()
         {
             ['p'] = EthtoolFlags.Phy,
@@ -101,23 +110,27 @@ namespace MadWizard.Desomnia.Manager.Network
             ['f'] = EthtoolFlags.Filter,
         };
 
-        // Parses the string Ethtool prints after "Wake-on: " / "Supports Wake-on: ".
+        // Parses the string ethtool prints after "Wake-on: " / "Supports Wake-on: ".
         // "d" and empty strings both map to None.
-        private static EthtoolFlags ParseFlags(string? s)
+        private static EthtoolFlags? ParseFlags(string? s)
         {
-            var result = EthtoolFlags.None;
-
             if (s != null)
-            foreach (char c in s)
             {
-                if (Mapping.TryGetValue(c, out var flag))
-                    result |= flag;
+                var result = EthtoolFlags.None;
+
+                foreach (char c in s)
+                {
+                    if (Mapping.TryGetValue(c, out var flag))
+                        result |= flag;
+                }
+
+                return result;
             }
 
-            return result;
+            return null;
         }
 
-        // Produces the string to pass to "Ethtool -s <iface> wol <value>".
+        // Produces the string to pass to "ethtool -s <iface> wol <value>".
         // None returns "d" (disable).
         private static string FlagsToString(EthtoolFlags flags)
         {

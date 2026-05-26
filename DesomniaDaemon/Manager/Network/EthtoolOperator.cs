@@ -1,8 +1,7 @@
-﻿using MadWizard.Desomnia.Network;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
-namespace MadWizard.Desomnia.Manager.Network
+namespace MadWizard.Desomnia.Network.Manager
 {
     internal class EthtoolOperator
     {
@@ -62,6 +61,30 @@ namespace MadWizard.Desomnia.Manager.Network
             }
 
             return process.StandardOutput.ReadToEnd();
+        }
+
+        public static bool IsInstalled
+        {
+            get
+            {
+                using var process = System.Diagnostics.Process.Start(new ProcessStartInfo
+                {
+                    FileName = "sh",
+                    ArgumentList = { "-c", "command -v ethtool" },
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false
+                });
+
+                if (process is not null)
+                {
+                    process.WaitForExit();
+
+                    return process.ExitCode == 0;
+                }
+
+                return false;
+            }
         }
     }
 }
