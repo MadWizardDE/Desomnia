@@ -340,3 +340,5 @@ ASALocalRun/
 healthchecksdb
 
 launchSettings.json
+
+.claude
