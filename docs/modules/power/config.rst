@@ -10,7 +10,7 @@ You can configure any number of ``<RequestFilterRule>`` to describe which power 
 
   <SystemMonitor>
 
-    <PowerRequestMonitor>
+    <PowerRequestMonitor watchOperation="sleep" watchMode="block|block-weak">
 
       <RequestFilterRule ... />
       <RequestFilterRule ... />
@@ -18,6 +18,27 @@ You can configure any number of ``<RequestFilterRule>`` to describe which power 
     </PowerRequestMonitor>
 
   </SystemMonitor>
+
+watchOperation
+++++++++++++++
+
+:default: ``sleep``
+:OS: 🐧 *Linux*
+
+Controls which inhibition operations are visible to the ``<PowerRequestMonitor>``. Only locks whose operation matches one of the configured values are evaluated by filter rules and counted as usage. Multiple values can be combined with ``|``.
+
+.. include:: inhibition/operation.rst
+
+watchMode
++++++++++
+
+:default: ``block|block-weak``
+
+:OS: 🐧 *Linux*
+
+Controls which inhibition modes are visible to the ``<PowerRequestMonitor>``. Only locks whose mode matches one of the configured values are evaluated. Multiple values can be combined with ``|``.
+
+.. include:: inhibition/mode.rst
 
 RequestFilterRule
 -----------------

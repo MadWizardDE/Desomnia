@@ -29,7 +29,7 @@ Available installation methods
 What to read next
 -----------------
 
-Once Desomnia is installed and running, the :doc:`/guides/sleep` guide is the best place to start, if you want to **replace the built-in power management** with Desomnia's configurable monitoring. Local resource management is currently supported on **Windows only**; on Linux and macOS, the primary use cases are as a :doc:`WoL client </guides/wol-client>` or :doc:`network proxy </guides/wol-proxy>`.
+Once Desomnia is installed and running, the :doc:`/guides/sleep` guide is the best place to start, if you want to **replace the built-in power management** with Desomnia's configurable monitoring. Local resource management is supported on **Windows and Linux**; on macOS, the primary use cases are as a :doc:`WoL client </guides/wol-client>` or :doc:`network proxy </guides/wol-proxy>`.
 
 If your primary goal is to **wake remote hosts on demand**, head directly to the Wake-on-LAN guides: start with :doc:`/guides/wol-client` if Desomnia should run locally on the machine that initiates the connection, or :doc:`/guides/wol-proxy` if you want it to run on an always-on device that watches the network and send Magic Packets on behalf of other hosts. The proxy deployment is the most sophisticated and feature rich.
 

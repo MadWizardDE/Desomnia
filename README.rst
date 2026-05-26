@@ -22,7 +22,7 @@ Modes of operation
 
 Desomnia can be deployed in three complementary roles and combined across multiple machines:
 
-1. **Local Sleep Management** – 🪟 *Windows*
+1. **Local Sleep Management** – 🪟 *Windows* 🐧 *Linux*
 
    Replaces the OS's built-in sleep management. Desomnia holds the system awake while any watched resource is active — a user session, a running process, an open SMB share, an incoming network connection — and sends it to sleep once everything goes quiet.
 
@@ -57,7 +57,7 @@ The following activities can be tracked out of the box:
 
    Keeps the system awake while remote clients have open file-sharing sessions, with fine-grained filtering by username, client name, IP address, share name, or file path.
 
--  **Power requests** – 🪟 *Windows*
+-  **Power requests** – 🪟 *Windows* 🐧 *Linux*
 
    Tracks and filters the power requests registered by processes and drivers — giving you selective control over something the OS's own override mechanism cannot reliably provide.
 

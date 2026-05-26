@@ -1,7 +1,7 @@
 Local Sleep Management
 ======================
 
-:OS: 🪟 Windows
+:OS: 🪟 Windows 🐧 Linux
 
 Where are the limits?
 ---------------------
@@ -130,18 +130,6 @@ SystemMonitor
 
 The root container for all resource monitors. It provides the events and actions that control system-level sleep behaviour. See :doc:`/modules/system/monitor` to understand its role in Desomnia's architecture.
 
-SessionMonitor
-++++++++++++++
-
-The built-in power management keeps the system awake for as long as a user is interacting with it, based on input activity such as mouse and keyboard movement.
-
-Enabling this monitor makes user session activity contribute to the system's overall idle state. See :doc:`/modules/session/monitor` to learn how to filter by user account and how to use session events — for example, to automatically log out idle sessions or stop idle processes.
-
-NetworkSessionMonitor
-+++++++++++++++++++++
-
-Keeps the system awake while remote clients have open SMB sessions — for example, while someone is actively accessing shared files or folders. See :doc:`/modules/network_session/monitor` to learn how to filter which sessions should count as activity.
-
 PowerRequestMonitor
 +++++++++++++++++++
 
@@ -156,3 +144,19 @@ NetworkMonitor
 ++++++++++++++
 
 Beyond basic idle detection, this monitor can watch local network services and keep the system awake while they are in use. It also integrates with the Wake-on-LAN functionality to wake remote hosts on demand. See :doc:`/modules/network/monitor` for the full reference, or the :doc:`wol-client` and :doc:`wol-proxy` guides for practical Wake-on-LAN setup.
+
+NetworkSessionMonitor
++++++++++++++++++++++
+
+:OS: 🪟 Windows only
+
+Keeps the system awake while remote clients have open SMB sessions — for example, while someone is actively accessing shared files or folders. See :doc:`/modules/network_session/monitor` to learn how to filter which sessions should count as activity.
+
+SessionMonitor
+++++++++++++++
+
+:OS: 🪟 Windows only
+
+The built-in power management keeps the system awake for as long as a user is interacting with it, based on input activity such as mouse and keyboard movement.
+
+Enabling this monitor makes user session activity contribute to the system's overall idle state. See :doc:`/modules/session/monitor` to learn how to filter by user account and how to use session events — for example, to automatically log out idle sessions or stop idle processes.
