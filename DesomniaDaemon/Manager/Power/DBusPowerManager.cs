@@ -49,12 +49,12 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async Task IHostedService.StartAsync(CancellationToken token)
         {
-            Logger.LogTrace("Watching Inhibition operation: '{operation}'", watchOperation);
-            Logger.LogTrace("Watching Inhibition mode: '{mode}'", watchMode);
-
             _sleepSignal = await LoginManager.WatchPrepareForSleepAsync(PrepareForSleep);
 
-            Logger.LogTrace("Watching LoginManager signal: '{signal}'", "PrepareForSleep");
+            Logger.LogTrace("Watching LoginManager signal: {signal}", "PrepareForSleep");
+
+            Logger.LogTrace("Watching Inhibition operations: {operation}", watchOperation);
+            Logger.LogTrace("Watching Inhibition modes: {mode}", watchMode);
         }
 
         private void PrepareForSleep(bool active)

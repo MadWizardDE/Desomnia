@@ -28,7 +28,7 @@ namespace MadWizard.Desomnia.Network.Manager
         {
             if (ethtool is not null)
             {
-                Logger.LogDebug("Automatically enabling Wake-on-LAN on demand");
+                Logger.LogDebug("Automatically enabling Wake-on-LAN before suspend");
             }
             else
             {
