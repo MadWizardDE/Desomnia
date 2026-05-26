@@ -142,16 +142,16 @@ namespace MadWizard.Desomnia.Power.Manager
 
         async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
         {
-            Logger.LogDebug("Creating sleep inhibitor: {reason}", reason);
-
-            var handle = await LoginManager.InhibitAsync("sleep", InhibitionName, reason, "block");
-
-            return new InhibitionRequest(InhibitionName, reason,
-                InhibitionOperation.Sleep, 
-                InhibitionMode.Block) 
+            var request = new InhibitionRequest(InhibitionName, reason,
+                InhibitionOperation.Sleep,
+                InhibitionMode.Block)
             {
-                Handle = handle
+                Handle = await LoginManager.InhibitAsync("sleep", InhibitionName, reason, "block")
             };
+
+            Logger.LogTrace("Created inhibitor: {request}", request);
+
+            return request;
         }
 
         async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)

@@ -18,6 +18,11 @@ namespace MadWizard.Desomnia.Power.Manager
         {
             Handle?.Dispose();
         }
+
+        public override string ToString()
+        {
+            return $"InhibitionRequest(who='{name}', why='{reason}', what={operation}, mode={mode})";
+        }
     }
 
     [Flags]
