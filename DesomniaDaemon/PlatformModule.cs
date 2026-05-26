@@ -1,5 +1,6 @@
 using Autofac;
 using MadWizard.Desomnia.Daemon.Configuration;
+using MadWizard.Desomnia.Manager.Network;
 using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
@@ -14,6 +15,7 @@ namespace MadWizard.Desomnia.Daemon
 
         protected override void Load(ContainerBuilder builder)
         {
+            // Implementing Power-Manager
             if (Config.UseDBus && HasSystemDBus())
             {
                 builder.RegisterType<DBusPowerManager>()
@@ -31,9 +33,14 @@ namespace MadWizard.Desomnia.Daemon
                     .AsSelf();
             }
 
-            // Implementing Network-Managers
+            // Implementing network adapters
             builder.RegisterType<LinuxNeighborCache>()
                 .AsImplementedInterfaces()
+                .InstancePerNetwork();
+            builder.RegisterType<WakeOnLANEnabler>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
+            builder.RegisterType<EthtoolOperator>()
                 .InstancePerNetwork()
                 .AsSelf();
         }

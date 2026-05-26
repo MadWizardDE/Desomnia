@@ -134,6 +134,7 @@ namespace MadWizard.Desomnia.Network
 
                 // Feed NetworkMonitors dynamically into the SystemMonitor
                 builder.RegisterServiceMiddleware<IEnumerable<IInspectable>>(new DynamicNetworkMonitors());
+                /// builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors()); // TODO: has to be tested
                 builder.RegisterServiceMiddleware<IEnumerable<NetworkService>>(new DynamicNetworkServices());
                 builder.RegisterServiceMiddleware<IEnumerable<PacketFilterRule>>(new DynamicPacketFilterRules());
             }
