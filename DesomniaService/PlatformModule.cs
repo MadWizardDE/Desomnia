@@ -13,7 +13,6 @@ namespace MadWizard.Desomnia.Service
     {
         protected override void Load(ContainerBuilder builder)
         {
-            // Implementing Platform-Managers
             builder.RegisterType<PowerManager>()
                 .AsImplementedInterfaces()
                 .SingleInstance()

@@ -4,6 +4,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends \
     libpcap0.8t64 \
     iproute2 \
+    ethtool \
  && rm -rf /var/lib/apt/lists/*
 
 COPY plugins/ /usr/lib/desomnia/plugins/

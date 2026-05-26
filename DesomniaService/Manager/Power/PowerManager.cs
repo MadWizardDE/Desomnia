@@ -7,6 +7,8 @@ using System.ServiceProcess;
 
 namespace MadWizard.Desomnia.Power.Manager
 {
+    // see: https://learn.microsoft.com/en-us/windows/win32/power/system-power-states
+
     public class PowerManager : IPowerManager
     {
         public required ILogger<PowerManager> Logger { private get; init; }
@@ -40,13 +42,16 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public void Suspend(bool hibernate = false)
+        async Task IPowerManager.Hibernate()    => await Suspend(true);
+        async Task IPowerManager.Suspend()      => await Suspend(false);
+
+        async Task Suspend(bool hibernate = false)
         {
             var acpi = hibernate ? "S4 (hibernate)" : "S1-S3 (sleep)";
 
             if (hibernate ? IsPwrHibernateAllowed() : IsPwrSuspendAllowed())
             {
-                Logger.LogDebug($"Requested ACPI state: {acpi}");
+                Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
                 if (!SetSuspendState(hibernate, false, false))
                 {
@@ -55,15 +60,17 @@ namespace MadWizard.Desomnia.Power.Manager
             }
             else
             {
-                Logger.LogWarning($"Requested ACPI state: {acpi} [unsupported]");
+                Logger.LogWarning("Requested ACPI state: {acpi} [unsupported]", acpi);
             }
         }
 
-        public void Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
+            const string acpi = "S5 (shutdown)";
+
             EnableShutdownPrivilege();
 
-            Logger.LogDebug($"Requested ACPI state: S5 (shutdown)");
+            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
             uint seconds = (uint)(timeout?.TotalSeconds ?? 0);
 
@@ -73,11 +80,13 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        public void Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
+        public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
+            const string acpi = "S0 (reboot)";
+
             EnableShutdownPrivilege();
 
-            Logger.LogDebug($"Requested ACPI state: S0 (reboot)");
+            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
             uint seconds = (uint)(timeout?.TotalSeconds ?? 0);
 
@@ -87,12 +96,12 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        IPowerRequest IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
         {
             return new PowerRequest(PowerRequestsType.SystemRequired, reason);
         }
 
-        IEnumerator<IPowerRequest> IEnumerable<IPowerRequest>.GetEnumerator()
+        async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
         {
             Dictionary<PowerRequestsType, List<PowerRequest>> requestsByType = [];
 
@@ -149,7 +158,7 @@ namespace MadWizard.Desomnia.Power.Manager
                     }
                 }
 
-                process.WaitForExit();
+                await process.WaitForExitAsync();
 
                 if (requestsByType.TryGetValue(PowerRequestsType.SystemRequired, out var systemRequests))
                     foreach (var systemReuqest in systemRequests)

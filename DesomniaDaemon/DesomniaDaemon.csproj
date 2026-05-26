@@ -13,11 +13,13 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="Tmds.DBus" Version="0.93.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DesomniaCore\DesomniaCore.csproj" />
     <ProjectReference Include="..\modules\NetworkMonitor\NetworkMonitor.csproj" />
+    <ProjectReference Include="..\modules\PowerRequestMonitor\PowerRequestMonitor.csproj" />
     <ProjectReference Include="..\modules\ProcessMonitor\ProcessMonitor.csproj" />
   </ItemGroup>
 

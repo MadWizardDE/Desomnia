@@ -113,29 +113,29 @@ namespace MadWizard.Desomnia
         }
 
         [ActionHandler("reboot")]
-        internal void HandleActionReboot() => power.Reboot();
+        internal async Task HandleActionReboot() => await power.Reboot();
         [ActionHandler("shutdown")]
-        internal void HandleActionShutdown() => power.Shutdown();
+        internal async Task HandleActionShutdown() => await power.Shutdown();
         [ActionHandler("sleep")]
-        internal void HandleActionSleep()
+        internal async Task HandleActionSleep()
         {
             TriggerEvent(nameof(Suspend));
             TriggerEvent(nameof(SuspendTimeout));
 
-            power.Suspend();
+            await power.Suspend();
         }
 
         [ActionHandler("sleepless")]
-        internal void HandleActionSleepless(InspectionEvent eventRef, string? reason = null, bool addTokens = true)
+        internal async Task HandleActionSleepless(InspectionEvent eventRef, string? reason = null, bool addTokens = true)
         {
             if (reason == null)
             {
-                reason = $"No Standby because: " + (eventRef.Tokens.Any() ? string.Join(", ", eventRef.Tokens) : "?");
+                reason = eventRef.Tokens.Any() ? string.Join(", ", eventRef.Tokens) : "?";
             }
 
             if (SleeplessIfUsage != false || eventRef.Tokens.OfType<SleeplessToken>().Any())
             {
-                Request = power.CreateRequest($"{reason}");
+                Request = await power.CreateRequest($"{reason}");
             }
         }
 

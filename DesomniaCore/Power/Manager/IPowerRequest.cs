@@ -2,7 +2,7 @@
 {
     public interface IPowerRequest : IDisposable
     {
-        public string Name { get; }
-        public string? Reason { get; }
+        public string   Name    { get; }
+        public string?  Reason  { get; }
     }
 }
