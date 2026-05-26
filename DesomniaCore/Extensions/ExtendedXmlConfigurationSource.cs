@@ -132,7 +132,7 @@ namespace Microsoft.Extensions.Configuration.Xml
             {
                 if (source.EnumAttributes.Contains(attribute.Name.LocalName))
                 {
-                    attribute.Value = attribute.Value.Replace("|", ",").Trim();
+                    attribute.Value = attribute.Value.Replace("|", ",").Replace("-", "").Trim();
                 }
             }
         }
