@@ -21,10 +21,10 @@ namespace MadWizard.Desomnia.PowerRequest
         {
             var filteredRequests = power.ToBlockingEnumerable().Where(ShouldMonitorRequest);
 
-            if (Rules.Any())
+            if (Rules.Where(rule => rule.Type == FilterRuleType.Must) is var mustRules && mustRules.Any())
             {
                 foreach (var request in filteredRequests)
-                    foreach (var rule in Rules.Where(rule => rule.Type == FilterRuleType.Must))
+                    foreach (var rule in mustRules)
                         if (Matches(request, rule.Pattern))
                             yield return new PowerRequestToken(rule.Name);
             }
