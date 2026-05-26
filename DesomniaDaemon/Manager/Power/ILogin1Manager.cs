@@ -10,9 +10,9 @@ namespace MadWizard.Desomnia.Power.Manager
         const ulong SD_LOGIND_ROOT_CHECK_INHIBITORS = 0x01;
         const ulong SD_LOGIND_SKIP_INHIBITORS       = 0x10;
 
-        Task<string> CanReboot();
-        Task<string> CanSuspend();
-        Task<string> CanHibernate();
+        Task<string> CanRebootAsync();
+        Task<string> CanSuspendAsync();
+        Task<string> CanHibernateAsync();
 
         Task SuspendWithFlagsAsync      (ulong flags);
         Task HibernateWithFlagsAsync    (ulong flags);

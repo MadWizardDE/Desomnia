@@ -51,7 +51,7 @@ namespace MadWizard.Desomnia.Power.Manager
 
             if (hibernate ? IsPwrHibernateAllowed() : IsPwrSuspendAllowed())
             {
-                Logger.LogDebug($"Requested ACPI state: {acpi}");
+                Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
                 if (!SetSuspendState(hibernate, false, false))
                 {
@@ -60,15 +60,17 @@ namespace MadWizard.Desomnia.Power.Manager
             }
             else
             {
-                Logger.LogWarning($"Requested ACPI state: {acpi} [unsupported]");
+                Logger.LogWarning("Requested ACPI state: {acpi} [unsupported]", acpi);
             }
         }
 
         public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
+            const string acpi = "S5 (shutdown)";
+
             EnableShutdownPrivilege();
 
-            Logger.LogDebug($"Requested ACPI state: S5 (shutdown)");
+            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
             uint seconds = (uint)(timeout?.TotalSeconds ?? 0);
 
@@ -80,9 +82,11 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
+            const string acpi = "S0 (reboot)";
+
             EnableShutdownPrivilege();
 
-            Logger.LogDebug($"Requested ACPI state: S0 (reboot)");
+            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
             uint seconds = (uint)(timeout?.TotalSeconds ?? 0);
 

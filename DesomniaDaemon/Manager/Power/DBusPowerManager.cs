@@ -73,41 +73,55 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Suspend()
         {
-            if (await LoginManager.CanSuspend() != "yes")
-                throw new NotSupportedException("ACPI state S1-S3 (sleep) not available");
+            const string acpi = "S1-S3 (sleep)";
 
-            Logger.LogDebug("Requested ACPI state: {state}", "S1-S3 (sleep)");
-
-            try
+            if (await LoginManager.CanSuspendAsync() == "yes")
             {
-                await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
+
+                try
+                {
+                    await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                }
+                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                {
+                    await LoginManager.SuspendWithFlagsAsync(0);
+                }
             }
-            catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+            else
             {
-                await LoginManager.SuspendWithFlagsAsync(0);
+                Logger.LogWarning("Requested ACPI state: {acpi} [unsupported]", acpi);
             }
         }
 
         public async Task Hibernate()
         {
-            if (await LoginManager.CanHibernate() != "yes")
-                throw new NotSupportedException("ACPI state S4 (hibernate) not available");
+            const string acpi = "S4 (hibernate)";
 
-            Logger.LogDebug("Requested ACPI state: {state}", "S4 (hibernate)");
-
-            try
+            if (await LoginManager.CanHibernateAsync() == "yes")
             {
-                await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
+
+                try
+                {
+                    await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
+                }
+                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                {
+                    await LoginManager.HibernateWithFlagsAsync(0);
+                }
             }
-            catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+            else
             {
-                await LoginManager.HibernateWithFlagsAsync(0);
+                Logger.LogWarning("Requested ACPI state: {acpi} [unsupported]", acpi);
             }
         }
 
         public async Task Shutdown(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
-            Logger.LogDebug("Requested ACPI state: S5 (shutdown)");
+            const string acpi = "S5 (shutdown)";
+
+            Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
 
             if (message != null)
                 Logger.LogInformation("Shutdown message: {message}", message);
@@ -116,7 +130,7 @@ namespace MadWizard.Desomnia.Power.Manager
             {
                 try
                 {
-                    await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                    await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
                 }
                 catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
                 {
@@ -129,27 +143,33 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public async Task Reboot(TimeSpan? timeout = null, string? message = null, bool force = false)
         {
-            if (await LoginManager.CanReboot() != "yes")
-                throw new NotSupportedException("ACPI state S0 (reboot) not available");
+            const string acpi = "S0 (reboot)";
 
-            Logger.LogDebug("Requested ACPI state: S0 (reboot)");
-
-            if (message != null)
-                Logger.LogInformation("Reboot message: {message}", message);
-
-            if (!timeout.HasValue)
+            if (await LoginManager.CanRebootAsync() == "yes")
             {
-                try
+                Logger.LogDebug("Requested ACPI state: {acpi}", acpi);
+
+                if (message != null)
+                    Logger.LogInformation("Reboot message: {message}", message);
+
+                if (!timeout.HasValue)
                 {
-                    await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
+                    try
+                    {
+                        await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
+                    }
+                    catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                    {
+                        await LoginManager.RebootWithFlagsAsync(0);
+                    }
                 }
-                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
-                {
-                    await LoginManager.RebootWithFlagsAsync(0);
-                }
+                else
+                    await LoginManager.ScheduleShutdownAsync("reboot", ToLogindUsec(timeout.Value));
             }
             else
-                await LoginManager.ScheduleShutdownAsync("reboot", ToLogindUsec(timeout.Value));
+            {
+                Logger.LogWarning("Requested ACPI state: {acpi} [unsupported]", acpi);
+            }
         }
 
         async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
