@@ -28,7 +28,9 @@ namespace MadWizard.Desomnia.Power.Manager
     [Flags]
     public enum InhibitionOperation
     {
-        Unknown             = 0,
+        None                = 0,
+
+        Unknown             = 1 << 0,
 
         Sleep               = 1 << 1,   // Block suspend/hibernate
         Shutdown            = 1 << 2,   // Block shutdown/reboot/poweroff
@@ -44,7 +46,9 @@ namespace MadWizard.Desomnia.Power.Manager
     [Flags]
     public enum InhibitionMode
     {
-        Unknown             = 0,
+        None                = 0,
+
+        Unknown             = 1 << 0,
 
         Delay               = 1 << 1,   // temporarily delay the operation
         BlockWeak           = 1 << 2,   // weaker variant of block
@@ -53,28 +57,38 @@ namespace MadWizard.Desomnia.Power.Manager
 
     internal static class Inhibition
     {
-        internal static InhibitionOperation OfOperation(string operation) => operation switch
+        internal static InhibitionOperation OfOperation(string operation)
         {
-            "sleep"                 => InhibitionOperation.Sleep,
-            "shutdown"              => InhibitionOperation.Shutdown,
-            "reboot"                => InhibitionOperation.Reboot,
-            "idle"                  => InhibitionOperation.Idle,
+            InhibitionOperation result = InhibitionOperation.None;
 
-            "handle-power-key"      => InhibitionOperation.HandlePowerKey,
-            "handle-suspend-key"    => InhibitionOperation.HandleSuspendKey,
-            "handle-hibernate-key"  => InhibitionOperation.HandleHibernateKey,
-            "handle-lid-switch"     => InhibitionOperation.HandleLidSwitch,
+            foreach (string part in operation.Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                result |= part switch
+                {
+                    "sleep"                 => InhibitionOperation.Sleep,
+                    "shutdown"              => InhibitionOperation.Shutdown,
+                    "reboot"                => InhibitionOperation.Reboot,
+                    "idle"                  => InhibitionOperation.Idle,
 
-            _                       => InhibitionOperation.Unknown
-        };
+                    "handle-power-key"      => InhibitionOperation.HandlePowerKey,
+                    "handle-suspend-key"    => InhibitionOperation.HandleSuspendKey,
+                    "handle-hibernate-key"  => InhibitionOperation.HandleHibernateKey,
+                    "handle-lid-switch"     => InhibitionOperation.HandleLidSwitch,
+
+                    _                       => InhibitionOperation.Unknown
+                };
+            }
+
+            return result;
+        }
 
         internal static InhibitionMode OfMode(string mode) => mode switch
         {
-            "delay"                 => InhibitionMode.Delay,
-            "block"                 => InhibitionMode.Block,
-            "block-weak"            => InhibitionMode.BlockWeak,
+            "delay"                         => InhibitionMode.Delay,
+            "block"                         => InhibitionMode.Block,
+            "block-weak"                    => InhibitionMode.BlockWeak,
 
-            _                       => InhibitionMode.Unknown
+            _                               => InhibitionMode.Unknown
         };
     }
 }
