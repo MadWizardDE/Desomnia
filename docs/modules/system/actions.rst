@@ -17,8 +17,8 @@ sleepless
 
 This creates a system-wide power request, which will prevent the built-in power management from suspending the system. The request will be valid until the next *timeout phase*, when it has to be recreated.
 
-restart
--------
+reboot
+------
 
 :🔥 action:
 
@@ -33,7 +33,7 @@ This will initiate a full system shutdown.
 
 .. caution::
 
-    This is a final state change. After this, your computer will need to be started again manually in order to respond to requests.
+    This is a final state change. After this, you will need to restart your computer manually for it to respond to requests, unless it is able to wake up from the S5 state using a Magic Packet.
 
 exec
 ----
@@ -43,7 +43,9 @@ exec
 :required: ``command``
 :optional: ``arguments``
 
-This will attempt to run the specified script or program. This process will execute in the context of the system and will usually have the highest possible privileges. An example could look like this:
+:OS: 🪟 *Windows-only*
+
+This will attempt to run the specified script or program. This process will execute in the context of the system, which means it will have the highest possible privileges. An example could look like this:
 
 .. code:: xml
 

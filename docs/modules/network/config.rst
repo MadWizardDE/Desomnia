@@ -177,36 +177,16 @@ Setting this option instructs Desomnia to notify the other nodes on the network 
 
   Later, Desomnia will be able to register the local services it is watching with a Sleep Proxy on the network. The Proxy will then be responsible for advertising their presence without interruption and for waking up the local host again if any remote host tries to access them.
 
+.. _allow-wake-on-lan:
+
 allowWakeOnLAN
 ++++++++++++++
 
 :default: 🐧 ``MagicPacket``
 
-Controls which Wake-on-LAN mode Desomnia should ensure is set on the interface. If the current mode differs — and the hardware supports it — Desomnia changes it temporarily and restores the previous state on shutdown. Setting this to ``None`` disables Wake-on-LAN on the network interface. Multiple modes can be combined with ``|``:
+Controls which Wake-on-LAN mode Desomnia should ensure is set on the interface. If the current mode differs — and the hardware supports it — Desomnia changes it temporarily and restores the previous state on shutdown. Setting this to ``None`` disables Wake-on-LAN on the network interface. Multiple modes can be combined with ``|``. You also find here the corresponding ``ethtool`` constants:
 
-``MagicPacket``
-  Wakes the system when a Magic Packet addressed to the NIC's MAC is received. The standard Wake-on-LAN method — this is what Desomnia sends to sleeping hosts.
-
-``PHY``
-  Wakes on any physical layer event, such as a cable being connected or a link speed change. Very broad; use with caution on always-connected interfaces.
-
-``Unicast``
-  Wakes on any unicast packet addressed to the NIC's MAC address. Will trigger on ordinary traffic from any sender.
-
-``Broadcast``
-  Wakes on broadcast packets, including ARP requests and DHCP traffic.
-
-``Multicast``
-  Wakes on multicast packets.
-
-``ARP``
-  Wakes specifically on ARP requests.
-
-``SecureOn``
-  Adds password protection to the Magic Packet mechanism. The sender must include the correct six-byte password in the Magic Packet. The password itself is configured in the NIC driver, not in Desomnia.
-
-``Filter``
-  Wakes based on custom hardware-level packet filters defined in the NIC driver. The filter rules are driver-specific.
+.. include:: definitions/wol.rst
 
 See :doc:`wol` for details on platform support.
 

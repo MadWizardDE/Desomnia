@@ -10,7 +10,7 @@ Wake-on-LAN depends on the network interface being configured to listen for a Ma
 How to enable
 -------------
 
-Platform specific tools have to be used to enable Wake-on-LAN for a particular network interface. The following sections explain how to do this for Windows and Linux. Desomnia can take care of this automatically, ensuring the interface is ready every time before the machine suspends. The ``allowWakeOnLAN`` attribute on ``<NetworkMonitor>`` controls which mode to ensure and is documented in the :doc:`configuration reference <config>`.
+Platform specific tools have to be used to enable Wake-on-LAN for a particular network interface. The following sections explain how to do this for Windows and Linux. Desomnia can take care of this automatically, ensuring the interface is ready every time before the machine suspends. The ``allowWakeOnLAN`` attribute on ``<NetworkMonitor>`` controls which mode to ensure and is documented in the :ref:`configuration reference <allow-wake-on-lan>`.
 
 Just before issuing a suspend, Desomnia queries the monitored interface to determine whether the required Wake-on-LAN mode is already active. If it is not — and the hardware reports it as supported — Desomnia enables it and records the previous state. After the system resumes, it restores that original value. A machine that had Wake-on-LAN disabled before the suspend will have it disabled again after waking up; Desomnia holds the setting open only for the duration of the sleep.
 
