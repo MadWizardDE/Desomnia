@@ -3,6 +3,7 @@ using Microsoft.Management.Infrastructure;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
+    // see: https://gist.github.com/marvinlehmann/194a95ce14bad67d2680992c20950f79
     internal class CIMDeviceWake : CIMNetAdapterBase, IWakeOnLANManager
     {
         public required ILogger<CIMDeviceWake> Logger { private get; init; }
