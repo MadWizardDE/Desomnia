@@ -84,7 +84,7 @@ You can inspect and modify them with PowerShell:
     # Enable Wake on Magic Packet
     Set-NetAdapterPowerManagement -Name "Ethernet" -WakeOnMagicPacket Enabled
 
-Alternatively, the same settings are available in Device Manager under the adapter's *Power Management* tab and in the *Advanced* properties.
+Additionally, you have to check all options in Device Manager under the adapter's *Power Management* tab and in the *Advanced* properties.
 
 .. note::
 

@@ -9,6 +9,7 @@ using MadWizard.Desomnia.Network.Manager;
 using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 
 namespace MadWizard.Desomnia.Network.Configuration
 {
@@ -131,6 +132,14 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IList<ServiceFilterRuleInfo> ServiceFilterRule { get; set; } = [];
         public IList<HTTPFilterRuleInfo> HTTPFilterRule { get; set; } = [];
         public PingFilterRuleInfo? PingFilterRule { get; set; }
+
+        NetworkMonitorConfig()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                AllowWakeOnLAN = WakeOnLANMode.MagicPacket;
+            }
+        }
 
         static NetworkMonitorConfig() // we want to use native types
         {
