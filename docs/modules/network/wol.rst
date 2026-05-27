@@ -84,8 +84,8 @@ You can inspect and modify them with PowerShell:
     # Enable Wake on Magic Packet
     Set-NetAdapterPowerManagement -Name "Ethernet" -WakeOnMagicPacket Enabled
 
-Additionally, you have to check all options in Device Manager under the adapter's *Power Management* tab and in the *Advanced* properties.
+These properties map to the settings in Device Manager under the adapter's *Advanced* properties. **Additionally**, you have to check the corresponding options under the *Power Management* tab.
 
 .. note::
 
-    Unlike Linux, changes to Wake-on-LAN settings on Windows persist across reboots. Desomnia still verifies and re-applies the setting before each suspend as a safeguard against silent configuration drift. The original state of each property is restored on resume.
+    Unlike Linux, changes to Wake-on-LAN settings on Windows persist across reboots. Desomnia can still verify and re-apply the setting before each suspend as a safeguard against silent configuration drift. The original state of these properties will then be restored on shutdown.
