@@ -32,12 +32,12 @@ namespace MadWizard.Desomnia.Service
                 .InstancePerNetwork()
                 .AsSelf();
 
-            builder.RegisterComposite<CompositeWakeOnLANManager, IWakeOnLANManager>();
+            builder.RegisterComposite<WindowsWakeOnLANManager, IWakeOnLANManager>();
             {
-                builder.RegisterType<PSAdapterPowerManagement>()
+                builder.RegisterType<CIMNetAdapterPowerManagement>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork();
-                builder.RegisterType<CIMAdapterWakeManager>()
+                builder.RegisterType<CIMDeviceWake>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork();
             }

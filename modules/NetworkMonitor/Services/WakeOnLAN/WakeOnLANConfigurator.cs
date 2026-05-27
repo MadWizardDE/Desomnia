@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
@@ -18,7 +19,32 @@ namespace MadWizard.Desomnia.Network.Manager
         {
             if (manager is not null)
             {
-                Logger.LogDebug("Automatically enabling Wake-on-LAN before suspend");
+                Logger.LogDebug("Automatically configuring Wake-on-LAN...");
+
+                try
+                {
+                    var watch = Stopwatch.StartNew();
+
+                    if (manager?.Modes is WakeOnLANMode modes && modes != set)
+                    {
+                        if (!manager.SupportedModes.HasFlag(set))
+                        {
+                            Logger.LogWarning("Wake-on-LAN (by {mode}) is not supported.", set);
+                        }
+                        else
+                        {
+                            manager.Modes = set;
+
+                            Logger.LogDebug("Wake-on-LAN -> {mode} ({time} ms)", set, watch.ElapsedMilliseconds);
+
+                            _modesToReset = modes;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Wake-on-LAN could not be configured.");
+                }
             }
             else
             {
@@ -26,41 +52,23 @@ namespace MadWizard.Desomnia.Network.Manager
             }
         }
 
-        void INetworkService.Suspend()
-        {
-            try
-            {
-                if (manager?.Modes is WakeOnLANMode modes && modes != set)
-                {
-                    if (!manager.SupportedModes.HasFlag(set))
-                    {
-                        Logger.LogWarning("Wake-on-LAN (by {mode}) is not supported.", set);
-                    }
-                    else
-                    {
-                        manager.Modes = set;
-
-                        _modesToReset = modes;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Wake-on-LAN could not be configured.");
-            }
-        }
-
-        void INetworkService.Resume()
+        void INetworkService.Shutdown() 
         {
             if (_modesToReset is WakeOnLANMode reset)
             {
+                Logger.LogDebug("Reverting Wake-on-LAN to its original state...");
+
+                var watch = Stopwatch.StartNew();
+
                 try
                 {
                     manager?.Modes = reset;
+
+                    Logger.LogDebug("Wake-on-LAN -> {mode} ({time} ms)", reset, watch.ElapsedMilliseconds);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Wake-on-LAN could not be resetted.");
+                    Logger.LogError(ex, "Wake-on-LAN could not be reverted.");
                 }
                 finally
                 {
@@ -68,7 +76,5 @@ namespace MadWizard.Desomnia.Network.Manager
                 }
             }
         }
-
-        void INetworkService.Shutdown() { } // don't call Suspend() here
     }
 }
