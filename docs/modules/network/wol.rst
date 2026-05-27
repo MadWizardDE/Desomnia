@@ -59,22 +59,33 @@ PowerShell
 
 On Windows, Wake-on-LAN settings are stored per adapter in the NIC driver and are generally persistent across reboots. However, they can be silently disabled by Windows Update replacing the driver, by power management policy changes, or simply by a non-default factory configuration.
 
-.. admonition:: Work in progress
+Windows exposes Wake-on-LAN through two adapter properties:
 
-    Automatic Wake-on-LAN activation on Windows is not yet implemented. The configuration attribute is accepted but has no effect. The section below describes the planned behaviour and explains how to configure Wake-on-LAN manually in the meantime.
+``WakeOnMagicPacket``
+  Controls the ``MagicPacket`` mode. A Magic Packet addressed to the adapter's MAC address wakes the system.
 
-Windows exposes NIC power settings through the adapter's advanced driver properties. You can inspect and modify them with PowerShell:
+``WakeOnPattern``
+  Controls pattern-based wake modes: ``Unicast``, ``Broadcast``, ``Multicast``, ``ARP``, and ``Filter``. All of these are enabled or disabled together through a single driver property.
+
+You can inspect and modify them with PowerShell:
 
 .. code:: PowerShell
 
     # Read current Wake-on-LAN state
-    Get-NetAdapterPowerManagement -Name "Ethernet"
+    Get-NetAdapterPowerManagement -Name "Ethernet" | Format-List WakeOnMagicPacket, WakeOnPattern
+
+.. code::
+
+    WakeOnMagicPacket : Enabled
+    WakeOnPattern     : Disabled
 
 .. code:: PowerShell
 
     # Enable Wake on Magic Packet
     Set-NetAdapterPowerManagement -Name "Ethernet" -WakeOnMagicPacket Enabled
 
-Alternatively, the same setting is available in Device Manager under the adapter's *Power Management* tab and in the *Advanced* properties as *Wake on Magic Packet*.
+Alternatively, the same settings are available in Device Manager under the adapter's *Power Management* tab and in the *Advanced* properties.
 
-When implemented, Desomnia will use the Windows network adapter management API to check whether the required mode is active before each suspend and enable it if not, restoring the original state on resume — the same behaviour as on Linux.
+.. note::
+
+    Unlike Linux, changes to Wake-on-LAN settings on Windows persist across reboots. Desomnia still verifies and re-applies the setting before each suspend as a safeguard against silent configuration drift. The original state of each property is restored on resume.

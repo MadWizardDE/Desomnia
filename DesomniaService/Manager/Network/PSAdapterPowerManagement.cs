@@ -9,13 +9,6 @@ namespace MadWizard.Desomnia.Network.Manager
 
         public required NetworkDevice Device { private get; init; }
 
-        const WakeOnLANMode Pattern = WakeOnLANMode.None
-            | WakeOnLANMode.Unicast
-            | WakeOnLANMode.Broadcast
-            | WakeOnLANMode.Multicast
-            | WakeOnLANMode.ARP
-            | WakeOnLANMode.Filter;
-
         WakeOnLANMode IWakeOnLANManager.SupportedModes
         {
             get
@@ -26,31 +19,23 @@ namespace MadWizard.Desomnia.Network.Manager
                     result |= WakeOnLANMode.MagicPacket;
 
                 if (this["WakeOnPattern"] is string pattern && pattern != "Unsupported")
-                    result = result
-                        | WakeOnLANMode.Broadcast 
-                        | WakeOnLANMode.Multicast 
-                        | WakeOnLANMode.ARP 
-                        | WakeOnLANMode.Filter;
+                    result |= CompositeWakeOnLANManager.Pattern;
 
                 return result;
             }
         }
+
         WakeOnLANMode IWakeOnLANManager.Modes
         {
             get
             {
                 var result = WakeOnLANMode.None;
 
-                if (this["WakeOnMagicPacket"]   == "Enabled")
+                if (this["WakeOnMagicPacket"] == "Enabled")
                     result |= WakeOnLANMode.MagicPacket;
 
-                if (this["WakeOnPattern"]       == "Enabled")
-                    result = result
-                        | WakeOnLANMode.Unicast
-                        | WakeOnLANMode.Broadcast
-                        | WakeOnLANMode.Multicast
-                        | WakeOnLANMode.ARP
-                        | WakeOnLANMode.Filter;
+                if (this["WakeOnPattern"] == "Enabled")
+                    result |= CompositeWakeOnLANManager.Pattern;
 
                 return result;
             }
@@ -58,10 +43,11 @@ namespace MadWizard.Desomnia.Network.Manager
             set
             {
                 this["WakeOnMagicPacket"] = value.HasFlag(WakeOnLANMode.MagicPacket) ? "Enabled" : "Disabled";
-                this["WakeOnPattern"] = (value & Pattern) != WakeOnLANMode.None ? "Enabled" : "Disabled";
+                this["WakeOnPattern"] = (value & CompositeWakeOnLANManager.Pattern) != WakeOnLANMode.None ? "Enabled" : "Disabled";
             }
         }
 
+        #region PowerShell helper methods
         private string? this[string property]
         {
             get
@@ -109,5 +95,6 @@ namespace MadWizard.Desomnia.Network.Manager
         }
 
         private static string Quote(string value) => "'" + value.Replace("'", "''") + "'";
+        #endregion
     }
 }

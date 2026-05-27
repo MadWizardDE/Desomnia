@@ -22,7 +22,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         public bool             UseBPF          { get; set; } = true;
 
-        public WakeOnLANMode    AllowWakeOnLAN  { get; set; } = WakeOnLANMode.MagicPacket;
+        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; }
 
         // Actions
         public DelayedAction?   OnIdle          { get; set; }

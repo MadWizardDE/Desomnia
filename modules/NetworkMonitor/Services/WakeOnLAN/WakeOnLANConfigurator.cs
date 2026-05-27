@@ -8,9 +8,9 @@ namespace MadWizard.Desomnia.Network.Manager
      * Therefore the daemon will try to enable it each time, before going to sleep,
      * if not enabled otherwise.
      */
-    internal class WakeOnLANEnabler(WakeOnLANMode set, IWakeOnLANManager? manager = null) : INetworkService
+    internal class WakeOnLANConfigurator(WakeOnLANMode set, IWakeOnLANManager? manager = null) : INetworkService
     {
-        public required ILogger<WakeOnLANEnabler> Logger { private get; init; }
+        public required ILogger<WakeOnLANConfigurator> Logger { private get; init; }
 
         private WakeOnLANMode? _modesToReset;
 
@@ -30,7 +30,7 @@ namespace MadWizard.Desomnia.Network.Manager
         {
             try
             {
-                if (manager?.Modes is WakeOnLANMode modes && !modes.HasFlag(set))
+                if (manager?.Modes is WakeOnLANMode modes && modes != set)
                 {
                     if (!manager.SupportedModes.HasFlag(set))
                     {
@@ -38,7 +38,7 @@ namespace MadWizard.Desomnia.Network.Manager
                     }
                     else
                     {
-                        manager.Modes = modes | set;
+                        manager.Modes = set;
 
                         _modesToReset = modes;
                     }
@@ -46,7 +46,7 @@ namespace MadWizard.Desomnia.Network.Manager
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Wake-on-LAN could not be enabled.");
+                Logger.LogError(ex, "Wake-on-LAN could not be configured.");
             }
         }
 
