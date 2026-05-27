@@ -38,6 +38,8 @@ namespace MadWizard.Desomnia.Network.Manager
             {
                 this["WakeOnMagicPacket"] = value.HasFlag(WakeOnLANMode.MagicPacket);
                 this["WakeOnPattern"] = (value & Pattern) != WakeOnLANMode.None;
+
+                // TODO: Also configure ARP and NS offload? Does this matter?
             }
         }
 
