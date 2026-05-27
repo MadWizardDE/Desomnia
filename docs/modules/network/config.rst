@@ -182,7 +182,7 @@ allowWakeOnLAN
 
 :default: 🐧 ``MagicPacket``
 
-Controls which Wake-on-LAN mode Desomnia should ensure is active on the interface before each suspend. If the mode is not currently active — and the hardware supports it — Desomnia enables it temporarily and restores the previous state after the system resumes. Setting this to ``None`` disables the feature and leaves the interface state untouched. Multiple modes can be combined with ``|``:
+Controls which Wake-on-LAN mode Desomnia should ensure is set on the interface. If the current mode differs — and the hardware supports it — Desomnia changes it temporarily and restores the previous state on shutdown. Setting this to ``None`` disables Wake-on-LAN on the network interface. Multiple modes can be combined with ``|``:
 
 ``MagicPacket``
   Wakes the system when a Magic Packet addressed to the NIC's MAC is received. The standard Wake-on-LAN method — this is what Desomnia sends to sleeping hosts.

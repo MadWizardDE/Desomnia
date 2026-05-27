@@ -13,9 +13,14 @@ namespace MadWizard.Desomnia.Network.Manager
     {
         public required ILogger<WakeOnLANConfigurator> Logger { private get; init; }
 
+        public bool ShouldReplace { get; set; } = true;
+
         private WakeOnLANMode? _modesToReset;
 
-        void INetworkService.Startup()
+        void INetworkService.Startup() => ConfigureWakeOnLAN();
+        // void INetworkService.Suspend() => ConfigureWakeOnLAN();
+
+        void ConfigureWakeOnLAN()
         {
             if (manager is not null)
             {
@@ -33,11 +38,11 @@ namespace MadWizard.Desomnia.Network.Manager
                         }
                         else
                         {
-                            manager.Modes = set;
+                            var result = ShouldReplace ? manager.Modes = set : manager.Modes |= set;
 
-                            Logger.LogDebug("Wake-on-LAN -> {mode} ({time} ms)", set, watch.ElapsedMilliseconds);
+                            Logger.LogDebug("Wake-on-LAN -> {mode} ({time} ms)", result, watch.ElapsedMilliseconds);
 
-                            _modesToReset = modes;
+                            _modesToReset ??= modes;
                         }
                     }
                 }

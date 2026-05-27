@@ -166,10 +166,12 @@ namespace MadWizard.Desomnia.Network.Context
 
                 if (config.AllowWakeOnLAN is WakeOnLANMode allow)
                 {
-                    builder.RegisterType<WakeOnLANConfigurator>()
-                        .WithParameter(TypedParameter.From(allow))
+                    var build = builder.RegisterType<WakeOnLANConfigurator>()
+                        .WithParameter(TypedParameter.From(allow & ~WakeOnLANMode.Default))
                         .AsImplementedInterfaces()
                         .InstancePerNetwork();
+
+                    build.OnActivated(x => x.Instance.ShouldReplace = !allow.HasFlag(WakeOnLANMode.Default));
                 }
 
                 RegisterDiscovery(builder, config);

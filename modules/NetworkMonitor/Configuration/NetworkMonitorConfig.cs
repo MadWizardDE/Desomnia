@@ -137,7 +137,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                AllowWakeOnLAN = WakeOnLANMode.MagicPacket;
+                AllowWakeOnLAN = WakeOnLANMode.MagicPacket | WakeOnLANMode.Default; // don't replace existing modes
             }
         }
 
