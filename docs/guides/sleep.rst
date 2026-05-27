@@ -3,10 +3,21 @@ Local Sleep Management
 
 :OS: 🪟 Windows 🐧 Linux
 
-Where are the limits?
----------------------
+The limits of built-in sleep management
+----------------------------------------
 
-Windows includes a built-in idle detection mechanism that can suspend the system automatically. Individual processes and kernel drivers can participate by issuing power requests — instructions to the system to stay awake. You can inspect active requests at any time:
+Both Windows and Linux include an idle detection mechanism that can suspend the system automatically. For an interactive desktop machine this is usually sufficient — a laptop that sleeps after ten minutes with no keyboard or mouse activity. Headless servers and home lab machines live in a different world: they need to stay alive for a client in another room, wake up the moment a connection arrives, and go back to sleep the instant the last client disconnects. Neither platform's built-in approach was designed with this in mind.
+
+The core shortcomings are the same on both:
+
+- There is no awareness of network connections — a file server can stay awake all night serving nobody, or suspend in the middle of a transfer.
+- The system cannot distinguish between a process that is doing meaningful work and one that is simply running in the background.
+- Once asleep, there is no built-in mechanism to bring the machine back when a client arrives.
+
+On Windows
+++++++++++
+
+The Windows case deserves a closer look, because it was the original motivation for Desomnia. Windows lets processes and kernel drivers register *power requests* — explicit instructions to keep the system awake. You can inspect the active ones at any time:
 
 .. code:: PowerShell
 
@@ -20,17 +31,11 @@ Windows includes a built-in idle detection mechanism that can suspend the system
     DISPLAY:
     None.
 
-User processes appear with their executable path, which at least identifies what is keeping the system awake. Kernel drivers, however, typically use low-level APIs that carry no useful information about the reason for the request.
+User processes appear with their executable path, which at least tells you what is keeping the system awake. Kernel drivers, however, typically use low-level APIs that carry no useful caller information — the request shows up with an opaque name and no stated reason.
 
-Windows does allow you to override power requests from specific sources using ``powercfg /requestsoverride``, but this does not work for all API types and overrides do not survive a reboot — they must be re-applied after every restart.
+Windows does provide a way to suppress requests from specific sources via ``powercfg /requestsoverride``, but the mechanism has hard limits: it does not work for all API types, overrides do not survive a reboot, and there is no way to do the inverse — allow only named requests and ignore everything else.
 
-The limitations of the built-in approach are:
-
-- Power requests cannot be filtered reliably.
-- Overrides must be re-applied after every reboot.
-- It is not possible to allow only specific requests and ignore the rest.
-
-Desomnia addresses these limitations by replacing the built-in sleep management with a configurable set of monitors. You define exactly which activity should keep the system awake, and what actions to take when everything goes quiet.
+Desomnia addresses all of these limitations, on both platforms, by replacing the built-in sleep management with a configurable set of monitors. You define exactly which activity should keep the system awake, and what actions to take when everything goes quiet.
 
 Timing is everything
 --------------------
