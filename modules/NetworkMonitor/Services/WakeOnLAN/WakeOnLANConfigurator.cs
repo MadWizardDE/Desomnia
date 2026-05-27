@@ -18,7 +18,7 @@ namespace MadWizard.Desomnia.Network.Manager
         private WakeOnLANMode? _modesToReset;
 
         void INetworkService.Startup() => ConfigureWakeOnLAN();
-        // void INetworkService.Suspend() => ConfigureWakeOnLAN();
+        void INetworkService.Suspend() => ConfigureWakeOnLAN();
 
         void ConfigureWakeOnLAN()
         {
