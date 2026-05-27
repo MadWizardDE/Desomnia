@@ -3,13 +3,24 @@ using System.Diagnostics;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
-    internal class EthtoolOperator
+    internal class EthtoolOperator : IWakeOnLANManager
     {
         public required ILogger<EthtoolOperator> Logger { private get; init; }
 
         public required NetworkDevice Device { private get; init; }
 
-        public string? this[string settingName]
+        WakeOnLANMode IWakeOnLANManager.SupportedModes
+        {
+            get => ParseModes(this["Supports Wake-on"]) ?? WakeOnLANMode.None;
+        }
+        WakeOnLANMode IWakeOnLANManager.Modes
+        {
+            get => ParseModes(this["Wake-on"]) ?? WakeOnLANMode.None;
+
+            set => this["wol"] = ModesToString(value);
+        }
+
+        private string? this[string settingName]
         {
             get
             {
@@ -86,5 +97,59 @@ namespace MadWizard.Desomnia.Network.Manager
                 return false;
             }
         }
+
+        #region WakeOnLANMode-Mapping
+        // Canonical letter order matches ethtool's own output order.
+        private static readonly Dictionary<char, WakeOnLANMode> Mapping = new()
+        {
+            //['d'] = WakeOnLANMode.None,       // d — disabled
+
+            ['p'] = WakeOnLANMode.PHY,          // p — PHY activity
+            ['u'] = WakeOnLANMode.Unicast,      // u — unicast message
+            ['m'] = WakeOnLANMode.Multicast,    // m — multicast message
+            ['b'] = WakeOnLANMode.Broadcast,    // b — broadcast message
+            ['a'] = WakeOnLANMode.ARP,          // a — ARP
+            ['g'] = WakeOnLANMode.MagicPacket,  // g — magic packet
+            ['s'] = WakeOnLANMode.SecureOn,     // s — SecureOn password for magic packet
+            ['f'] = WakeOnLANMode.Filter,       // f — filter(s)
+        };
+
+        // Parses the string ethtool prints after "Wake-on: " / "Supports Wake-on: ".
+        // "d" and empty strings both map to None.
+        private static WakeOnLANMode? ParseModes(string? s)
+        {
+            if (s != null)
+            {
+                var result = WakeOnLANMode.None;
+
+                foreach (char c in s)
+                {
+                    if (Mapping.TryGetValue(c, out var flag))
+                        result |= flag;
+                }
+
+                return result;
+            }
+
+            return null;
+        }
+
+        // Produces the string to pass to "ethtool -s <iface> wol <value>".
+        // None returns "d" (disable).
+        private static string ModesToString(WakeOnLANMode flags)
+        {
+            if (flags != WakeOnLANMode.None)
+            {
+                var sb = new System.Text.StringBuilder(Mapping.Count);
+                foreach (var (letter, flag) in Mapping)
+                {
+                    if (flags.HasFlag(flag)) sb.Append(letter);
+                }
+                return sb.ToString();
+            }
+
+            return "d";
+        }
+        #endregion
     }
 }

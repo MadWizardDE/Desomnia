@@ -19,6 +19,7 @@ For environments with virtual machines, the :doc:`virtual machines <virtual>` pa
 
 .. toctree::
    config
+   
    auto
    interface
    ipv6
@@ -28,6 +29,7 @@ For environments with virtual machines, the :doc:`virtual machines <virtual>` pa
    virtual
    router
    vpn
+   wol
    yield
    troubleshooting
 

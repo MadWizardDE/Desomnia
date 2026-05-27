@@ -47,15 +47,11 @@ namespace MadWizard.Desomnia.Daemon
                 .AsImplementedInterfaces()
                 .InstancePerNetwork();
 
-            builder.RegisterType<WakeOnLANEnabler>()
-                .AsImplementedInterfaces()
-                .InstancePerNetwork();
-
             if (EthtoolOperator.IsInstalled)
             {
                 builder.RegisterType<EthtoolOperator>()
-                    .InstancePerNetwork()
-                    .AsSelf();
+                    .AsImplementedInterfaces()
+                    .InstancePerNetwork();
             }
         }
 

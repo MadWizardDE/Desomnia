@@ -135,7 +135,6 @@ namespace MadWizard.Desomnia.Network.Context
                     .SingleInstance()
                     .AsSelf();
 
-
                 if (config.UseBPF)
                 {
                     builder.RegisterType<BerkeleyPacketFilter>()
@@ -161,7 +160,16 @@ namespace MadWizard.Desomnia.Network.Context
 
                     builder.RegisterType<TraceService>()
                         .WithParameter(TypedParameter.From(new TraceService.Options() { Hosts = hosts }))
-                        .AsImplementedInterfaces();
+                        .AsImplementedInterfaces()
+                        .InstancePerNetwork();
+                }
+
+                if (config.AllowWakeOnLAN is var allow && allow != WakeOnLANMode.None)
+                {
+                    builder.RegisterType<WakeOnLANEnabler>()
+                        .WithParameter(TypedParameter.From(config.AllowWakeOnLAN))
+                        .AsImplementedInterfaces()
+                        .InstancePerNetwork();
                 }
 
                 RegisterDiscovery(builder, config);

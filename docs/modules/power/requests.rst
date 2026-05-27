@@ -1,5 +1,5 @@
-Platform consideration
-======================
+Platform considerations
+=======================
 
 Both Windows and Linux provide a mechanism for applications and drivers to signal that the system should not go to sleep — but they were designed by different teams with different philosophies and expose different capabilities. Desomnia understands both natively.
 
@@ -67,13 +67,12 @@ Although the built-in command allows for rudimentary adaptations, there are seve
 - There is no way to allow *only* named requests and block everything else.
 - Kernel-mode drivers often provide minimal name or reason strings, making it impossible to tell what is holding the system awake without additional tooling.
 
-Inhibition Locks
-----------------
+Inhibitor Locks
+---------------
 
 :OS: 🐧 *Linux*
 
-
-On Linux, the equivalent mechanism is the *inhibition lock*, managed by ``systemd-logind``. An application acquires a lock by calling the ``Inhibit`` method on the D-Bus logind interface and receives a file descriptor in return. The lock is held for as long as that file descriptor stays open — closing it (or the process dying) releases the lock automatically. There is no separate release call.
+On Linux, the equivalent mechanism is the `Inhibitor Locks`_, managed by ``systemd-logind``. An application acquires a lock by calling the ``Inhibit`` method on the D-Bus logind interface and receives a file descriptor in return. The lock is held for as long as that file descriptor stays open — closing it (or the process dying) releases the lock automatically. There is no separate release call.
 
 .. attention::
 
@@ -131,3 +130,5 @@ Reason
   The human-readable explanation it provided.
 
 This common representation is what allows the ``<PowerRequestMonitor>`` and its ``<RequestFilterRule>`` elements to work identically on both platforms. The same regex-based rules match against ``Name`` and ``Reason`` regardless of whether the underlying source is a Windows power request or a Linux inhibition lock.
+
+.. _`Inhibitor Locks`: https://systemd.io/INHIBITOR_LOCKS/

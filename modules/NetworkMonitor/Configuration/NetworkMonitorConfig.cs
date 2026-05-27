@@ -5,6 +5,7 @@ using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
+using MadWizard.Desomnia.Network.Manager;
 using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -20,6 +21,8 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IPNetwork?       Network         { get; set; }
 
         public bool             UseBPF          { get; set; } = true;
+
+        public WakeOnLANMode    AllowWakeOnLAN  { get; set; } = WakeOnLANMode.MagicPacket;
 
         // Actions
         public DelayedAction?   OnIdle          { get; set; }
