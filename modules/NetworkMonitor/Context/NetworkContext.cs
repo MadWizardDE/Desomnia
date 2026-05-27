@@ -144,7 +144,7 @@ namespace MadWizard.Desomnia.Network.Context
                         .AsSelf();
                 }
 
-                if (config.DeviceTimeout is TimeSpan timeout)
+                if (config.WatchTimeout is TimeSpan timeout)
                 {
                     var reg = builder.RegisterType<CaptureWatchDog>().AutoActivate()
                         .WithParameter(TypedParameter.From(timeout))

@@ -122,7 +122,7 @@ If you define this attribute, Desomnia will scan repeatedly for a changed config
 
 .. include:: ./options/demand.rst
 
-deviceTimeout
+watchTimeout
 +++++++++++++
 
 :⏱️ duration:

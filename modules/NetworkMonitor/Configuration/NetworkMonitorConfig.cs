@@ -20,7 +20,6 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IPNetwork?       Network         { get; set; }
 
         public bool             UseBPF          { get; set; } = true;
-        public TimeSpan?        DeviceTimeout   { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why?
 
         // Actions
         public DelayedAction?   OnIdle          { get; set; }
@@ -62,7 +61,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal bool               AdvertiseIfStopped  { get; set; } = true;
         #endregion
 
-        #region                     YieldOptions
+        #region Network :: YieldOptions
         internal TimeSpan           YieldTimeout        { get; set; } = TimeSpan.FromSeconds(5);
         #endregion
 
@@ -97,12 +96,14 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: WatchOptions
         internal WatchMode          WatchMode           { get; set; } = WatchMode.Normal;
+        internal TimeSpan?          WatchTimeout        { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why do we need this?
         internal ushort?            WatchUDPPort        { get; set; } = null;
         internal bool               WatchYield          { get; set; } = false;
 
         public WatchOptions MakeWatchOptions() => new()
         {
             Mode = this.WatchMode,
+            Timeout = this.WatchTimeout,
             UDPPorts = this.WatchUDPPort != null ? [this.WatchUDPPort.Value] : [],
             Yield = this.WatchYield
         };

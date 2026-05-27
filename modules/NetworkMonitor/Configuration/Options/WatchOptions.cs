@@ -3,9 +3,8 @@
     public readonly struct WatchOptions
     {
         public WatchMode    Mode            { get; init; }
-
+        public TimeSpan?    Timeout         { get; init; }
         public ushort[]     UDPPorts        { get; init; }
-
         public bool         Yield           { get; init; }
     }
 
