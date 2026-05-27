@@ -1,5 +1,6 @@
 ﻿using ConcurrentCollections;
 using MadWizard.Desomnia.Network.Services;
+using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network.Filter
 {
@@ -21,11 +22,14 @@ namespace MadWizard.Desomnia.Network.Filter
 
     public class BerkeleyPacketFilter(NetworkDevice device) : INetworkService
     {
-        private bool _shouldApplyFilter = false;
+        public required ILogger<NetworkDevice> Logger { private get; init; }
+
+        private IEnumerable<ITrafficType> Types => _requests.SelectMany(x => x.Types).Distinct();
 
         readonly ConcurrentHashSet<TrafficFilterRequest> _requests = [];
 
-        private IEnumerable<ITrafficType> Types => _requests.SelectMany(x => x.Types).Distinct();
+        private bool _shouldApplyFilter = false;
+
 
         internal void AddRequest(TrafficFilterRequest request)
         {
@@ -88,14 +92,26 @@ namespace MadWizard.Desomnia.Network.Filter
                 filter += $" or ({ip6})";
             }
 
-            device.Filter = filter;
+            Update(filter);
         }
 
         void INetworkService.Shutdown()
         {
             _shouldApplyFilter = false;
 
-            device.Filter = "";
+            Update("");
+        }
+
+        private void Update(string filter)
+        {
+            try
+            {
+                device.Filter = filter;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Fail");
+            }
         }
     }
 
