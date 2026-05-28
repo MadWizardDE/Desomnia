@@ -45,21 +45,21 @@ The following activities can be tracked out of the box:
 
    Tracks incoming and outgoing connections using libpcap or Npcap. You declare which hosts and which services — by TCP or UDP port — should count as activity; anything else is invisible to Desomnia. For remote hosts, network demand can also trigger actions: wake a sleeping machine, start a VM, or issue a Single Packet Authorization knock before the connection attempt is made. In *promiscuous mode*, Desomnia watches the entire broadcast domain and can act on behalf of other hosts — this is the foundation of the Wake-on-LAN deployment.
 
--  **User sessions** – 🪟 *Windows*
-
-   Tracks the activity of Windows user sessions, including Remote Desktop connections. Sessions can be filtered by user account, have individual idle thresholds, and trigger actions — lock, disconnect, logout, or run a script — when they go quiet.
-
 -  **Processes** – 🪐 *platform-independent*
 
    Watches running processes by name, with an optional CPU threshold to distinguish real activity from idle background processes. On Windows, Desomnia uses Event Trace for Windows (ETW) for near-instant start and stop notifications with no polling overhead; on other platforms it polls at a configurable interval.
+
+-  **Power requests** – 🪟 *Windows* 🐧 *Linux*
+
+   Tracks and filters the power requests registered by processes and drivers — giving you selective control over something the OS's own override mechanism cannot reliably provide.
 
 -  **SMB sessions** – 🪟 *Windows*
 
    Keeps the system awake while remote clients have open file-sharing sessions, with fine-grained filtering by username, client name, IP address, share name, or file path.
 
--  **Power requests** – 🪟 *Windows* 🐧 *Linux*
+-  **User sessions** – 🪟 *Windows*
 
-   Tracks and filters the power requests registered by processes and drivers — giving you selective control over something the OS's own override mechanism cannot reliably provide.
+   Tracks the activity of Windows user sessions, including Remote Desktop connections. Sessions can be filtered by user account, have individual idle thresholds, and trigger actions — lock, disconnect, logout, or run a script — when they go quiet.
 
 Configuration examples
 ----------------------
@@ -155,8 +155,8 @@ Getting started
 
 Download the latest release from the `GitHub releases page <https://github.com/mad0x20wizard/Desomnia/releases>`__ and run the installer. It registers the service, installs all dependencies (including Npcap), and walks you through an initial configuration. `Read the docs <https://desomnia.readthedocs.io/>`__ to discover everything Desomnia can do and how to configure it.
 
-🍎 macOS / 🐧 Linux (Homebrew)
-+++++++++++++++++++++++++++++++
+🍺 Homebrew (🍎 macOS / 🐧 Linux)
++++++++++++++++++++++++++++++++++++
 
 .. code:: bash
 
@@ -165,8 +165,8 @@ Download the latest release from the `GitHub releases page <https://github.com/m
 
 See the `Homebrew installation guide <https://desomnia.readthedocs.io/en/latest/installation/homebrew.html>`__ for filesystem layout, plugin installation, and platform-specific notes.
 
-🐋 Linux (Docker)
-++++++++++++++++++
+🐋 Docker (🐧 Linux)
++++++++++++++++++++++
 
 A Docker image is available on `Docker Hub <https://hub.docker.com/r/mad0x20wizard/desomnia>`__. A ready-to-use ``docker-compose.yml`` is provided in the repository description there. See the `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for volume layout and capability requirements.
 
