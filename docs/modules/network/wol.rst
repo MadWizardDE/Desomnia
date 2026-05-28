@@ -89,3 +89,5 @@ These properties map to the settings in Device Manager under the adapter's *Adva
 .. note::
 
     Unlike Linux, changes to Wake-on-LAN settings on Windows persist across reboots. Desomnia can still verify and re-apply the setting before each suspend as a safeguard against silent configuration drift. The original state of these properties will then be restored on shutdown.
+
+.. _`System Power States`: https://learn.microsoft.com/en-us/windows/win32/power/system-power-states
