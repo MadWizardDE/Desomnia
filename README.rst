@@ -155,7 +155,7 @@ Getting started
 
 Download the latest release from the `GitHub releases page <https://github.com/mad0x20wizard/Desomnia/releases>`__ and run the installer. It registers the service, installs all dependencies (including Npcap), and walks you through an initial configuration. `Read the docs <https://desomnia.readthedocs.io/>`__ to discover everything Desomnia can do and how to configure it.
 
-🍺 Homebrew (🍎 macOS / 🐧 Linux)
+🍺 Homebrew – 🍎 macOS / 🐧 Linux
 +++++++++++++++++++++++++++++++++++
 
 .. code:: bash
@@ -165,8 +165,8 @@ Download the latest release from the `GitHub releases page <https://github.com/m
 
 See the `Homebrew installation guide <https://desomnia.readthedocs.io/en/latest/installation/homebrew.html>`__ for filesystem layout, plugin installation, and platform-specific notes.
 
-🐋 Docker (🐧 Linux)
-+++++++++++++++++++++
+🐋 Docker – 🐧 Linux
+++++++++++++++++++++++
 
 A Docker image is available on `Docker Hub <https://hub.docker.com/r/mad0x20wizard/desomnia>`__. A ready-to-use ``docker-compose.yml`` is provided in the repository description there. See the `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for volume layout and capability requirements.
 
