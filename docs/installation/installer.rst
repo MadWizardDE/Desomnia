@@ -3,7 +3,7 @@ Windows installer
 
 :OS: 🪟 *Windows*
 
-The easiest way to set up Desomnia on Windows is to download the latest installer from its `Release`_ page on GitHub. It registers Desomnia as a system service, installs all required dependencies, and walks you through a basic initial configuration.
+The easiest way to set up Desomnia on Windows is to download the latest installer from its `Release`_ page on GitHub. It takes care of registering Desomnia as a system service, installs all required dependencies, and walks you through a basic initial configuration.
 
 .. image:: /_static/images/windows/installer.png
    :width: 40em

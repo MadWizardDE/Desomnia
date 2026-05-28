@@ -8,13 +8,17 @@ Follow this guide to set up Desomnia on Linux manually, with full control over t
 Prerequisites
 -------------
 
-Desomnia requires the .NET Runtime. Use the official script to download and install it into the default location, where it will be found automatically::
+Desomnia requires the **.NET Runtime**. If it is not provided as a `package <https://learn.microsoft.com/en-us/dotnet/core/install/linux>`_ by your distribution, use the official script to download and install it into the default location, where it will be found automatically::
 
     curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 -runtime dotnet --install-dir /usr/share/dotnet
 
 For monitoring network services, the `libpcap`_ library is required. It is usually already present on most distributions. If it is missing, install it via your package manager. On Debian-based distributions (Ubuntu, Raspbian, etc.)::
 
-    apt-get install libpcap-dev
+    apt-get install libpcap0.8t64
+
+In order to automatically configure your network interface for **Wake-on-LAN** and temporarily assign static address mappings, Desomnia additionally needs the following optional network tools::
+
+    apt-get install ethtool iproute2
 
 Portable mode
 -------------

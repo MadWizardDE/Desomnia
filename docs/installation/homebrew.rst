@@ -55,7 +55,7 @@ To stop the service and remove it from auto-start:
 
     ``sudo`` is required so that Desomnia is installed and run as a system service with root privileges.
 
-.. note::
+.. error::
 
    A couple of problems can arise when running this on 🐧 **Linux**:
 
@@ -81,15 +81,27 @@ Desomnia installed via Homebrew includes all plugins from the main repository. T
 Logging
 -------
 
-macOS
-+++++
+The location of the default output of Desomnia depends on the platform:
 
-The standard output and error logs are written to ``.../var/log/desomnia``. To enable additional file-based logging, create a :doc:`log configuration </concepts/logging>` at ``.../etc/desomnia/NLog.config``.
+File 
+++++
 
-Linux
-+++++
+:OS: 🍎 macOS
+
+The standard output and error logs, as well as the extended logs are written to ``.../var/log/desomnia``. 
+
+Journal
++++++++
+
+:OS: 🐧 Linux
 
 .. include:: ./journal.rst
+
+
+Extended Logging
+----------------
+
+To enable additional file-based logging, create a :doc:`log configuration </concepts/logging>` at ``.../etc/desomnia/NLog.config``. Unless configured otherwise, these logs will be written to ``.../var/log/desomnia``.
 
 Uninstallation
 --------------
