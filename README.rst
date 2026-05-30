@@ -8,7 +8,7 @@ Desomnia
 
 Desomnia is an intelligent sleep management solution designed for use on local networks, ranging from home labs to small businesses. It monitors the usage of your machines locally and via network to keep them awake as long as they are in use and can wake them at the exact moment you open a connection to one of it's services — transparently, with minimal or no changes at all on the connecting sides. This is achieved through a smart use of standard network protocols and a little bit of IP spoofing.
 
-If you have ever been frustrated by the built-in sleep management features of your operating system, Desomnia can be used as a drop-in replacement. You can declaratively configure it to monitor a variety of metrics ranging from network traffic, process activitiy, native power requests / inhibitor locks, among others, that should keep the system running and Desomnia enforces exactly that — across your entire network, automatically.
+If you have ever been frustrated by the built-in sleep management features of your operating system, Desomnia can be used as a drop-in replacement. You can configure it to monitor a variety of metrics ranging from network traffic, process activitiy, native power requests / inhibitor locks, among others, that should keep the system running and Desomnia enforces exactly that — across your entire network, automatically.
 
 Why should I need this?
 -----------------------
