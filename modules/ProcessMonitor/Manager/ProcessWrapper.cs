@@ -1,4 +1,5 @@
-﻿using NativeProcess = System.Diagnostics.Process;
+﻿using System.Runtime.InteropServices;
+using NativeProcess = System.Diagnostics.Process;
 
 namespace MadWizard.Desomnia.Process.Manager
 {
@@ -12,7 +13,17 @@ namespace MadWizard.Desomnia.Process.Manager
         {
             try
             {
-                process.EnableRaisingEvents = true;
+                /**
+                 * Only on Windows proccess handles can only be waited upon toll-free.
+                 * Other platforms emulate this with polling, which creates
+                 * totally unnecessary CPU load here – especially if the ProcessMonitor 
+                 * is not used at all.
+                 */
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    process.EnableRaisingEvents = true;
+                }
+
                 process.Exited += TriggerStop;
             }
             catch (Exception)
