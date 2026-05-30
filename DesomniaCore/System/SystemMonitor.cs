@@ -19,46 +19,39 @@ namespace MadWizard.Desomnia
 
         private IPowerRequest? Request { get; set; }
 
-        private DateTime? _sleeplessUntil = null;
-        private bool? _sleeplessIfUsage = config.OnDemand?.Name == "sleepless";
-
-        private Timer? _sleeplessTimer;
+        public bool MaySleep => config.OnSuspend?.Name == "sleep";
 
         public bool Sleepless
         {
-            get => _sleeplessUntil != null && _sleeplessUntil > DateTime.Now;
+            get => SleeplessUntil != null && SleeplessUntil > DateTime.Now;
 
             set => SleeplessUntil = value ? DateTime.MaxValue : null;
         }
 
-        public bool? SleeplessIfUsage
+        public bool? SleeplessOnDemand
         {
-            get => _sleeplessIfUsage;
-
-            set
+            get; set
             {
-                _sleeplessIfUsage = value;
+                field = value;
 
                 SleeplessChanged?.Invoke(this, EventArgs.Empty);
             }
-        }
+        } = config.OnDemand?.Name == "sleepless";
 
         public DateTime? SleeplessUntil
         {
-            get => _sleeplessUntil;
-
-            set
+            get; set
             {
                 _sleeplessTimer?.Dispose();
                 _sleeplessTimer = null;
 
-                _sleeplessUntil = value;
+                field = value;
 
                 SleeplessChanged?.Invoke(this, EventArgs.Empty);
 
-                if (_sleeplessUntil != null && _sleeplessUntil != DateTime.MaxValue)
+                if (field != null && field != DateTime.MaxValue)
                 {
-                    _sleeplessTimer = new Timer(_sleeplessUntil.Value - DateTime.Now);
+                    _sleeplessTimer = new Timer(field.Value - DateTime.Now);
                     _sleeplessTimer.Elapsed += (sender, args) => SleeplessUntil = null;
                     _sleeplessTimer.AutoReset = false;
                     _sleeplessTimer.Start();
@@ -67,6 +60,8 @@ namespace MadWizard.Desomnia
         }
 
         public event EventHandler? SleeplessChanged;
+
+        private Timer? _sleeplessTimer;
 
         public override void Start()
         {
@@ -133,7 +128,7 @@ namespace MadWizard.Desomnia
                 reason = eventRef.Tokens.Any() ? string.Join(", ", eventRef.Tokens) : "?";
             }
 
-            if (SleeplessIfUsage != false || eventRef.Tokens.OfType<SleeplessToken>().Any())
+            if (SleeplessOnDemand != false || eventRef.Tokens.OfType<SleeplessToken>().Any())
             {
                 Request = await power.CreateRequest($"{reason}");
             }

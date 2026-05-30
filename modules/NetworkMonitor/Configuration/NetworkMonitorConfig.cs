@@ -23,7 +23,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         public bool             UseBPF          { get; set; } = true;
 
-        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; }
+        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; } = DefaultWakeOnLAN();
 
         // Actions
         public DelayedAction?   OnIdle          { get; set; }
@@ -133,12 +133,14 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IList<HTTPFilterRuleInfo> HTTPFilterRule { get; set; } = [];
         public PingFilterRuleInfo? PingFilterRule { get; set; }
 
-        NetworkMonitorConfig()
+        private static WakeOnLANMode? DefaultWakeOnLAN()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                AllowWakeOnLAN = WakeOnLANMode.MagicPacket | WakeOnLANMode.Default; // don't replace existing modes
+               return WakeOnLANMode.MagicPacket | WakeOnLANMode.Default; // don't replace existing modes
             }
+
+            return null;
         }
 
         static NetworkMonitorConfig() // we want to use native types

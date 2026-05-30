@@ -52,7 +52,7 @@ namespace MadWizard.Desomnia.Service.Bridge.Notification
         {
             var message = new NotificationAreaMessage(new()
             {
-                SleeplessIfUsage = system.SleeplessIfUsage,
+                SleeplessIfUsage = system.SleeplessOnDemand,
                 SleeplessUntil = system.SleeplessUntil,
 
                 Sessions = manager.Select(s =>
@@ -122,7 +122,7 @@ namespace MadWizard.Desomnia.Service.Bridge.Notification
 
             if (message.SleeplessIfUsage != null)
             {
-                system.SleeplessIfUsage = message.SleeplessIfUsage;
+                system.SleeplessOnDemand = message.SleeplessIfUsage;
             }
         }
         #endregion
