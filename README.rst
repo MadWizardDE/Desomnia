@@ -15,7 +15,7 @@ Why should I need this?
 
 The aim is to **reduce the energy consumption** of your self-hosted services while **maintaining availability**.
 
-But instead of requiring you to decide when to wake and suspend the servers manually, you can declare the hosts and services that need to be available in a declarative fashion. Desomnia will then take care of providing you with an integrated and frictionless experience.
+But instead of requiring you to decide when to wake and suspend the servers manually, you can declare the hosts and services that need to be available in a unified configuration format. Desomnia will then take care of providing you with an integrated and frictionless experience.
 
 Modes of operation
 ------------------
