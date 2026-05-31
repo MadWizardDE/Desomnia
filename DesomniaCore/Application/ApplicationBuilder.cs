@@ -8,9 +8,7 @@ using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Config;
 using NLog.Extensions.Logging;
-using NLog.Layouts;
 using NLog.Targets;
-using System.Diagnostics;
 
 namespace MadWizard.Desomnia
 {
@@ -52,9 +50,20 @@ namespace MadWizard.Desomnia
             }
         }
 
+        /**
+         * Ideally the ContextRootPath should be left empty,
+         * because the runtime will install file system watches
+         * for every file below that path. On Linux this can
+         * extend to the whole file system, if run as a systemd unit.
+         */
+        protected virtual HostApplicationBuilderSettings DefaultSettings => new()
+        {
+            DisableDefaults = true // don't set ContextRootPath to working directory
+        };
+
         public ApplicationBuilder()
         {
-            _builder = new HostApplicationBuilder();
+            _builder = new HostApplicationBuilder(DefaultSettings);
 
             _builder.Services.AddSingleton<IHostLifetime, ConsoleLifetime>();
 
