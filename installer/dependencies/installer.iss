@@ -59,7 +59,7 @@ begin
     Dependency_Clear;
     //Dependency_AddVC2015To2022;
     if not Dependency_IsNetCoreInstalled('Microsoft.WindowsDesktop.App', 10, 0, 0) then begin
-      Dependency_AddDotNet90Desktop;
+      Dependency_AddDotNet100Desktop;
     end;
 
     if IsComponentSelected('DesomniaService\NetworkMonitor') then

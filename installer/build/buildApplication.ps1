@@ -1,6 +1,6 @@
 Param([string]$ComponentsDirectory = "./components")
 
-$env:VERSION_NET = "9.0"
+$env:VERSION_NET = "10.0"
 
 . "./functions.ps1"
 

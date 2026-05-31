@@ -12,7 +12,7 @@ permissions:
 env:
   name: 'Desomnia'
 
-  VERSION_NET: '9.0'
+  VERSION_NET: '10.0'
   VERSION_DESOMNIA: ${{ github.ref_name }}
 
 jobs:
