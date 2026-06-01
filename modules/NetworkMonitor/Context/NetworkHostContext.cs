@@ -254,7 +254,7 @@ namespace MadWizard.Desomnia.Network.Context
             // Configure static Address addresses
             foreach (var ip in config.IPAddresses)
             {
-                if (host.AddAddress(ip))
+                if (host.AddAddress(ip, flags: IPAddressFlags.Static))
                 {
                     Logger.LogHostAddressAdded(host, ip);
                 }

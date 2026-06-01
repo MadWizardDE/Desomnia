@@ -15,7 +15,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public virtual PhysicalAddress? PhysicalAddress { get; set { field = value;  PhysicalAddressChanged?.Invoke(this, new(value!)); } }
 
-        readonly ConcurrentDictionary<IPAddress, DateTime?> _addresses = [];
+        readonly ConcurrentDictionary<IPAddress, IPAddressScope> _addresses = [];
 
         public virtual IEnumerable<IPAddress> IPAddresses => _addresses.Keys;
         public IEnumerable<IPAddress> IPv4Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork);
@@ -25,7 +25,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
         public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
 
-        public bool AddAddress(IPAddress ip, TimeSpan? lifetime = null)
+        public bool AddAddress(IPAddress ip, TimeSpan? lifetime = null, IPAddressFlags flags = default)
         {
             ip.RemoveScopeId();
 
@@ -33,16 +33,20 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             if (_addresses.ContainsKey(ip))
             {
-                if (_addresses[ip] < expires)
+                if (_addresses[ip].Expires < expires)
                 {
-                    _addresses[ip] = expires;
+                    _addresses[ip].Expires = expires;
                 }
 
                 return false;
             }
             else
             {
-                _addresses[ip] = expires;
+                _addresses[ip] = new()
+                {
+                    Flags = flags,
+                    Expires = expires
+                };
 
                 AddressAdded?.Invoke(this, new(ip, expires));
 
@@ -50,18 +54,25 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             }
         }
 
-        public bool ShouldAddressExpire(IPAddress ip, out DateTime expires)
+        public bool ShouldAddressExpire(IPAddress ip, out DateTime expires, out bool dynamic)
         {
             expires = DateTime.MaxValue;
 
-            if (_addresses.ContainsKey(ip) && _addresses[ip] is DateTime date)
+            if (_addresses.TryGetValue(ip, out var scope))
             {
-                expires = date;
+                dynamic = !scope.Flags.HasFlag(IPAddressFlags.Static);
 
-                return true;
+                if (scope.Expires is DateTime date)
+                {
+                    expires = date;
+
+                    return true;
+                }
+
+                return false;
             }
 
-            return false;
+            throw new KeyNotFoundException("IP = " + ip.ToString());
         }
 
         public bool HasAddress(PhysicalAddress? mac = null, IPAddress? ip = null, bool both = false)
@@ -88,5 +99,18 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
+
+        private class IPAddressScope
+        {
+            public IPAddressFlags   Flags   { get; set; }
+            public DateTime?        Expires { get; set; }
+        }
+    }
+
+    public enum IPAddressFlags
+    {
+        None = 0,
+
+        Static  = 1 << 0,
     }
 }

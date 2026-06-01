@@ -66,8 +66,11 @@ namespace MadWizard.Desomnia.Network.Address
                             if (Network.LocalRange.Contains(ip))
                                 addresses.Update(ip, mac);
 
-                        if (host.ShouldAddressExpire(ip, out _)) // install static hosts mappings, for static IP addresses
+                        // install static hosts mappings, for static IP addresses
+                        if (!host.ShouldAddressExpire(ip, out var expires, out bool dynamic) && !dynamic)
+                        {
                             names?.Update(host.HostName, ip);
+                        }
                     }
                 }
             }
@@ -95,10 +98,9 @@ namespace MadWizard.Desomnia.Network.Address
                         if (host.PhysicalAddress is not null)
                             if (Network.LocalRange.Contains(ip))
                                 addresses.Delete(ip);
-
-                        if (host.ShouldAddressExpire(ip, out _))
-                            names?.Delete(host.HostName);
                     }
+
+                    names?.Delete(host.HostName);
                 }
             }
         }

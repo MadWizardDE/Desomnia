@@ -17,7 +17,7 @@ namespace MadWizard.Desomnia.Network.Context.Watch
 
         public required Lazy<ReachabilityService> Reachability { private get; init; }
 
-        public TimeSpan GatewayTimeout { get; set; } = timeout;
+        public TimeSpan? GatewayTimeout { get; set; }
 
         CancellationTokenSource? _cancel = null;
         DateTime _lastTimeReceived = DateTime.Now;
@@ -52,13 +52,13 @@ namespace MadWizard.Desomnia.Network.Context.Watch
 
                     if ((DateTime.Now - _lastTimeReceived) > timeout)
                     {
-                        if (Network.DefaultGateway is NetworkRouter router)
+                        if (Network.DefaultGateway is NetworkRouter router && GatewayTimeout is TimeSpan timeoutGateway)
                         {
                             Logger.LogDebug($"Received NO packets on device '{Device.Name}' for {timeout}, testing reachability of default gateway:");
 
                             try
                             {
-                                var latency = await Reachability.Value.Send(new(router.IPAddresses, GatewayTimeout));
+                                var latency = await Reachability.Value.Send(new(router.IPAddresses, timeoutGateway));
 
                                 Logger.LogTrace($"Default gateway responded after {Math.Ceiling(latency.TotalMilliseconds)} ms");
 

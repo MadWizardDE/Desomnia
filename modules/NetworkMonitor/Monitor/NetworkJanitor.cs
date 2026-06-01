@@ -51,7 +51,7 @@ namespace MadWizard.Desomnia.Network
                 List<IPAddress>? removeIPs = null;
                 foreach (var ip in host.IPAddresses)
                 {
-                    if (host.ShouldAddressExpire(ip, out var expires))
+                    if (host.ShouldAddressExpire(ip, out var expires, out bool dynamic))
                     {
                         if (DateTime.Now - expires > options.Delay)
                         {

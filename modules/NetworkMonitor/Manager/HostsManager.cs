@@ -5,7 +5,7 @@ namespace MadWizard.Desomnia.Network.Manager
 {
     public class HostsManager(string path) : IStaticNameMapping, IDisposable
     {
-        public required ILogger<HostsManager> LoggerHosts { private get; init; }
+        public required ILogger<HostsManager> Logger { private get; init; }
 
         /*
          * Host name -> IP mappings are written into the Windows "hosts" file. To keep our edits
@@ -23,7 +23,7 @@ namespace MadWizard.Desomnia.Network.Manager
 
         // Host names this instance added, so that we can guarantee their removal on shutdown,
         // regardless of whether Delete() was ever called for them.
-        private readonly HashSet<string> _managedNames = [with(StringComparer.OrdinalIgnoreCase)];
+        private readonly HashSet<string> _managedNames = new(StringComparer.OrdinalIgnoreCase);
 
         void IStaticNameMapping.Update(string name, IPAddress ip)
         {
@@ -40,7 +40,7 @@ namespace MadWizard.Desomnia.Network.Manager
                 return true;
             });
 
-            LoggerHosts.LogTrace($"Mapped host '{name}' to {ip} in hosts file");
+            Logger.LogTrace($"Mapped host '{name}' to {ip} in hosts file");
         }
 
         void IStaticNameMapping.Delete(string name)
@@ -60,7 +60,7 @@ namespace MadWizard.Desomnia.Network.Manager
 
             _managedNames.Remove(name);
 
-            LoggerHosts.LogTrace($"Removed host '{name}' from hosts file");
+            Logger.LogTrace($"Removed host '{name}' from hosts file");
         }
 
         public void Dispose()
@@ -101,7 +101,7 @@ namespace MadWizard.Desomnia.Network.Manager
                 }
                 catch (Exception ex)
                 {
-                    LoggerHosts.LogError($"Failed to read hosts file \"{path}\" – {ex.Message}");
+                    Logger.LogError($"Failed to read hosts file \"{path}\" – {ex.Message}");
                     return;
                 }
 
@@ -114,7 +114,7 @@ namespace MadWizard.Desomnia.Network.Manager
                 }
                 catch (Exception ex)
                 {
-                    LoggerHosts.LogError($"Failed to write hosts file \"{path}\" – {ex.Message}");
+                    Logger.LogError($"Failed to write hosts file \"{path}\" – {ex.Message}");
                 }
             }
         }
