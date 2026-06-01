@@ -68,7 +68,7 @@ namespace MadWizard.Desomnia.Network.Address
 
                         // install static hosts mappings, for static IP addresses
                         if (!host.ShouldAddressExpire(ip, out var expires, out var flags))
-                            if (flags.HasFlag(IPAddressFlags.Static))
+                            if (flags.HasFlag(IPAddressFlags.Static) && !host.HostName.Any(char.IsWhiteSpace))
                                 names?.Insert(host.HostName, ip);
                     }
                 }
