@@ -33,7 +33,7 @@ namespace MadWizard.Desomnia.Network.Manager
             {
                 if (_mappings.Remove(name))
                 {
-                    Logger.LogTrace("Removed mappings for '{name}'", name);
+                    Logger.LogTrace("Deleted mappings for '{name}'", name);
 
                     Flush();
                 }
