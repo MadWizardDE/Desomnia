@@ -9,7 +9,7 @@ namespace MadWizard.Desomnia.Network.Manager
 
         private readonly Dictionary<string, List<IPAddress>> _mappings = new(StringComparer.OrdinalIgnoreCase);
 
-        void IStaticNameMapping.Update(string name, IPAddress ip)
+        void IStaticNameMapping.Insert(string name, IPAddress ip)
         {
             lock (_mappings)
             {
