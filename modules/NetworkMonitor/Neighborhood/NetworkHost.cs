@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Neighborhood.Events;
+﻿using MadWizard.Desomnia.Network.Neighborhood.Address;
+using MadWizard.Desomnia.Network.Neighborhood.Events;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -15,7 +16,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public virtual PhysicalAddress? PhysicalAddress { get; set { field = value;  PhysicalAddressChanged?.Invoke(this, new(value!)); } }
 
-        readonly ConcurrentDictionary<IPAddress, IPAddressScope> _addresses = [];
+        readonly ConcurrentDictionary<IPAddress, IPAddressOptions> _addresses = [];
 
         public virtual IEnumerable<IPAddress> IPAddresses => _addresses.Keys;
         public IEnumerable<IPAddress> IPv4Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork);
@@ -25,54 +26,59 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
         public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
 
-        public virtual bool AddAddress(IPAddress ip, TimeSpan? lifetime = null, IPAddressFlags flags = default)
+        public virtual IPAddressOptions this[IPAddress ip]
+        {
+            get
+            {
+                if (_addresses.TryGetValue(ip, out var options))
+                {
+                    return options;
+                }
+
+                throw new KeyNotFoundException("IP = " + ip.ToString());
+            }
+        }
+
+        public virtual bool AddAddress(IPAddress ip, IPAddressOptions options = default)
         {
             ip.RemoveScopeId();
 
-            var expires = lifetime != null ? DateTime.Now + lifetime : null;
-
-            if (_addresses.ContainsKey(ip))
+            if (_addresses.TryGetValue(ip, out IPAddressOptions existing))
             {
-                if (_addresses[ip].Expires < expires)
+                if (!existing.HasFlags(IPAddressFlags.Static))
                 {
-                    _addresses[ip].Expires = expires;
+                    if (existing.Expires < options.Expires)
+                    {
+                        existing.Expires = options.Expires;
+
+                        _addresses[ip] = existing;
+                    }
                 }
 
                 return false;
             }
             else
             {
-                _addresses[ip] = new()
-                {
-                    Flags = flags,
-                    Expires = expires
-                };
+                _addresses[ip] = options;
 
-                AddressAdded?.Invoke(this, new(ip, expires));
+                AddressAdded?.Invoke(this, new(ip, options.Expires));
 
                 return true;
             }
         }
 
-        public virtual bool ShouldAddressExpire(IPAddress ip, out DateTime expires, out IPAddressFlags flags)
+        public bool ShouldAddressExpire(IPAddress ip, out DateTime expires)
         {
             expires = DateTime.MaxValue;
 
-            if (_addresses.TryGetValue(ip, out var scope))
+            if (this[ip].Expires is DateTime date)
             {
-                flags = scope.Flags;
+                expires = date;
 
-                if (scope.Expires is DateTime date)
-                {
-                    expires = date;
-
-                    return true;
-                }
-
-                return false;
+                return true;
             }
 
-            throw new KeyNotFoundException("IP = " + ip.ToString());
+            return false;
         }
 
         public bool HasAddress(PhysicalAddress? mac = null, IPAddress? ip = null, bool both = false)
@@ -99,18 +105,5 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
-
-        private class IPAddressScope
-        {
-            public IPAddressFlags   Flags   { get; set; }
-            public DateTime?        Expires { get; set; }
-        }
-    }
-
-    public enum IPAddressFlags
-    {
-        None = 0,
-
-        Static  = 1 << 0,
     }
 }

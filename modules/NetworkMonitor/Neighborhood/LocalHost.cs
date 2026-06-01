@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using MadWizard.Desomnia.Network.Neighborhood.Address;
+using System.Net;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Neighborhood
@@ -11,16 +12,10 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public override IEnumerable<IPAddress> IPAddresses => device.IPAddresses;
 
-        public override bool AddAddress(IPAddress ip, TimeSpan? lifetime = null, IPAddressFlags flags = IPAddressFlags.None) => throw new InvalidOperationException("LocalHost");
-        public override bool RemoveAddress(IPAddress ip, bool expired = false) => throw new InvalidOperationException("LocalHost");
+        public override IPAddressOptions this[IPAddress ip] => default;
 
-        public override bool ShouldAddressExpire(IPAddress ip, out DateTime expires, out IPAddressFlags flags)
-        {
-            expires = DateTime.MaxValue;
+        public override bool AddAddress(IPAddress ip, IPAddressOptions options = default)   => throw new InvalidOperationException("LocalHost");
+        public override bool RemoveAddress(IPAddress ip, bool expired = false)              => throw new InvalidOperationException("LocalHost");
 
-            flags = default;
-
-            return false;
-        }
     }
 }

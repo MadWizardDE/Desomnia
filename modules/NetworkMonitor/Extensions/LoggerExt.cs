@@ -1,6 +1,7 @@
 ﻿using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Address;
 using PacketDotNet;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -144,9 +145,9 @@ namespace Microsoft.Extensions.Logging
                 else
                     tokens.Add("remote");
 
-                if (host.ShouldAddressExpire(ip, out var expires, out var flags))
+                if (host.ShouldAddressExpire(ip, out var expires))
                     tokens.Add($"expires={DateTime.Now - expires}");
-                else if (flags.HasFlag(IPAddressFlags.Static))
+                else if (host[ip].HasFlags(IPAddressFlags.Static))
                     tokens.Add("static");
 
                 logger.LogDebug("Add {Family} address '{IPAddress}' to host '{HostName}' [{Flags}]",

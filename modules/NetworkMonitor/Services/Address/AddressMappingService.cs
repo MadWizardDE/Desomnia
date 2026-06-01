@@ -1,7 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Address;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
@@ -54,7 +54,7 @@ namespace MadWizard.Desomnia.Network.Address
         {
             if (EligibleHosts.Any())
             {
-                Logger.LogDebug("Installing static address mappings...");
+                Logger.LogDebug("Installing static mappings...");
 
                 foreach (var host in EligibleHosts)
                 {
@@ -69,9 +69,13 @@ namespace MadWizard.Desomnia.Network.Address
                                 addresses.Update(ip, mac);
 
                         // install static hosts mappings, for static IP addresses
-                        if (!host.ShouldAddressExpire(ip, out var expires, out var flags))
-                            if (flags.HasFlag(IPAddressFlags.Static) && !host.HostName.Any(char.IsWhiteSpace))
+                        if (host[ip].HasFlags(IPAddressFlags.Static) && !host.ShouldAddressExpire(ip, out var expires))
+                        {
+                            if (!host.HostName.Any(char.IsWhiteSpace))
+                            {
                                 hosts?.Insert(host.HostName, ip);
+                            }
+                        }
                     }
                 }
             }
@@ -86,7 +90,7 @@ namespace MadWizard.Desomnia.Network.Address
         {
             if (EligibleHosts.Any())
             {
-                Logger.LogDebug("Deleting static address mappings...");
+                Logger.LogDebug("Deleting static mappings...");
 
                 foreach (var host in EligibleHosts)
                 {

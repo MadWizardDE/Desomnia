@@ -1,6 +1,6 @@
 ﻿using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network.Services
+namespace MadWizard.Desomnia.Network
 {
     public interface INetworkService
     {

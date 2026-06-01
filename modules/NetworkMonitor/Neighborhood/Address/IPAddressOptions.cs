@@ -1,0 +1,27 @@
+﻿namespace MadWizard.Desomnia.Network.Neighborhood.Address
+{
+    public struct IPAddressOptions
+    {
+        public IPAddressFlags   Flags   { get; set; }
+        public DateTime?        Expires { get; set; }
+
+        public IPAddressOptions(IPAddressFlags flags)
+        {
+            Flags = flags;
+        }
+
+        public IPAddressOptions(TimeSpan lifetime)
+        {
+            Expires = DateTime.Now + lifetime;
+        }
+
+        public readonly bool HasFlags(IPAddressFlags flags) => Flags.HasFlag(flags);
+    }
+
+    public enum IPAddressFlags
+    {
+        None = 0,
+
+        Static = 1 << 0,
+    }
+}
