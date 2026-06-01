@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
-    internal class LinuxNeighborCache : IAddressCache
+    internal class LinuxNeighborCache : IStaticAddressMapping
     {
         public required ILogger<LinuxNeighborCache> Logger { private get; init; }
 
@@ -13,14 +13,14 @@ namespace MadWizard.Desomnia.Network.Manager
 
         private string DeviceName => Device.Interface.Name;
 
-        void IAddressCache.Update(IPAddress ip, PhysicalAddress mac)
+        void IStaticAddressMapping.Update(IPAddress ip, PhysicalAddress mac)
         {
             // IMPROVE add [ nud STATE ] ? which state, "permanent" or "reachable"?
 
             exec($"-family {ip.ToFamilyName()} neigh replace {ip} lladdr {mac.ToPlatformString()} dev {DeviceName}");
         }
 
-        void IAddressCache.Delete(IPAddress ip)
+        void IStaticAddressMapping.Delete(IPAddress ip)
         {
             exec($"-family {ip.ToFamilyName()} neigh del {ip} dev {DeviceName}");
         }

@@ -11,6 +11,8 @@ namespace MadWizard.Desomnia.Service
 {
     internal class PlatformModule : Desomnia.ConfigurableModule<ServiceConfig>
     {
+        private static string HostsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
+
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterType<PowerManager>()
@@ -27,6 +29,11 @@ namespace MadWizard.Desomnia.Service
                     .AsSelf();
             }
 
+            // Address mappings
+            builder.RegisterType<HostsManager>()
+                .WithParameter(TypedParameter.From(HostsFilePath))
+                .AsImplementedInterfaces()
+                .SingleInstance();
             builder.RegisterType<WindowsNeighborCache>()
                 .AsImplementedInterfaces()
                 .InstancePerNetwork()

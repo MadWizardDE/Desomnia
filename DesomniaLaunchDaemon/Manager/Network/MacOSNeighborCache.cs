@@ -5,11 +5,11 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
-    internal class MacOSNeighborCache : IAddressCache
+    internal class MacOSNeighborCache : IStaticAddressMapping
     {
         public required ILogger<MacOSNeighborCache> Logger { private get; init; }
 
-        void IAddressCache.Update(IPAddress ip, PhysicalAddress mac)
+        void IStaticAddressMapping.Update(IPAddress ip, PhysicalAddress mac)
         {
             switch (ip.AddressFamily)
             {
@@ -28,7 +28,7 @@ namespace MadWizard.Desomnia.Network.Manager
             }
         }
 
-        void IAddressCache.Delete(IPAddress ip)
+        void IStaticAddressMapping.Delete(IPAddress ip)
         {
             switch (ip.AddressFamily)
             {

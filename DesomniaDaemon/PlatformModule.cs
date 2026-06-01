@@ -11,6 +11,8 @@ namespace MadWizard.Desomnia.Daemon
 {
     internal class PlatformModule : Desomnia.ConfigurableModule<DaemonConfig>
     {
+        private static string HostsFilePath => "/etc/hosts";
+
         // The D-Bus system bus socket is the canonical indicator that logind is reachable.
         private static bool HasSystemDBus() => File.Exists("/run/dbus/system_bus_socket");
 
@@ -42,7 +44,11 @@ namespace MadWizard.Desomnia.Daemon
                     .AsSelf();
             }
 
-            // Implementing network adapters
+            // Address mappings
+            builder.RegisterType<HostsManager>()
+                .WithParameter(TypedParameter.From(HostsFilePath))
+                .AsImplementedInterfaces()
+                .SingleInstance();
             builder.RegisterType<LinuxNeighborCache>()
                 .AsImplementedInterfaces()
                 .InstancePerNetwork();

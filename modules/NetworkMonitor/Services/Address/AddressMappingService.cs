@@ -10,11 +10,9 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Address
 {
-    public class AddressMappingService : INetworkService
+    public class AddressMappingService(IStaticAddressMapping addresses, IStaticNameMapping? names = null) : INetworkService
     {
         public required ILogger<AddressMappingService> Logger { private get; init; }
-
-        public required IAddressCache Cache { private get; init; }
 
         public required NetworkDevice   Device  { private get; init; }
         public required NetworkSegment  Network { private get; init; }
@@ -62,10 +60,15 @@ namespace MadWizard.Desomnia.Network.Address
                     host.PhysicalAddressChanged += Host_PhysicalAddressChanged;
                     host.AddressRemoved += Host_AddressRemoved;
 
-                    if (host.PhysicalAddress is PhysicalAddress mac)
-                        foreach (var ip in host.IPAddresses)
+                    foreach (var ip in host.IPAddresses)
+                    {
+                        if (host.PhysicalAddress is PhysicalAddress mac)
                             if (Network.LocalRange.Contains(ip))
-                                Cache.Update(ip, mac);
+                                addresses.Update(ip, mac);
+
+                        if (host.ShouldAddressExpire(ip, out _)) // install static hosts mappings, for static IP addresses
+                            names?.Update(host.HostName, ip);
+                    }
                 }
             }
         }
@@ -88,9 +91,14 @@ namespace MadWizard.Desomnia.Network.Address
                     host.AddressRemoved -= Host_AddressRemoved;
 
                     foreach (var ip in host.IPAddresses)
-                        if (Network.LocalRange.Contains(ip))
-                            if (host.PhysicalAddress is not null)
-                                Cache.Delete(ip);
+                    {
+                        if (host.PhysicalAddress is not null)
+                            if (Network.LocalRange.Contains(ip))
+                                addresses.Delete(ip);
+
+                        if (host.ShouldAddressExpire(ip, out _))
+                            names?.Delete(host.HostName);
+                    }
                 }
             }
         }
@@ -104,7 +112,7 @@ namespace MadWizard.Desomnia.Network.Address
                 Logger.LogDebug($"Updating static address mappings for host '{host.Name}'...");
 
                 if (Network.LocalRange.Contains(args.IPAddress))
-                    Cache.Update(args.IPAddress, mac);
+                    addresses.Update(args.IPAddress, mac);
             }
         }
 
@@ -118,7 +126,7 @@ namespace MadWizard.Desomnia.Network.Address
                 {
                     if (Network.LocalRange.Contains(ip))
                     {
-                        Cache.Update(ip, args.PhysicalAddress);
+                        addresses.Update(ip, args.PhysicalAddress);
                     }
                 }
             }
@@ -131,7 +139,7 @@ namespace MadWizard.Desomnia.Network.Address
                 Logger.LogDebug($"Updating static address mappings for host '{host.Name}'...");
 
                 if (Network.LocalRange.Contains(args.IPAddress))
-                    Cache.Delete(args.IPAddress);
+                    addresses.Delete(args.IPAddress);
             }
         }
         #endregion

@@ -5,7 +5,7 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
-    internal class WindowsNeighborCache : IAddressCache
+    internal class WindowsNeighborCache : IStaticAddressMapping
     {
         public required ILogger<WindowsNeighborCache> Logger { private get; init; }
 
@@ -13,13 +13,13 @@ namespace MadWizard.Desomnia.Network.Manager
 
         private string DeviceName => Device.Interface.Name;
 
-        void IAddressCache.Update(IPAddress ip, PhysicalAddress mac)
+        void IStaticAddressMapping.Update(IPAddress ip, PhysicalAddress mac)
         {
             netsh($"interface {ip.ToContextName()} delete neighbors \"{DeviceName}\" {ip}");
             netsh($"interface {ip.ToContextName()} add neighbors \"{DeviceName}\" {ip} {mac.ToPlatformString()}");
         }
 
-        void IAddressCache.Delete(IPAddress ip)
+        void IStaticAddressMapping.Delete(IPAddress ip)
         {
             netsh($"interface {ip.ToContextName()} delete neighbors \"{DeviceName}\" {ip}");
         }
