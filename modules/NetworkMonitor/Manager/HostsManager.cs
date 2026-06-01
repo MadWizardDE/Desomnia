@@ -7,6 +7,55 @@ namespace MadWizard.Desomnia.Network.Manager
     {
         public required ILogger<HostsManager> Logger { private get; init; }
 
+        private readonly Dictionary<string, List<IPAddress>> _mappings = new(StringComparer.OrdinalIgnoreCase);
+
+        void IStaticNameMapping.Update(string name, IPAddress ip)
+        {
+            lock (_mappings)
+            {
+                if (!_mappings.TryGetValue(name, out var ips))
+                    _mappings[name] = ips = [];
+
+                if (!ips.Contains(ip))
+                {
+                    ips.Add(ip);
+
+                    Logger.LogTrace("Inserted mapping '{name}' -> {ip}", name, ip);
+
+                    Flush();
+                }
+            }
+        }
+
+        void IStaticNameMapping.Delete(string name)
+        {
+            lock (_mappings)
+            {
+                if (_mappings.Remove(name))
+                {
+                    Logger.LogTrace("Removed mappings for '{name}'", name);
+
+                    Flush();
+                }
+            }
+        }
+
+        void IDisposable.Dispose()
+        {
+            lock (_mappings)
+            {
+                if (_mappings.Count > 0)
+                {
+                    // On shutdown drop every mapping we ever added – even those for which Delete() was
+                    // not called – so that no stale Desomnia entries are left behind in the hosts file.
+                    _mappings.Clear();
+
+                    Flush();
+                }
+            }
+        }
+
+        #region Hosts file read/write
         /*
          * Host name -> IP mappings are written into the "hosts" file. To keep our edits isolated
          * from any other (manual or third-party) entries, every mapping managed by Desomnia lives
@@ -14,112 +63,56 @@ namespace MadWizard.Desomnia.Network.Manager
          * The markers use the hosts file comment character '#', so they are ignored by the name
          * resolver itself.
          */
-        private const string BlockStartMarker = "# --- BEGIN Desomnia managed hosts (do not edit – automatically generated) ---";
-        private const string BlockEndMarker = "# --- END Desomnia managed hosts ---";
-
-        // The hosts file is a process-wide resource; serialize all access so that concurrent callers
-        // (e.g. one network service per interface) cannot corrupt each other's edits. The lock also
-        // guards the in-memory mapping below.
-        private static readonly object HostsFileLock = new();
-
-        // The authoritative state of the managed block: every host name we map to one or more
-        // addresses. The hosts file is merely a projection of this mapping and is rewritten from it
-        // after every change.
-        private readonly Dictionary<string, List<IPAddress>> _mappings = new(StringComparer.OrdinalIgnoreCase);
-
-        void IStaticNameMapping.Update(string name, IPAddress ip)
-        {
-            lock (HostsFileLock)
-            {
-                if (!_mappings.TryGetValue(name, out var ips))
-                    _mappings[name] = ips = [];
-
-                if (ips.Contains(ip))
-                    return;
-
-                ips.Add(ip);
-                Flush();
-            }
-
-            Logger.LogTrace($"Mapped host '{name}' to {ip} in hosts file");
-        }
-
-        void IStaticNameMapping.Delete(string name)
-        {
-            lock (HostsFileLock)
-            {
-                if (!_mappings.Remove(name))
-                    return;
-
-                Flush();
-            }
-
-            Logger.LogTrace($"Removed host '{name}' from hosts file");
-        }
-
-        public void Dispose()
-        {
-            lock (HostsFileLock)
-            {
-                if (_mappings.Count == 0)
-                    return;
-
-                // On shutdown drop every mapping we ever added – even those for which Delete() was
-                // not called – so that no stale Desomnia entries are left behind in the hosts file.
-                _mappings.Clear();
-                Flush();
-            }
-        }
+        private const string BlockStartMarker   = "# DESOMNIA-BEGIN";
+        private const string BlockEndMarker     = "# DESOMNIA-END";
 
         /// <summary>
         /// Rewrites the managed block in the hosts file from the current in-memory mapping: everything
         /// between the markers is discarded and replaced with the freshly exported entries. The block
-        /// (and its markers) is removed entirely when no mappings remain. Must be called under <see cref="HostsFileLock"/>.
+        /// (and its markers) is removed entirely when no mappings remain. Must be called under <see cref="_hostsFileLock"/>.
         /// </summary>
         private void Flush()
         {
-            List<string> lines;
             try
             {
-                lines = File.Exists(path) ? [.. File.ReadAllLines(path)] : [];
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError($"Failed to read hosts file \"{path}\" – {ex.Message}");
-                return;
-            }
+                List<string> lines = File.Exists(path) ? [.. File.ReadAllLines(path)] : [];
 
-            // Strip the previously written block (markers + content), wherever it sits in the file.
-            var (start, end) = FindBlock(lines);
-            if (start >= 0)
-                lines.RemoveRange(start, end - start + 1);
-
-            // Re-create the block from the current mapping, reusing the original position if we had one.
-            List<string> entries = [.. ExportEntries()];
-            if (entries.Count > 0)
-            {
-                List<string> block = [BlockStartMarker, .. entries, BlockEndMarker];
-
+                // Strip the previously written block (markers + content), wherever it sits in the file.
+                var (start, end) = FindBlock(lines);
                 if (start >= 0)
-                {
-                    lines.InsertRange(start, block);
-                }
-                else
-                {
-                    if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
-                        lines.Add(string.Empty);
+                    lines.RemoveRange(start, end - start + 1);
 
-                    lines.AddRange(block);
-                }
-            }
+                // Re-create the block from the current mapping, reusing the original position if we had one.
+                List<string> entries = [.. ExportEntries()];
+                if (entries.Count > 0)
+                {
+                    List<string> block = [BlockStartMarker, .. entries, BlockEndMarker];
 
-            try
-            {
-                File.WriteAllLines(path, lines);
+                    if (start >= 0)
+                    {
+                        lines.InsertRange(start, block);
+                    }
+                    else
+                    {
+                        if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+                            lines.Add(string.Empty);
+
+                        lines.AddRange(block);
+                    }
+                }
+
+                try
+                {
+                    File.WriteAllLines(path, lines);
+                }
+                catch (Exception ex)
+                {
+                    throw new HostsFileException($"Failed to write hosts file \"{path}\"", ex);
+                }
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Failed to write hosts file \"{path}\" – {ex.Message}");
+                throw new HostsFileException($"Failed to read hosts file \"{path}\"", ex);
             }
         }
 
@@ -142,6 +135,9 @@ namespace MadWizard.Desomnia.Network.Manager
             return end < 0 ? (-1, -1) : (start, end);
         }
 
-        private static string FormatEntry(IPAddress ip, string name) => $"{ip}\t{name}";
+        private static string FormatEntry(IPAddress ip, string name) => $"{ip} {name}";
+        #endregion
     }
+
+    public class HostsFileException(string? message, Exception? innerException) : Exception(message, innerException) { }
 }

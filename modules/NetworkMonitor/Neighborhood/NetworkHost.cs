@@ -25,7 +25,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
         public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
 
-        public bool AddAddress(IPAddress ip, TimeSpan? lifetime = null, IPAddressFlags flags = default)
+        public virtual bool AddAddress(IPAddress ip, TimeSpan? lifetime = null, IPAddressFlags flags = default)
         {
             ip.RemoveScopeId();
 
@@ -54,13 +54,13 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             }
         }
 
-        public bool ShouldAddressExpire(IPAddress ip, out DateTime expires, out bool dynamic)
+        public virtual bool ShouldAddressExpire(IPAddress ip, out DateTime expires, out IPAddressFlags flags)
         {
             expires = DateTime.MaxValue;
 
             if (_addresses.TryGetValue(ip, out var scope))
             {
-                dynamic = !scope.Flags.HasFlag(IPAddressFlags.Static);
+                flags = scope.Flags;
 
                 if (scope.Expires is DateTime date)
                 {
@@ -88,7 +88,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             return false;
         }
 
-        public bool RemoveAddress(IPAddress ip, bool expired = false)
+        public virtual bool RemoveAddress(IPAddress ip, bool expired = false)
         {
             if (_addresses.Remove(ip, out _))
             {

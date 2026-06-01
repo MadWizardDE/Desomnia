@@ -134,24 +134,37 @@ namespace Microsoft.Extensions.Logging
 
         public static void LogHostAddressAdded(this ILogger logger, NetworkHost host, IPAddress ip)
         {
-            using var scope = logger.BeginHostScope(host);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                using var scope = logger.BeginHostScope(host);
 
-            logger.LogDebug("Add {Family} address '{IPAddress}' to host '{HostName}' "
-                + (host.Network.LocalRange.Contains(ip) ? "[link-local]" : "[remote]"),
+                List<string> tokens = [];
+                if (host.Network.LocalRange.Contains(ip))
+                    tokens.Add("link-local");
+                else
+                    tokens.Add("remote");
 
-                ip.ToFamilyName(), ip,
-                host.Name);
+                if (host.ShouldAddressExpire(ip, out var expires, out var flags))
+                    tokens.Add($"expires={DateTime.Now - expires}");
+                else if (flags.HasFlag(IPAddressFlags.Static))
+                    tokens.Add("static");
+
+                logger.LogDebug("Add {Family} address '{IPAddress}' to host '{HostName}' [{Flags}]",
+                    ip.ToFamilyName(), ip, host.Name, string.Join(", ", tokens));
+            }
         }
 
         public static void LogHostAddressRemoved(this ILogger logger, NetworkHost host, IPAddress ip, bool hasExpired = false)
         {
-            using var scope = logger.BeginHostScope(host);
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                using var scope = logger.BeginHostScope(host);
 
-            logger.LogDebug("Removed {Family} address '{IPAddress}' from host '{HostName}'"
-                + (hasExpired ? " (expired)" : ""),
-
-                ip.ToFamilyName(), ip,
-                host.Name);
+                logger.LogDebug("Removed {Family} address '{IPAddress}' from host '{HostName}'"
+                    + (hasExpired ? " (expired)" : ""),
+                    ip.ToFamilyName(), ip,
+                    host.Name);
+            }
         }
     }
 

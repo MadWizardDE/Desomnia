@@ -67,10 +67,9 @@ namespace MadWizard.Desomnia.Network.Address
                                 addresses.Update(ip, mac);
 
                         // install static hosts mappings, for static IP addresses
-                        if (!host.ShouldAddressExpire(ip, out var expires, out bool dynamic) && !dynamic)
-                        {
-                            names?.Update(host.HostName, ip);
-                        }
+                        if (!host.ShouldAddressExpire(ip, out var expires, out var flags))
+                            if (flags.HasFlag(IPAddressFlags.Static))
+                                names?.Update(host.HostName, ip);
                     }
                 }
             }
