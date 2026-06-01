@@ -170,6 +170,13 @@ namespace MadWizard.Desomnia.Network.Address
 
         private void SendARPResponse(IPAddress ip, PhysicalAddress mac, IPAddress ipTarget, PhysicalAddress macTarget)
         {
+            if (mac.Equals(macTarget))
+            {
+                Logger.LogWarning($"Cannot send ARP response <{ip} -> {mac.ToHexString()}> to {ipTarget} (this is me!)");
+
+                return;
+            }
+
             Logger.LogDebug($"Sending ARP response <{ip} -> {mac.ToHexString()}> to {ipTarget}");
 
             //var response = new EthernetPacket(Address.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
@@ -183,6 +190,13 @@ namespace MadWizard.Desomnia.Network.Address
 
         private void SendNDPAdvertisement(IPAddress ip, PhysicalAddress mac, IPAddress? ipTarget = null, PhysicalAddress? macTarget = null, bool unsolicited = false)
         {
+            if (mac.Equals(macTarget))
+            {
+                Logger.LogWarning($"Cannot send NDP advertisement <{ip} -> {mac.ToHexString()}> to {ipTarget} (this is me!)");
+
+                return;
+            }
+
             Logger.LogDebug($"Sending NDP advertisement <{ip} -> {mac.ToHexString()}>"
                 + (ipTarget != null ? $" to {ipTarget}" : ""));
 
