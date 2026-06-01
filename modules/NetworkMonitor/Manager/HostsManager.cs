@@ -3,13 +3,13 @@ using System.Net;
 
 namespace MadWizard.Desomnia.Network.Manager
 {
-    public class HostsManager(string path) : IStaticNameMapping, IDisposable
+    public class HostsManager(string path) : ILocalHostMapping, IDisposable
     {
         public required ILogger<HostsManager> Logger { private get; init; }
 
         private readonly Dictionary<string, List<IPAddress>> _mappings = new(StringComparer.OrdinalIgnoreCase);
 
-        void IStaticNameMapping.Insert(string name, IPAddress ip)
+        void ILocalHostMapping.Insert(string name, IPAddress ip)
         {
             lock (_mappings)
             {
@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Network.Manager
             }
         }
 
-        void IStaticNameMapping.Delete(string name)
+        void ILocalHostMapping.Delete(string name)
         {
             lock (_mappings)
             {

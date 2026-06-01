@@ -10,7 +10,7 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Address
 {
-    public class AddressMappingService(IStaticAddressMapping addresses, IStaticNameMapping? names = null) : INetworkService
+    public class AddressMappingService(ILocalAddressMapping addresses, ILocalHostMapping? hosts = null) : INetworkService
     {
         public required ILogger<AddressMappingService> Logger { private get; init; }
 
@@ -47,14 +47,16 @@ namespace MadWizard.Desomnia.Network.Address
             }
         }
 
-        #region NetworkService lifecycle
+        #region Manage static address mappings
+        private IEnumerable<NetworkHost> EligibleHosts => Network.Where(host => host is not LocalHost && host is not NetworkRouter);
+
         void INetworkService.Startup()
         {
-            if (Network.Where(host => host is not LocalHost && host is not NetworkRouter) is var hosts && hosts.Any())
+            if (EligibleHosts.Any())
             {
                 Logger.LogDebug("Installing static address mappings...");
 
-                foreach (var host in hosts)
+                foreach (var host in EligibleHosts)
                 {
                     host.AddressAdded += Host_AddressAdded;
                     host.PhysicalAddressChanged += Host_PhysicalAddressChanged;
@@ -69,7 +71,7 @@ namespace MadWizard.Desomnia.Network.Address
                         // install static hosts mappings, for static IP addresses
                         if (!host.ShouldAddressExpire(ip, out var expires, out var flags))
                             if (flags.HasFlag(IPAddressFlags.Static))
-                                names?.Insert(host.HostName, ip);
+                                hosts?.Insert(host.HostName, ip);
                     }
                 }
             }
@@ -82,11 +84,11 @@ namespace MadWizard.Desomnia.Network.Address
 
         void INetworkService.Shutdown()
         {
-            if (Network.Where(host => host is not LocalHost && host is not NetworkRouter) is var hosts && hosts.Any())
+            if (EligibleHosts.Any())
             {
                 Logger.LogDebug("Deleting static address mappings...");
 
-                foreach (var host in hosts)
+                foreach (var host in EligibleHosts)
                 {
                     host.AddressAdded -= Host_AddressAdded;
                     host.PhysicalAddressChanged -= Host_PhysicalAddressChanged;
@@ -99,7 +101,7 @@ namespace MadWizard.Desomnia.Network.Address
                                 addresses.Delete(ip);
                     }
 
-                    names?.Delete(host.HostName);
+                    hosts?.Delete(host.HostName);
                 }
             }
         }
