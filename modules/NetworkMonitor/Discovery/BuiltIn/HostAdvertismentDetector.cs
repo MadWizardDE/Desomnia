@@ -1,7 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Reachability;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Collections.Concurrent;
@@ -77,7 +76,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                     Logger.LogDebug("Host '{HostName}' advertised unknown {Family} address '{IPAddress}'",
                         host.Name, ip.ToFamilyName(), ip);
 
-                    host.AddAddress(ip, lifetime ?? options.Refresh);
+                    host.AddAddress(ip, new(lifetime ?? options.Refresh));
                 }
             }
         }

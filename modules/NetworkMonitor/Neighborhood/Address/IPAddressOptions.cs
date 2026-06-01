@@ -10,9 +10,12 @@
             Flags = flags;
         }
 
-        public IPAddressOptions(TimeSpan lifetime)
+        public IPAddressOptions(TimeSpan? lifetime)
         {
-            Expires = DateTime.Now + lifetime;
+            if (lifetime.HasValue)
+            {
+                Expires = DateTime.Now + lifetime;
+            }
         }
 
         public readonly bool HasFlags(IPAddressFlags flags) => Flags.HasFlag(flags);

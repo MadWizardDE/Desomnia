@@ -8,6 +8,7 @@ using MadWizard.Desomnia.Network.Discovery;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Address;
 using MadWizard.Desomnia.Network.Neighborhood.Services;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -254,7 +255,7 @@ namespace MadWizard.Desomnia.Network.Context
             // Configure static Address addresses
             foreach (var ip in config.IPAddresses)
             {
-                if (host.AddAddress(ip, flags: IPAddressFlags.Static))
+                if (host.AddAddress(ip, new(IPAddressFlags.Static)))
                 {
                     Logger.LogHostAddressAdded(host, ip);
                 }

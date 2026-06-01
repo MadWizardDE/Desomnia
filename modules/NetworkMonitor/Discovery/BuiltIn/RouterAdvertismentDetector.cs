@@ -4,7 +4,6 @@ using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context;
 using MadWizard.Desomnia.Network.Extensions;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
@@ -112,7 +111,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                 }
             }
 
-            if (router?.AddAddress(ip, lifetime) ?? false)
+            if (router?.AddAddress(ip, new(lifetime)) ?? false)
             {
                 Logger.LogHostAddressAdded(router, ip);
             }
