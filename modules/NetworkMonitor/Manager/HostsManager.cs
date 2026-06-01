@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace MadWizard.Desomnia.Network.Manager
@@ -8,115 +8,127 @@ namespace MadWizard.Desomnia.Network.Manager
         public required ILogger<HostsManager> Logger { private get; init; }
 
         /*
-         * Host name -> IP mappings are written into the Windows "hosts" file. To keep our edits
-         * isolated from any other (manual or third-party) entries, every mapping managed by
-         * Desomnia lives strictly between the marker lines below. We never touch anything outside
-         * of this block. The markers use the hosts file comment character '#', so they are ignored
-         * by the name resolver itself.
+         * Host name -> IP mappings are written into the "hosts" file. To keep our edits isolated
+         * from any other (manual or third-party) entries, every mapping managed by Desomnia lives
+         * strictly between the marker lines below. We never touch anything outside of this block.
+         * The markers use the hosts file comment character '#', so they are ignored by the name
+         * resolver itself.
          */
         private const string BlockStartMarker = "# --- BEGIN Desomnia managed hosts (do not edit – automatically generated) ---";
         private const string BlockEndMarker = "# --- END Desomnia managed hosts ---";
 
-        // The hosts file is a process-wide resource; serialize all read-modify-write cycles so that
-        // concurrent cache instances (one per network) cannot corrupt each other's edits.
+        // The hosts file is a process-wide resource; serialize all access so that concurrent callers
+        // (e.g. one network service per interface) cannot corrupt each other's edits. The lock also
+        // guards the in-memory mapping below.
         private static readonly object HostsFileLock = new();
 
-        // Host names this instance added, so that we can guarantee their removal on shutdown,
-        // regardless of whether Delete() was ever called for them.
-        private readonly HashSet<string> _managedNames = new(StringComparer.OrdinalIgnoreCase);
+        // The authoritative state of the managed block: every host name we map to one or more
+        // addresses. The hosts file is merely a projection of this mapping and is rewritten from it
+        // after every change.
+        private readonly Dictionary<string, List<IPAddress>> _mappings = new(StringComparer.OrdinalIgnoreCase);
 
         void IStaticNameMapping.Update(string name, IPAddress ip)
         {
-            EditHostsFile(lines =>
+            lock (HostsFileLock)
             {
-                var (start, end) = EnsureBlock(lines);
+                if (!_mappings.TryGetValue(name, out var ips))
+                    _mappings[name] = ips = [];
 
-                // Drop any previous mapping for this host name within our block before re-adding it.
-                RemoveEntries(lines, start, ref end, name);
+                if (ips.Contains(ip))
+                    return;
 
-                lines.Insert(end, FormatEntry(ip, name));
-
-                _managedNames.Add(name);
-                return true;
-            });
+                ips.Add(ip);
+                Flush();
+            }
 
             Logger.LogTrace($"Mapped host '{name}' to {ip} in hosts file");
         }
 
         void IStaticNameMapping.Delete(string name)
         {
-            EditHostsFile(lines =>
+            lock (HostsFileLock)
             {
-                var (start, end) = FindBlock(lines);
-                if (start < 0)
-                    return false;
+                if (!_mappings.Remove(name))
+                    return;
 
-                if (!RemoveEntries(lines, start, ref end, name))
-                    return false;
-
-                RemoveBlockIfEmpty(lines, start, end);
-                return true;
-            });
-
-            _managedNames.Remove(name);
+                Flush();
+            }
 
             Logger.LogTrace($"Removed host '{name}' from hosts file");
         }
 
         public void Dispose()
         {
-            if (_managedNames.Count == 0)
-                return;
-
-            // On shutdown remove every entry we ever added, even those for which Delete() was not
-            // called, so that no stale Desomnia mappings are left behind in the hosts file.
-            EditHostsFile(lines =>
-            {
-                var (start, end) = FindBlock(lines);
-                if (start < 0)
-                    return false;
-
-                bool changed = false;
-                foreach (var name in _managedNames)
-                    changed |= RemoveEntries(lines, start, ref end, name);
-
-                if (changed)
-                    RemoveBlockIfEmpty(lines, start, end);
-
-                return changed;
-            });
-
-            _managedNames.Clear();
-        }
-
-        /// <summary>Reads the hosts file, applies <paramref name="edit"/> and writes it back when the edit reports a change.</summary>
-        private void EditHostsFile(Func<List<string>, bool> edit)
-        {
             lock (HostsFileLock)
             {
-                List<string> lines;
-                try
-                {
-                    lines = File.Exists(path) ? [.. File.ReadAllLines(path)] : [];
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError($"Failed to read hosts file \"{path}\" – {ex.Message}");
-                    return;
-                }
-
-                if (!edit(lines))
+                if (_mappings.Count == 0)
                     return;
 
-                try
+                // On shutdown drop every mapping we ever added – even those for which Delete() was
+                // not called – so that no stale Desomnia entries are left behind in the hosts file.
+                _mappings.Clear();
+                Flush();
+            }
+        }
+
+        /// <summary>
+        /// Rewrites the managed block in the hosts file from the current in-memory mapping: everything
+        /// between the markers is discarded and replaced with the freshly exported entries. The block
+        /// (and its markers) is removed entirely when no mappings remain. Must be called under <see cref="HostsFileLock"/>.
+        /// </summary>
+        private void Flush()
+        {
+            List<string> lines;
+            try
+            {
+                lines = File.Exists(path) ? [.. File.ReadAllLines(path)] : [];
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to read hosts file \"{path}\" – {ex.Message}");
+                return;
+            }
+
+            // Strip the previously written block (markers + content), wherever it sits in the file.
+            var (start, end) = FindBlock(lines);
+            if (start >= 0)
+                lines.RemoveRange(start, end - start + 1);
+
+            // Re-create the block from the current mapping, reusing the original position if we had one.
+            List<string> entries = [.. ExportEntries()];
+            if (entries.Count > 0)
+            {
+                List<string> block = [BlockStartMarker, .. entries, BlockEndMarker];
+
+                if (start >= 0)
                 {
-                    File.WriteAllLines(path, lines);
+                    lines.InsertRange(start, block);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Logger.LogError($"Failed to write hosts file \"{path}\" – {ex.Message}");
+                    if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+                        lines.Add(string.Empty);
+
+                    lines.AddRange(block);
                 }
             }
+
+            try
+            {
+                File.WriteAllLines(path, lines);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Failed to write hosts file \"{path}\" – {ex.Message}");
+            }
+        }
+
+        /// <summary>Projects the in-memory mapping into hosts file entry lines, ordered for a stable file layout.</summary>
+        private IEnumerable<string> ExportEntries()
+        {
+            foreach (var (name, ips) in _mappings.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+                foreach (var ip in ips)
+                    yield return FormatEntry(ip, name);
         }
 
         /// <summary>Returns the indices of the start and end marker, or (-1, -1) when the block is absent.</summary>
@@ -128,60 +140,6 @@ namespace MadWizard.Desomnia.Network.Manager
 
             int end = lines.FindIndex(start + 1, line => line.Trim() == BlockEndMarker);
             return end < 0 ? (-1, -1) : (start, end);
-        }
-
-        /// <summary>Locates the managed block, appending a fresh one at the end of the file when none exists.</summary>
-        private static (int start, int end) EnsureBlock(List<string> lines)
-        {
-            var (start, end) = FindBlock(lines);
-            if (start >= 0)
-                return (start, end);
-
-            if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
-                lines.Add(string.Empty);
-
-            lines.Add(BlockStartMarker);
-            lines.Add(BlockEndMarker);
-
-            return (lines.Count - 2, lines.Count - 1);
-        }
-
-        /// <summary>Removes every entry for <paramref name="name"/> between the markers, adjusting <paramref name="end"/>.</summary>
-        private static bool RemoveEntries(List<string> lines, int start, ref int end, string name)
-        {
-            bool removed = false;
-            for (int i = end - 1; i > start; i--)
-            {
-                if (IsEntryForName(lines[i], name))
-                {
-                    lines.RemoveAt(i);
-                    end--;
-                    removed = true;
-                }
-            }
-            return removed;
-        }
-
-        /// <summary>Removes the marker lines when no entries remain between them.</summary>
-        private static void RemoveBlockIfEmpty(List<string> lines, int start, int end)
-        {
-            if (end == start + 1)
-            {
-                lines.RemoveAt(end);   // end marker
-                lines.RemoveAt(start); // start marker
-            }
-        }
-
-        private static bool IsEntryForName(string line, string name)
-        {
-            var tokens = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            // hosts entry: "<ip> <name> [aliases...]"; first token is the address, the rest are names.
-            for (int i = 1; i < tokens.Length; i++)
-            {
-                if (string.Equals(tokens[i], name, StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-            return false;
         }
 
         private static string FormatEntry(IPAddress ip, string name) => $"{ip}\t{name}";
