@@ -1,4 +1,5 @@
 using MadWizard.Desomnia.Network.Naming.MDNS;
+using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
@@ -30,6 +31,48 @@ namespace MadWizard.Desomnia.Network.SleepProxy
                     query.AnswerWith(proxy, service, instance);
                 }
             }
+        }
+
+        /// <summary>
+        /// Handles a Sleep Proxy registration: a DNS UPDATE whose OPT record carries an EDNS0 Owner option.
+        /// The records to defend are in the UPDATE (authority) section; the wake info is in the Owner option.
+        /// </summary>
+        void IMulticastDNSResolver.Update(MulticastDNSUpdate update)
+        {
+            try
+            {
+                if (update.Owner is not EdnsOwnerOption owner)
+                {
+                    Logger.LogTrace("Ignoring DNS UPDATE without an EDNS0 Owner option (not a sleep-proxy registration).");
+
+                    return;
+                }
+
+                var registration = new SleepProxyRegistration
+                {
+                    Records = update.AuthorityRecords,
+                    WakeMac = owner.WakeTarget,
+                    Password = owner.Password,
+                    Sequence = owner.Sequence,
+                    ClientAddress = update.SourceIPAddress,
+                    ClientPhysicalAddress = update.SourcePhysicalAddress,
+                    RequestedLease = update.Lease?.Duration ?? TimeSpan.Zero,
+                };
+
+                TimeSpan granted = TimeSpan.MaxValue;
+
+                if (granted > TimeSpan.Zero)
+                {
+                    update.GrantLease(granted);
+                }
+                else
+                    Logger.LogTrace("No registrar accepted the sleep-proxy registration from {ip}.", update.SourceIPAddress);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to handle sleep-proxy registration");
+            }
+
         }
     }
 }

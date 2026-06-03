@@ -7,7 +7,7 @@ using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Naming.MDNS
 {
-    public class MulticastDNSQuery(EthernetPacket packet, Message query)
+    public class MulticastDNSQuery(EthernetPacket packet, Message message)
     {
         // RFC 6762 §10: shared records (PTRs) get a long TTL, host-specific records (SRV/TXT/A) a short one.
         private static readonly TimeSpan SharedRecordTTL = TimeSpan.FromMinutes(75);
@@ -18,24 +18,27 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
         public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
 
-        public IEnumerable<Question> Questions => query.Questions;
+        public IEnumerable<EdnsOption>  Options         => message.AdditionalRecords.OfType<OPTRecord>().SelectMany(opt => opt.Options);
+        public IEnumerable<Question>    Questions       => message.Questions;
 
         internal TimeSpan Delay { get; private set; } = TimeSpan.Zero;
 
         internal Message Response { get; init; } = new Message() { QR = true, AA = true };
 
-        internal bool RespondViaUnicast
+        internal virtual DNSResponseType ShouldRespond()
         {
-            get
+            if (Response.Answers.Count > 0)
             {
                 if (SourcePort != MulticastDNSService.MulticastPort) // legacy protocol
-                    return true;
+                    return DNSResponseType.Unicast;
 
                 if (Questions.All(question => question.QU)) // client requests unicast
-                    return true;
+                    return DNSResponseType.Unicast;
 
-                return false;
+                return DNSResponseType.Multicast;
             }
+
+            return DNSResponseType.None;
         }
 
         private void AnswerWith(ResourceRecord record, TimeSpan delay = default)
@@ -94,4 +97,13 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
             }
         }
     }
+
+    internal enum DNSResponseType
+    {
+        None = 0,
+
+        Unicast,
+        Multicast
+    }
+
 }

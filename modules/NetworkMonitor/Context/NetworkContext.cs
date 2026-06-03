@@ -88,15 +88,6 @@ namespace MadWizard.Desomnia.Network.Context
 
                 RegisterContextAwareLogger(parent, builder);
 
-                if (config.WatchMode == WatchMode.Promiscuous)
-                {
-                    builder.RegisterType<PromiscuousModeMutex>()
-                        .WithParameter(TypedParameter.From(config.PingTimeout))
-                        .AsImplementedInterfaces()
-                        .InstancePerNetwork()
-                        .AsSelf();
-                }
-
                 builder.RegisterType<NetworkMonitor>()
                     .WithParameter(TypedParameter.From(Name))
                     .WithParameter(TypedParameter.From(config.MakeWatchOptions()))
@@ -170,6 +161,12 @@ namespace MadWizard.Desomnia.Network.Context
 
                 if (config.WatchMode == WatchMode.Promiscuous)
                 {
+                    builder.RegisterType<PromiscuousModeMutex>()
+                        .WithParameter(TypedParameter.From(config.PingTimeout))
+                        .AsImplementedInterfaces()
+                        .InstancePerNetwork()
+                        .AsSelf();
+
                     builder.RegisterType<MulticastDNSService>()
                         .AsImplementedInterfaces()
                         .SingleInstance()
@@ -179,11 +176,27 @@ namespace MadWizard.Desomnia.Network.Context
                         .AsImplementedInterfaces()
                         .SingleInstance();
 
-                    if (true) // TODO when?
+                    if (true) // TODO when enable Sleep Proxy?
                     {
+                        var service = new SleepProxyService(MulticastDNSService.MulticastPort)
+                        {
+                            /// <summary>
+                            /// Desomnia's default metric: deliberately HIGH (poor) so genuine proxies always win — we only
+                            /// want to be the last-resort responder, in keeping with the non-invasive design.
+                            /// </summary>
+
+                            Metrics = new()
+                            {
+                                Type            = 90,   // incidental software on a general-purpose host
+                                Portability     = 40,   // TODO: detect battery vs. mains and adjust
+                                MarginalPower   = 70,
+                                TotalPower      = 70,
+                            }
+                        };
+
                         builder.RegisterType<SleepProxyResolver>()
                             .WithParameter(new LocalHostParameter<NetworkHost>())
-                            .WithParameter(TypedParameter.From(new SleepProxyService(SleepProxyMetrics.LastResort)))
+                            .WithParameter(TypedParameter.From(service))
                             .AsImplementedInterfaces()
                             .SingleInstance();
 

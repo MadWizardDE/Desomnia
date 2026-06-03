@@ -1,4 +1,6 @@
 using ConcurrentCollections;
+using MadWizard.Desomnia.Network.Naming.Options;
+using MadWizard.Desomnia.Network.SleepProxy;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -13,6 +15,8 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
     public interface IMulticastDNSResolver
     {
         void Resolve(MulticastDNSQuery query);
+
+        void Update(MulticastDNSUpdate update) { }
     }
 
     internal class MulticastDNSService : INetworkService
@@ -25,7 +29,8 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
         public required ILogger<MulticastDNSService> Logger { private get; init; }
 
-        public required IEnumerable<IMulticastDNSResolver> Resolvers { private get; init; }
+        public required IEnumerable<IMulticastDNSResolver>  Resolvers { private get; init; }
+        public required IEnumerable<ISleepProxyRegistrar>   Registrars { private get; init; }
 
         public required NetworkDevice Device { private get; init; }
 
@@ -42,10 +47,24 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
             if (message.IsQuery)
             {
-                var query = new MulticastDNSQuery(packet, message);
+                MulticastDNSQuery query;
 
-                foreach (var resolver in Resolvers)
-                    resolver.Resolve(query);
+                if (message.Opcode == MessageOperation.Update)
+                {
+                    var update = new MulticastDNSUpdate(packet, message);
+
+                    foreach (var resolver in Resolvers)
+                        resolver.Update(update);
+
+                    query = update;
+                }
+                else
+                {
+                    query = new MulticastDNSQuery(packet, message);
+
+                    foreach (var resolver in Resolvers)
+                        resolver.Resolve(query);
+                }
 
                 _pendingQueries.Add(query);
 
@@ -53,9 +72,9 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
                 {
                     await Task.Delay(query.Delay);
 
-                    lock (query)
+                    lock (query) if (query.ShouldRespond() != DNSResponseType.None)
                     {
-                        RespondTo(query);
+                        RespondTo(query, Debugger.IsAttached || query.ShouldRespond() == DNSResponseType.Unicast);
                     }
                 }
                 catch (Exception ex)
@@ -97,14 +116,11 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
         /// <summary>
         /// Sends the accumulated answers for <paramref name="query"/> back to the link. The reply is multicast
-        /// to the all-mDNS group; but when the query may be answered by unicast (every question has the QU bit
+        /// to the all-mDNS group; but when the query may be answered by sendUnicast (every question has the QU bit
         /// set) or a debugger is attached, it is sent straight back to the querier instead.
         /// </summary>
-        private void RespondTo(MulticastDNSQuery query)
+        private void RespondTo(MulticastDNSQuery query, bool sendUnicast)
         {
-            if (query.Response.Answers.Count == 0)
-                return;
-
             if (Logger.IsEnabled(LogLevel.Trace))
             foreach (var record in query.Response.Answers)
             {
@@ -122,7 +138,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
             EthernetPacket eth = new(Device.PhysicalAddress, ip.DestinationAddress.DeriveLayer2MulticastAddress(), EthernetType.None); // EtherType = auto
 
-            if (query.RespondViaUnicast || Debugger.IsAttached)
+            if (sendUnicast)
             {
                 udp.DestinationPort             = query.SourcePort;
                 ip.DestinationAddress           = query.SourceIPAddress;
@@ -173,6 +189,13 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
             }
 
             return false;
+        }
+
+        /// <summary>Register the sleep-proxy EDNS0 options codes used by the Bonjour Sleep Proxy registration that Makaretu doesn't know about.</summary>
+        static MulticastDNSService()
+        {
+            EdnsOptionRegistry.Register<EdnsLeaseOption>();
+            EdnsOptionRegistry.Register<EdnsOwnerOption>();
         }
     }
 }
