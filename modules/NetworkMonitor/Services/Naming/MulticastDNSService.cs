@@ -8,8 +8,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-using ProtocolType = PacketDotNet.ProtocolType;
-
 namespace MadWizard.Desomnia.Network.Naming.MDNS
 {
     public interface IMulticastDNSResolver
@@ -104,30 +102,8 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         /// </summary>
         private void RespondTo(MulticastDNSQuery query)
         {
-            if (!query.HasAnswers) // nothing left to say after non-invasive filtering
+            if (query.Response.Answers.Count == 0)
                 return;
-
-            bool ipv4 = query.SourceAddress.AddressFamily == AddressFamily.InterNetwork;
-
-            IPAddress sourceIP = (ipv4 ? Device.IPv4Address : Device.IPv6LinkLocalAddress) 
-                ?? throw new NotSupportedException($"Cannot answer mDNS query: device has no {query.SourceAddress.ToFamilyName()} address.");
-
-            IPAddress destinationIP;
-            PhysicalAddress destinationMac;
-            ushort destinationPort;
-
-            if (query.MayRespondViaUnicast || Debugger.IsAttached)
-            {
-                destinationIP = query.SourceAddress;
-                destinationMac = query.SourcePhysicalAddress;
-                destinationPort = query.SourcePort;
-            }
-            else
-            {
-                destinationIP = ipv4 ? MulticastGroupIPv4 : MulticastGroupIPv6;
-                destinationMac = destinationIP.DeriveLayer2MulticastAddress();
-                destinationPort = MulticastPort;
-            }
 
             if (Logger.IsEnabled(LogLevel.Trace))
             foreach (var record in query.Response.Answers)
@@ -135,31 +111,41 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
                 Logger.LogTrace("Sending mDNS response: {Record}", record);
             }
 
-            var udp = new UdpPacket(MulticastPort, destinationPort)
+            UdpPacket udp = new(MulticastPort, MulticastPort)
             {
                 PayloadData = query.Response.ToByteArray()
             };
 
-            IPPacket ip = ipv4
-                ? new IPv4Packet(sourceIP, destinationIP) { TimeToLive = 255 }
-                : new IPv6Packet(sourceIP, destinationIP) { HopLimit = 255 };
+            IPPacket ip = query.SourceIPAddress.AddressFamily == AddressFamily.InterNetwork
+                ? new IPv4Packet(Device.IPv4Address,            MulticastGroupIPv4) { TimeToLive  = 255 }
+                : new IPv6Packet(Device.IPv6LinkLocalAddress,   MulticastGroupIPv6) { HopLimit    = 255 };
 
-            ip.Protocol = ProtocolType.Udp;
-            ip.PayloadPacket = udp;
+            EthernetPacket eth = new(Device.PhysicalAddress, ip.DestinationAddress.DeriveLayer2MulticastAddress(), EthernetType.None); // EtherType = auto
 
-            var ethernet = new EthernetPacket(Device.PhysicalAddress, destinationMac, ipv4 ? EthernetType.IPv4 : EthernetType.IPv6)
+            if (query.RespondViaUnicast || Debugger.IsAttached)
             {
-                PayloadPacket = ip
-            };
+                udp.DestinationPort             = query.SourcePort;
+                ip.DestinationAddress           = query.SourceIPAddress;
+                eth.DestinationHardwareAddress  = query.SourcePhysicalAddress;
+            }
 
-            // Recompute lengths and checksums from the inside out before sending.
+            SendPacket(eth, ip, udp);
+        }
+
+        private void SendPacket(EthernetPacket eth, IPPacket ip, UdpPacket udp)
+        {
             udp.UpdateCalculatedValues();
             udp.UpdateUdpChecksum();
+
+            ip.PayloadPacket = udp;
+
             ip.UpdateCalculatedValues();
             if (ip is IPv4Packet ipv4Packet)
                 ipv4Packet.UpdateIPChecksum();
 
-            Device.SendPacket(ethernet);
+            eth.PayloadPacket = ip;
+
+            Device.SendPacket(eth);
         }
 
         /// <summary>

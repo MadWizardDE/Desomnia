@@ -15,7 +15,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         private static readonly TimeSpan HostRecordTTL = TimeSpan.FromSeconds(120);
 
         public PhysicalAddress  SourcePhysicalAddress   => field ??= packet.FindSourcePhysicalAddress() ?? throw new ArgumentException("Source MAC missing");
-        public IPAddress        SourceAddress           => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
+        public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
         public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
 
         public IEnumerable<Question> Questions => query.Questions;
@@ -24,9 +24,19 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
         internal Message Response { get; init; } = new Message() { QR = true, AA = true };
 
-        internal bool HasAnswers => Response.Answers.Count > 0;
+        internal bool RespondViaUnicast
+        {
+            get
+            {
+                if (SourcePort != MulticastDNSService.MulticastPort) // legacy protocol
+                    return true;
 
-        internal bool MayRespondViaUnicast => !Questions.Any(question => !question.QU);
+                if (Questions.All(question => question.QU)) // client requests unicast
+                    return true;
+
+                return false;
+            }
+        }
 
         private void AnswerWith(ResourceRecord record, TimeSpan delay = default)
         {
