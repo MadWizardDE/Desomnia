@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
     internal class MulticastDNSService : INetworkService
     {
         /// <summary>The well-known multicast DNS port (RFC 6762).</summary>
-        internal static readonly ushort     MulticastPort = 5353;
+        internal static readonly ushort     MulticastPort       = 5353;
         /// <summary>The multicast groups mDNS responses are sent to (RFC 6762 §3).</summary>
         internal static readonly IPAddress  MulticastGroupIPv4 = IPAddress.Parse("224.0.0.251");
         internal static readonly IPAddress  MulticastGroupIPv6 = IPAddress.Parse("ff02::fb");
@@ -54,13 +54,20 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
                 try
                 {
                     await Task.Delay(query.Delay);
+
+                    lock (query)
+                    {
+                        RespondTo(query);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Could not send mDNS response");
                 }
                 finally
                 {
                     _pendingQueries.TryRemove(query);
                 }
-
-                RespondTo(query);
             }
 
             else if (message.IsResponse)
@@ -73,7 +80,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         {
             foreach (ResourceRecord answer in received.Answers)
             {
-                foreach (MulticastDNSQuery query in _pendingQueries)
+                foreach (MulticastDNSQuery query in _pendingQueries) lock (query)
                 {
                     query.Response.Answers.RemoveAll(record =>
                     {
@@ -91,9 +98,9 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         }
 
         /// <summary>
-        /// Sends <paramref name="response"/> back to the link. By default it is multicast to the all-mDNS
-        /// group (QM questions, the only ones we answer, ask for that); for testing, <see cref="RespondViaUnicast"/>
-        /// switches to a unicast reply straight to the <paramref name="querier"/>.
+        /// Sends the accumulated answers for <paramref name="query"/> back to the link. The reply is multicast
+        /// to the all-mDNS group; but when the query may be answered by unicast (every question has the QU bit
+        /// set) or a debugger is attached, it is sent straight back to the querier instead.
         /// </summary>
         private void RespondTo(MulticastDNSQuery query)
         {

@@ -4,7 +4,7 @@ using MadWizard.Desomnia.Network.Neighborhood.Services;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 
-namespace MadWizard.Desomnia.Network.Services.SleepProxy
+namespace MadWizard.Desomnia.Network.SleepProxy
 {
     internal class SleepProxyServiceResolver : IMulticastDNSResolver
     {
@@ -23,7 +23,7 @@ namespace MadWizard.Desomnia.Network.Services.SleepProxy
                 {
                     if (serviceWatch.AdvertiseOptions?.Type.HasFlag(AdvertiseType.Services) ?? false) // should we answer for this service?
                     {
-                        if (serviceWatch.Service is TransportNetworkService service)
+                        if (serviceWatch.Service is TransportNetworkService service && service.LocalDomainName == question.Name)
                         {
                             query.AnswerWith(watch.Host, service, delay: watch.AdvertiseOptions.Timeout);
                         }
