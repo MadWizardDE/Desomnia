@@ -21,8 +21,4 @@
     <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Services\SleepProxy\" />
-  </ItemGroup>
-
 </Project>

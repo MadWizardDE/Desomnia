@@ -9,9 +9,6 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS.Resolver
 {
     internal class HostnameResolver : IMulticastDNSResolver
     {
-        /// <summary>TTL for advertised host address records (RFC 6762 §10 recommends 120 s for host names).</summary>
-        private static readonly TimeSpan HostRecordTTL = TimeSpan.FromSeconds(120);
-
         public required NetworkMonitor Monitor { private get; init; }
         public required NetworkSegment Network { private get; init; }
 
@@ -46,10 +43,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS.Resolver
                             if (ip.AddressFamily == AddressFamily.InterNetworkV6 && !wantIPv6)
                                 continue;
 
-                            var record = AddressRecord.Create(question.Name, ip);
-                            record.TTL = HostRecordTTL;
-
-                            query.AnswerWith(record, watch.AdvertiseOptions.Timeout);
+                            query.AnswerWith(host, ip, watch.AdvertiseOptions.Timeout);
                         }
                 }
             }

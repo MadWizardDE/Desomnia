@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood.Address;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
+using Makaretu.Dns;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -11,6 +12,9 @@ namespace MadWizard.Desomnia.Network.Neighborhood
     {
         public virtual string Name { get; init; } = name;
         public virtual string HostName { get => field ?? Name; set; } = null!;
+
+        /// <summary>The mDNS name of this host, e.g. "desktop.local".</summary>
+        public DomainName LocalDomainName => new(HostName, "local");
 
         public required NetworkSegment Network { get; init; }
 

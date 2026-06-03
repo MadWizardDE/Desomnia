@@ -11,9 +11,10 @@ namespace MadWizard.Desomnia.Network.Middleware
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
-            if (context.FirstParameterOfType<WatchedHostInfo>() is WatchedHostInfo config)
+            if (context.FirstParameterOfType<WatchedHostInfo>() is WatchedHostInfo configHost)
             {
-                ApplyDefaultActions(config);
+                ApplyDefaultActions(configHost);
+                ApplyDefaultAdvertiseOptions(configHost);
             }
 
             if (context.FirstParameterOfType<RemoteHostInfo>() is RemoteHostInfo configRemote)
@@ -32,24 +33,34 @@ namespace MadWizard.Desomnia.Network.Middleware
             }
         }
 
+        private void ApplyDefaultAdvertiseOptions(WatchedHostInfo configHost)
+        {
+            var options = configHost.MakeAdvertiseOptions(config);
+
+            foreach (var service in configHost.Services)
+            {
+                service.Advertise               ??= options.Type;
+                service.AdvertiseTimeout        ??= options.Timeout;
+            }
+        }
+
         private void ApplyDefaultKnockOptions(RemoteHostInfo configHost)
         {
             foreach (var service in configHost.Services)
             {
-                service.KnockMethod         ??= configHost.KnockMethod          ?? config.KnockMethod;
-                service.KnockProtocol       ??= configHost.KnockProtocol        ?? config.KnockProtocol;
-                service.KnockPort           ??= configHost.KnockPort            ?? config.KnockPort;
+                service.KnockMethod             ??= configHost.KnockMethod          ?? config.KnockMethod;
+                service.KnockProtocol           ??= configHost.KnockProtocol        ?? config.KnockProtocol;
+                service.KnockPort               ??= configHost.KnockPort            ?? config.KnockPort;
 
-                service.KnockDelay          ??= configHost.KnockDelay           ?? config.KnockDelay;
-                service.KnockRepeat         ??= configHost.KnockRepeat          ?? config.KnockRepeat;
-                service.KnockTimeout        ??= configHost.KnockTimeout         ?? config.KnockTimeout;
+                service.KnockDelay              ??= configHost.KnockDelay           ?? config.KnockDelay;
+                service.KnockRepeat             ??= configHost.KnockRepeat          ?? config.KnockRepeat;
+                service.KnockTimeout            ??= configHost.KnockTimeout         ?? config.KnockTimeout;
 
-                service.KnockSecret         ??= configHost.KnockSecret          ?? config.KnockSecret;
-                service.KnockSecretAuth     ??= configHost.KnockSecretAuth      ?? config.KnockSecretAuth;
-                service.KnockSecretAuthType ??= configHost.KnockSecretAuthType  ?? config.KnockSecretAuthType;
-                service.KnockSecretEncoding       ??= configHost.KnockSecretEncoding        ?? config.KnockSecretEncoding;
+                service.KnockSecret             ??= configHost.KnockSecret          ?? config.KnockSecret;
+                service.KnockSecretAuth         ??= configHost.KnockSecretAuth      ?? config.KnockSecretAuth;
+                service.KnockSecretAuthType     ??= configHost.KnockSecretAuthType  ?? config.KnockSecretAuthType;
+                service.KnockSecretEncoding     ??= configHost.KnockSecretEncoding  ?? config.KnockSecretEncoding;
             }
-
         }
     }
 }

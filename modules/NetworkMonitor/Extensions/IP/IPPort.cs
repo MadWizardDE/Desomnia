@@ -43,6 +43,7 @@ namespace System.Net
             return null;
         }
 
+        public static implicit operator ushort(IPPort port) => port.Port;
 
         private string ToProtocolString()
         {

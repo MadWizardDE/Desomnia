@@ -184,21 +184,26 @@ namespace MadWizard.Desomnia.Network.Context
         {
             foreach (var info in services)
             {
-                builder.RegisterType<TransportNetworkService>().As<NetworkService>()
+                var registerService = builder.RegisterType<TransportNetworkService>().As<NetworkService>()
                     .WithParameter(TypedParameter.From(info.Name))
                     .WithParameter(TypedParameter.From(info.TransportService))
-                    .WithProperty(TypedParameter.From(info.ServiceName))
                     .SingleInstance()
                     .AsSelf();
 
-                var watch = builder.RegisterType<NetworkServiceWatch>()
+                if (info.ServiceName is string name)
+                {
+                    registerService.WithProperty(TypedParameter.From(info.ServiceName));
+                }
+
+                var registerWatch = builder.RegisterType<NetworkServiceWatch>()
                     .WithParameter(NetworkServiceParameter.FindByName(info.Name))
+                    .WithProperty(TypedParameter.From(info.MakeAdvertiseOptions()))
                     .WithProperty(TypedParameter.From(info.MakeKnockOptions()))
                     .WithProperty(TypedParameter.From(info.MinTraffic))
                     .SingleInstance()
                     .AsSelf();
 
-                watch.OnActivated(args =>
+                registerWatch.OnActivated(args =>
                 {
                     args.Instance.AddEventAction(nameof(NetworkServiceWatch.Demand), info.OnDemand);
                     args.Instance.AddEventAction(nameof(NetworkServiceWatch.Idle), info.OnIdle);

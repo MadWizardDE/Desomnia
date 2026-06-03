@@ -2,6 +2,7 @@
 using Autofac.Features.Metadata;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Context.Parameters;
 using MadWizard.Desomnia.Network.Context.Watch;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Filter.Rules;
@@ -12,6 +13,8 @@ using MadWizard.Desomnia.Network.Middleware;
 using MadWizard.Desomnia.Network.Naming.MDNS;
 using MadWizard.Desomnia.Network.Naming.MDNS.Resolver;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Services.SleepProxy;
+using MadWizard.Desomnia.Network.SleepProxy;
 using MadWizard.Desomnia.Network.Trace;
 using Microsoft.Extensions.Logging;
 using System.Net.NetworkInformation;
@@ -176,6 +179,19 @@ namespace MadWizard.Desomnia.Network.Context
                     builder.RegisterType<HostnameResolver>()
                         .AsImplementedInterfaces()
                         .SingleInstance();
+
+                    if (true) // TODO when?
+                    {
+                        builder.RegisterType<SleepProxyResolver>()
+                            .WithParameter(new LocalHostParameter<NetworkHost>())
+                            .WithParameter(TypedParameter.From(SleepProxyMetrics.LastResort))
+                            .AsImplementedInterfaces()
+                            .SingleInstance();
+
+                        builder.RegisterType<SleepProxyServiceResolver>()
+                            .AsImplementedInterfaces()
+                            .SingleInstance();
+                    }
 
                     RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
                 }

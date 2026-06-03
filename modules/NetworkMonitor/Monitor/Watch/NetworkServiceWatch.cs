@@ -10,7 +10,8 @@ namespace MadWizard.Desomnia.Network
 
         public NetworkService Service => service;
 
-        public KnockOptions? KnockOptions { get; init; }
+        public AdvertiseOptions?    AdvertiseOptions    { get; init; }
+        public KnockOptions?        KnockOptions        { get; init; }
 
         public bool CanTriggerDemand(EthernetPacket trigger)
         {

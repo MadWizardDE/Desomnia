@@ -12,15 +12,34 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
     /// </summary>
     public class ServiceInfo
     {
-        public required string Name { get; set; }
-        public string? ServiceName { get; set; }
+        public required string  Name        { get; set; }
+        public string?          ServiceName { get; set; }
 
-        public IPProtocol Protocol { get; set; } = IPProtocol.TCP;
-        public required ushort Port { get; set; }
+        public IPProtocol       Protocol    { get; set; } = IPProtocol.TCP;
+        public required ushort  Port        { get; set; }
 
         public TrafficThreshold? MinTraffic { get; set; }
 
         // Options
+        #region                 AdvertiseOptions
+        internal AdvertiseType? Advertise           { get; set; }
+        internal TimeSpan?      AdvertiseTimeout    { get; set; }
+
+        public virtual AdvertiseOptions? MakeAdvertiseOptions()
+        {
+            if (Advertise != null)
+            {
+                return new() // wird von network -> host -> service übertragen
+                {
+                    Type = Advertise ?? throw new NullReferenceException("Advertise"),
+                    Timeout = AdvertiseTimeout ?? throw new NullReferenceException("AdvertiseTimeout"),
+                };
+            }
+
+            return null;
+        }
+        #endregion
+
         #region                 KnockOptions
         internal string?        KnockMethod { get; set; }
 

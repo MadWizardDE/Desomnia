@@ -75,7 +75,17 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
             {
                 foreach (MulticastDNSQuery query in _pendingQueries)
                 {
-                    query.Response.Answers.RemoveAll(record => record.Name == answer.Name);
+                    query.Response.Answers.RemoveAll(record =>
+                    {
+                        switch (record)
+                        {
+                            case PTRRecord recordPTR:
+                                return answer is PTRRecord answerPTR && recordPTR.DomainName == answerPTR.DomainName;
+
+                            default:
+                                return record.Name == answer.Name;
+                        }
+                    });
                 }
             }
         }
@@ -87,7 +97,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         /// </summary>
         private void RespondTo(MulticastDNSQuery query)
         {
-            if (query.Response.Answers.Count == 0)
+            if (!query.HasAnswers) // nothing left to say after non-invasive filtering
                 return;
 
             bool ipv4 = query.SourceAddress.AddressFamily == AddressFamily.InterNetwork;
