@@ -1,6 +1,5 @@
 using MadWizard.Desomnia.Network.Naming.MDNS;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Services.SleepProxy;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 
