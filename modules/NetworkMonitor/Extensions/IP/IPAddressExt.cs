@@ -32,7 +32,8 @@ namespace System.Net.NetworkInformation
             switch (ip.AddressFamily)
             {
                 case AddressFamily.InterNetwork:
-                    throw new NotImplementedException("IPv4 multicast address derivation not implemented.");
+                    // IPv4 multicast MAC: fixed 01:00:5E prefix + low 23 bits of the group address
+                    return PhysicalAddress.Parse($"01:00:5E:{bytes[1] & 0x7F:X2}:{bytes[2]:X2}:{bytes[3]:X2}");
 
                 case AddressFamily.InterNetworkV6:
                     if (!ip.IsIPv6Multicast)

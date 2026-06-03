@@ -130,7 +130,7 @@ namespace MadWizard.Desomnia.Network
 
         protected void HandleOffline(bool suspended)
         {
-            var ips = Host.IPAddresses.Where(suspended ? DemandOptions.ShouldAdvertiseOnRemoteHostSuspended : DemandOptions.ShouldAdvertiseOnRemoteHostStopped);
+            var ips = Host.IPAddresses.Where(suspended ? AdvertiseOptions.ShouldAdvertiseOnRemoteHostSuspended : AdvertiseOptions.ShouldAdvertiseOnRemoteHostStopped);
             
             if (ips.Any())
             {

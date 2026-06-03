@@ -16,12 +16,16 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
 
         public DemandOptions MakeDemandOptions(NetworkMonitorConfig network) => new()
         {
-            Source = DemandSource ?? network.DemandSource,
-            Timeout = DemandTimeout ?? network.DemandTimeout,
-            Parallel = DemandParallel ?? network.DemandParallel,
-            Forward = false,
+            Source      = DemandSource      ?? network.DemandSource,
+            Timeout     = DemandTimeout     ?? network.DemandTimeout,
+            Parallel    = DemandParallel    ?? network.DemandParallel,
+            Forward     = false
+        };
 
-            Advertise = AddressAdvertisment.Never
+        public AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
+        {
+            Type        = AdvertiseType.Never,
+            Timeout     = TimeSpan.MaxValue,
         };
         #endregion
 

@@ -2,7 +2,6 @@
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -101,7 +100,7 @@ namespace MadWizard.Desomnia.Network.Demand
                     {
                         if (!watch.IsOnline)
                         {
-                            if (watch.DemandOptions.ShouldAdvertiseOnRemoteHostDemand(needed.Address))
+                            if (watch.AdvertiseOptions.ShouldAdvertiseOnRemoteHostDemand(needed.Address))
                             {
                                 Logger.LogTrace($"More information needed; try to request IP unicast traffic");
 
@@ -164,7 +163,7 @@ namespace MadWizard.Desomnia.Network.Demand
             {
                 using var scope = Logger.BeginHostScope(watch.Host);
 
-                if (watch.Host.IPAddresses.Where(watch.DemandOptions.ShouldAdvertiseOnLocalHostResume) is var ips && ips.Any())
+                if (watch.Host.IPAddresses.Where(watch.AdvertiseOptions.ShouldAdvertiseOnLocalHostResume) is var ips && ips.Any())
                 {
                     Logger.LogDebug($"Resuming operation, taking ownership of watched IP addresses...");
 

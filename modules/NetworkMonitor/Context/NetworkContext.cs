@@ -9,6 +9,8 @@ using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Logging;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Middleware;
+using MadWizard.Desomnia.Network.Naming.MDNS;
+using MadWizard.Desomnia.Network.Naming.MDNS.Resolver;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Trace;
 using Microsoft.Extensions.Logging;
@@ -162,6 +164,20 @@ namespace MadWizard.Desomnia.Network.Context
                         .WithParameter(TypedParameter.From(new TraceService.Options() { Hosts = hosts }))
                         .AsImplementedInterfaces()
                         .InstancePerNetwork();
+                }
+
+                if (config.WatchMode == WatchMode.Promiscuous)
+                {
+                    builder.RegisterType<MulticastDNSService>()
+                        .AsImplementedInterfaces()
+                        .SingleInstance()
+                        .AsSelf();
+
+                    builder.RegisterType<HostnameResolver>()
+                        .AsImplementedInterfaces()
+                        .SingleInstance();
+
+                    RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
                 }
 
                 if (config.AllowWakeOnLAN is WakeOnLANMode allow)

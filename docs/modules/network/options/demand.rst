@@ -12,7 +12,7 @@ The following options are available to specify **which address procotols** shoul
   advertise IPv4 addresses
 ``IPv6``
   advertise IPv6 addresses
-``Both``
+``IP``
   advertise IPv4 and IPv6 addresses
 
 The following options are available to specify **when addresses** should be advertised:
@@ -28,9 +28,9 @@ The following options are available to specify **when addresses** should be adve
 
 For your convenience there are two practical short hand notations:
 
-``lazy``    = ``Both|Demand``
+``lazy``    = ``IP|Demand``
   (remote) hosts are only advertised when requested
-``eager``   = ``Both|Demand|Suspend|Resume``
+``eager``   = ``IP|Demand|Suspend|Resume``
   (remote) hosts are advertised as soon as possible
   
   This may be useful in situations where hosts are frequently resuming and suspending (less than 5min).

@@ -16,16 +16,28 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         bool?           DemandForward       { get; set; }
         int?            DemandParallel      { get; set; }
 
-        AddressAdvertisment? Advertise  { get; set; }
-
         public virtual DemandOptions MakeDemandOptions(NetworkMonitorConfig network) => new()
         {
-            Source = DemandSource ?? network.DemandSource,
-            Timeout = DemandTimeout ?? network.DemandTimeout,
-            Forward     = DemandForward ?? network.DemandForward,
-            Parallel    = DemandParallel ?? network.DemandParallel,
+            Source      = DemandSource          ?? network.DemandSource,
+            Timeout     = DemandTimeout         ?? network.DemandTimeout,
+            Forward     = DemandForward         ?? network.DemandForward,
+            Parallel    = DemandParallel        ?? network.DemandParallel,
+        };
+        #endregion
 
-            Advertise = Advertise ?? network.Advertise
+        #region         AdvertiseOptions
+        AdvertiseType?  Advertise           { get; set; }
+        TimeSpan?       AdvertiseTimeout    { get; set; }
+        bool?           AdvertiseHostname   { get; set; }
+        bool?           AdvertiseServices   { get; set; }
+
+        public virtual AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
+        {
+            Type        = (Advertise            ?? network.Advertise)
+                        | (AdvertiseHostname    ?? network.AdvertiseHostname ? AdvertiseType.Hostname : 0)
+                        | (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Services : 0),
+
+            Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
         };
         #endregion
 

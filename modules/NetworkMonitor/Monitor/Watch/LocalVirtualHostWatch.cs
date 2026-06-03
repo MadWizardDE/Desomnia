@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Network
          * resulting in the Sleep Proxy to take over the IP of the virtual host,
          * while this should be the responsibility of the physical host.
          */
-        protected override int MaxConcurrentRequests => Math.Max(base.MaxConcurrentRequests, DemandOptions.Advertise != AddressAdvertisment.Never ? 2 : 0);
+        protected override int MaxConcurrentRequests => Math.Max(base.MaxConcurrentRequests, AdvertiseOptions.Type != AdvertiseType.Never ? 2 : 0);
 
         public LocalVirtualHostWatch(IVirtualMachine vm)
         {
@@ -66,7 +66,7 @@ namespace MadWizard.Desomnia.Network
 
         private void HandleSuspended()
         {
-            if (DemandOptions.Advertise == AddressAdvertisment.Never)
+            if (AdvertiseOptions.Type == AdvertiseType.Never)
             {
                 YieldWatch();
             }

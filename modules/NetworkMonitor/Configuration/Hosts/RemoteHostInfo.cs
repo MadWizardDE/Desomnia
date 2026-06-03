@@ -7,20 +7,23 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
     public class RemoteHostInfo : WatchedHostInfo
     {
         // Options
-        #region     DemandOptions
-        bool?       AdvertiseIfStopped { get; set; } = true;
+        #region     AdvertiseOptions
+        bool?       AdvertiseIfStopped  { get; set; }
 
-        public override DemandOptions MakeDemandOptions(NetworkMonitorConfig network)
+        public override AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network)
         {
-            var options = base.MakeDemandOptions(network);
+            var options = base.MakeAdvertiseOptions(network);
 
-            if (network.WatchMode != WatchMode.Promiscuous)
+            if (network.WatchMode == WatchMode.Promiscuous)
             {
-                options = options with { Advertise = AddressAdvertisment.Never };
+                if (AdvertiseIfStopped ?? network.AdvertiseIfStopped)
+                {
+                    options = options with { Type = options.Type | AdvertiseType.Stop };
+                }
             }
-            else if (AdvertiseIfStopped ?? network.AdvertiseIfStopped)
+            else
             {
-                options = options with { Advertise = options.Advertise | AddressAdvertisment.Stop };
+                options = options with { Type = AdvertiseType.Never };
             }
 
             return options;

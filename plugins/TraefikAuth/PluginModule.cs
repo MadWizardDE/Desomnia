@@ -1,5 +1,4 @@
 ﻿using Autofac;
-using MadWizard.Desomnia.Network.Services;
 using MadWizard.Desomnia.Network.Traefik.Configuration;
 using MadWizard.Desomnia.Network.Traefik.Filter;
 

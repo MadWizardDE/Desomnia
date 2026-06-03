@@ -15,6 +15,8 @@ namespace MadWizard.Desomnia.Network.Configuration
 {
     public class NetworkMonitorConfig : LocalHostInfo
     {
+        const long DEFAULT_TIMEOUT_MS = 500;
+
         // Network-Identification
         public string?          Name            { get => (field?.StartsWith("NetworkMonitor#") ?? false) ? null : field; init; }
 
@@ -61,7 +63,10 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal bool               DemandForward       { get; set; } = true;
         internal int                DemandParallel      { get; set; } = 1;
 
-        internal AddressAdvertisment Advertise          { get; set; } = AddressAdvertisment.Lazy;
+        internal AdvertiseType      Advertise           { get; set; } = AdvertiseType.Lazy;
+        internal TimeSpan           AdvertiseTimeout    { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+        internal bool               AdvertiseHostname   { get; set; } = true;
+        internal bool               AdvertiseServices   { get; set; } = false;
         internal bool               AdvertiseIfStopped  { get; set; } = true;
         #endregion
 
@@ -86,7 +91,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: PingOptions
-        internal TimeSpan           PingTimeout         { get; set; } = TimeSpan.FromMilliseconds(500);
+        internal TimeSpan           PingTimeout         { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
         internal TimeSpan?          PingFrequency       { get; set; }
         #endregion
 

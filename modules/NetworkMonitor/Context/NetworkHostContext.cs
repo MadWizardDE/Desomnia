@@ -72,6 +72,7 @@ namespace MadWizard.Desomnia.Network.Context
                 RegisterHostRangeFilters(builder, config.HostRangeFilterRule);
 
                 builder.RegisterType<LocalHostWatch>().As<NetworkHostWatch>()
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
                     .SingleInstance()
                     .AsSelf();
@@ -102,6 +103,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 builder.RegisterType<LocalVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(vm))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
                     .SingleInstance()
                     .AsSelf();
@@ -123,6 +125,7 @@ namespace MadWizard.Desomnia.Network.Context
                 RegisterFilters(builder, config);
 
                 builder.RegisterType<RemoteHostWatch>().As<NetworkHostWatch>()
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(networkConfig)))
@@ -153,6 +156,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 builder.RegisterType<RemoteVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(NetworkHostWatchParameter<RemoteHostWatch>.FindByHostName(hostConfig.Name))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(networkConfig)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(networkConfig)))

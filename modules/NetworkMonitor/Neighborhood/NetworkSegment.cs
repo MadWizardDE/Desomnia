@@ -11,6 +11,9 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 {
     public class NetworkSegment : IIEnumerable<NetworkHost>
     {
+        /// <summary>The pseudo-TLD that multicast DNS is authoritative for (RFC 6762 §3).</summary>
+        private static readonly string LocalZone = ".local";
+
         public required ILogger<NetworkSegment> Logger { protected get; init; }
 
         public AsyncLock Mutex { get; } = new();
@@ -25,13 +28,23 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<NetworkHostEventArgs>? HostAdded;
         public event EventHandler<NetworkHostEventArgs>? HostRemoved;
 
-        readonly ConcurrentDictionary<string, NetworkHost> _hosts = [];
+        readonly ConcurrentDictionary<string, NetworkHost> _hosts = new(StringComparer.OrdinalIgnoreCase);
 
         readonly MemoryCache _cacheHostName = new(new MemoryCacheOptions());
 
-        public NetworkHost? this[string name]
+        public NetworkHost? this[string name, bool byHostName = false]
         {
-            get => _hosts.TryGetValue(name, out var host) ? host : null;
+            get
+            {
+                if (byHostName)
+                {
+                    return this.FirstOrDefault(host => string.Equals(host.HostName, name, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    return _hosts.TryGetValue(name, out var host) ? host : null;
+                }
+            }
         }
 
         public NetworkHost? this[IPAddress? ip]
@@ -71,7 +84,14 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public bool IsInLocalZone(string domainName)
         {
-            return domainName.Contains(Device.Interface.GetIPProperties().DnsSuffix);
+            const StringComparison comparision = StringComparison.OrdinalIgnoreCase;
+
+            if (domainName.EndsWith(LocalZone, comparision))
+                return true;
+            if (domainName.EndsWith(Device.Interface.GetIPProperties().DnsSuffix, comparision))
+                return true;
+
+            return false;
         }
 
         public async Task<string?> LookupHostName(PhysicalAddress? mac, IPAddress? ip)

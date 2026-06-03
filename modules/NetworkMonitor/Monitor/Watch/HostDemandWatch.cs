@@ -26,8 +26,10 @@ namespace MadWizard.Desomnia.Network
 
         public required NetworkDevice Device { protected get; init; }
 
-        public required DemandOptions               DemandOptions   { get; init; }
-        public required Lazy<IDemandPacketFilter>   DemandFilter    { private get; init; }
+        public required AdvertiseOptions            AdvertiseOptions    { get; init; }
+        public required DemandOptions               DemandOptions       { get; init; }
+
+        public required Lazy<IDemandPacketFilter>   DemandFilter        { private get; init; }
 
         readonly ConcurrentDictionary<object, DemandRequest> _ongoingRequests = [];
 
