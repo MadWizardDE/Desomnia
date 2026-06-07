@@ -22,7 +22,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
         async Task IIPAddressDiscovery.DiscoverIPAddresses(NetworkHost host, AddressFamily family)
         {
-            _hosts.GetOrAdd(host, []).Add(family); // only remember which hosts should receive Address address updates
+            _hosts.GetOrAdd(host, []).Add(family); // only remember which hosts should receive Options address updates
         }
 
         void INetworkService.ProcessPacket(EthernetPacket packet)

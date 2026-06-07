@@ -1,7 +1,6 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Demand;
-using MadWizard.Desomnia.Network.Demand.Filter;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
@@ -10,7 +9,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public abstract class HostDemandWatch : NetworkHostWatch
     {
@@ -26,10 +25,10 @@ namespace MadWizard.Desomnia.Network
 
         public required NetworkDevice Device { protected get; init; }
 
-        public required AdvertiseOptions            AdvertiseOptions    { get; init; }
-        public required DemandOptions               DemandOptions       { get; init; }
+        public required AdvertiseOptions        AdvertiseOptions    { get; init; }
+        public required DemandOptions           DemandOptions       { get; init; }
 
-        public required Lazy<IDemandPacketFilter>   DemandFilter        { private get; init; }
+        public required Lazy<IPacketFilter> Filter    { private get; init; }
 
         readonly ConcurrentDictionary<object, DemandRequest> _ongoingRequests = [];
 
@@ -60,7 +59,7 @@ namespace MadWizard.Desomnia.Network
             }
 
             /**
-             * Only packets with a valid source Address address will be processed
+             * Only packets with a valid source Options address will be processed
              * and can trigger a demand request.
              */
             else if (packet.FindSourceIPAddress() is IPAddress source)
@@ -71,7 +70,7 @@ namespace MadWizard.Desomnia.Network
                     ongoing.EnqueuePacket(packet);
                 }
 
-                // can we start a new request for that source Address?
+                // can we start a new request for that source Options?
                 else if (MaybeStartRequest(packet) is DemandRequest request)
                 {
                     request.EnqueuePacket(packet);
@@ -156,7 +155,19 @@ namespace MadWizard.Desomnia.Network
 
         public bool Verify(EthernetPacket packet)
         {
-            return !DemandFilter.Value.ShouldFilter(packet);
+            var options = new PacketFilterOptions();
+
+            if (this.OfType<ServiceFilterWatch>() is var serviceFilter && serviceFilter.Any())
+            {
+                options.BlockByDefault = true;
+
+                foreach (var serviceWatch in serviceFilter.Where(w => w.Service.Accepts(packet)))
+                {
+                    return !serviceWatch.Filter.Value.ShouldFilter(packet, options);
+                }
+            }
+
+            return !Filter.Value.ShouldFilter(packet, options);
         }
 
         internal protected virtual async Task<PhysicalAddress?> RequestIPUnicastTrafficTo(IPAddress ip)

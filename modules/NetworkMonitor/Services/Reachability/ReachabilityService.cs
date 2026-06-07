@@ -1,6 +1,6 @@
 ﻿using ConcurrentCollections;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Services;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
@@ -43,7 +43,7 @@ namespace MadWizard.Desomnia.Network.Reachability
             if (useCache)
             {
                 bool? cached = null;
-                if (Cache.Read(test).Values.Any(r => r == true)) // has any Address been reachable recently?
+                if (Cache.Read(test).Values.Any(r => r == true)) // has any Options been reachable recently?
                     cached = true;
                 else if (Cache.Read(test).Values.All(r => r == false)) // have all IPs been unreachable recently?
                     cached = false;
@@ -99,7 +99,7 @@ namespace MadWizard.Desomnia.Network.Reachability
         /// Tests the reachability of a given host, passively. No requests will be sent to the network.
         /// </summary>
         /// 
-        /// <param name="host">Host that should be checked, via all known Address addresses</param>
+        /// <param name="host">Host that should be checked, via all known Options addresses</param>
         /// <param name="timeout">TimeSpan we should wait for a response</param>
         /// 
         /// <returns>Time when we received the first response.</returns>

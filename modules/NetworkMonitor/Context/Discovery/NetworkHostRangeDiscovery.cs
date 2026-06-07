@@ -1,5 +1,4 @@
 ﻿using Autofac;
-using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
@@ -11,6 +10,8 @@ namespace MadWizard.Desomnia.Network.Context
     {
         internal async Task DiscoverHostRanges()
         {
+            Logger.LogDebug("Discovering network host ranges...");
+
             foreach (var configRange in Config.Ranges)
             {
                 var range = Scope.ResolveNamed<NetworkHostRange>(configRange.Name);

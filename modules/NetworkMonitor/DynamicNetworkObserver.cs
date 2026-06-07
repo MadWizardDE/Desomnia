@@ -77,7 +77,7 @@ namespace MadWizard.Desomnia.Network
                 {
                     foreach (var context in _contexts.Where(c => c.Value.Interface.Id == @interface.Id))
                     {
-                        context.Value.Interface = @interface; // Update Address config
+                        context.Value.Interface = @interface; // Update Options config
 
                         orphaned.Remove(context);
 
@@ -117,7 +117,11 @@ namespace MadWizard.Desomnia.Network
             await context.DiscoverRouters();
             await context.DiscoverHosts();
             await context.DiscoverHostRanges();
+
             await context.DiscoverDynamicFilterHosts();
+
+            await context.DiscoverAddresses();
+            await context.DiscoverServices();
 
             context.Monitor.StartMonitoring();
 

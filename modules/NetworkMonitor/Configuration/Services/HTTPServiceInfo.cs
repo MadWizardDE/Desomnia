@@ -30,6 +30,5 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
                 Type = FilterRuleType.Must
             };
         }
-
     }
 }

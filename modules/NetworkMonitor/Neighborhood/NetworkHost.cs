@@ -1,5 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Neighborhood.Address;
-using MadWizard.Desomnia.Network.Neighborhood.Events;
+﻿using MadWizard.Desomnia.Network.Neighborhood.Events;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
 using Makaretu.Dns;
 using System.Collections.Concurrent;
 using System.Net;
@@ -30,6 +30,13 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
         public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
 
+        readonly ConcurrentDictionary<NetworkService, ServiceOptions> _services = [];
+
+        public virtual IEnumerable<NetworkService> Services => _services.Keys;
+
+        public event EventHandler<ServiceAddedEventArgs>? ServiceAdded;
+        public event EventHandler<ServiceRemovedEventArgs>? ServiceRemoved;
+
         public virtual IPAddressOptions this[IPAddress ip]
         {
             get
@@ -42,7 +49,20 @@ namespace MadWizard.Desomnia.Network.Neighborhood
                 throw new KeyNotFoundException("IP = " + ip.ToString());
             }
         }
+        public virtual ServiceOptions   this[NetworkService service]
+        {
+            get
+            {
+                if (_services.TryGetValue(service, out var options))
+                {
+                    return options;
+                }
 
+                throw new KeyNotFoundException("NetworkService = " + service.ToString());
+            }
+        }
+
+        #region IP address management
         public virtual bool AddAddress(IPAddress ip, IPAddressOptions options = default)
         {
             ip.RemoveScopeId();
@@ -109,5 +129,32 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
+        #endregion
+
+        #region Service management
+        public virtual bool AddService(NetworkService service, ServiceOptions options = default)
+        {
+            
+            // FIXME check if service is already present?!
+
+            _services[service] = options;
+
+            ServiceAdded?.Invoke(this, new(service, options.Expires));
+
+            return true;
+        }
+
+        public virtual bool RemoveService(NetworkService service, bool expired = false)
+        {
+            if (_services.Remove(service, out _))
+            {
+                ServiceRemoved?.Invoke(this, new(service, expired));
+
+                return true;
+            }
+
+            return false;
+        }
+        #endregion
     }
 }

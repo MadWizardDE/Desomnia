@@ -4,15 +4,12 @@ using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Context;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Demand.Detector;
-using MadWizard.Desomnia.Network.Demand.Filter;
 using MadWizard.Desomnia.Network.Discovery;
 using MadWizard.Desomnia.Network.Filter;
-using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Knocking.Methods;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Middleware;
-using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Reachability;
 using Microsoft.Extensions.Configuration.Xml;
 
@@ -54,7 +51,6 @@ namespace MadWizard.Desomnia.Network
                 builder.RegisterComposite<CompositePhysicalAddressDiscovery, IPhysicalAddressDiscovery>();
                 builder.RegisterComposite<CompositeVirtualMachineManager, IVirtualMachineManager>();
 
-                builder.RegisterComposite<CompositeDemandPacketFilter, IDemandPacketFilter>();
                 builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
                 builder.RegisterComposite<CompositeKnockFilter,  IKnockFilter>();
 
@@ -119,11 +115,11 @@ namespace MadWizard.Desomnia.Network
                 // --- Network Host Scope ---- //
 
                 // Demand Filters
-                builder.RegisterType<DemandRouterFilter>()
-                    .As<IDemandPacketFilter>()
-                    .InstancePerNetworkHost();
-                builder.RegisterType<DemandPacketRuleFilter>()
-                    .As<IDemandPacketFilter>()
+                builder.RegisterType<RouterFilter>()
+                    .As<IPacketFilter>()
+                    .InstancePerNetwork();
+                builder.RegisterType<PacketRuleFilter>()
+                    .As<IPacketFilter>()
                     .InstancePerNetworkHost();
 
                 // --- Request Scope ---- //
@@ -135,13 +131,11 @@ namespace MadWizard.Desomnia.Network
                 // Feed NetworkMonitors dynamically into the SystemMonitor
                 builder.RegisterServiceMiddleware<IEnumerable<IInspectable>>(new DynamicNetworkMonitors());
                 /// builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors()); // TODO: has to be tested
-                builder.RegisterServiceMiddleware<IEnumerable<NetworkService>>(new DynamicNetworkServices());
-                builder.RegisterServiceMiddleware<IEnumerable<PacketFilterRule>>(new DynamicPacketFilterRules());
             }
         }
     }
 
-    public abstract class NetworkPluginModule : Autofac.Module
+    public abstract class PluginModule : Autofac.Module
     {
         //public virtual void Build(ContainerBuilder builder) { }
     }

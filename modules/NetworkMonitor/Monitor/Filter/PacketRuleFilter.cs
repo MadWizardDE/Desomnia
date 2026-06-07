@@ -7,9 +7,9 @@ namespace MadWizard.Desomnia.Network.Filter
     {
         public required IEnumerable<PacketFilterRule> Rules { protected get; init; }
 
-        public virtual bool ShouldFilter(EthernetPacket packet)
+        public virtual bool ShouldFilter(EthernetPacket packet, PacketFilterOptions options)
         {
-            bool needMatch = Rules.Any(rule => rule.Type == FilterRuleType.Must);
+            bool needMatch = Rules.Any(rule => rule.Type == FilterRuleType.Must) || options.BlockByDefault;
 
             foreach (var rule in Rules)
             {

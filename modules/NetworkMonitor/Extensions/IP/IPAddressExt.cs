@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using MadWizard.Desomnia.Network.Configuration.Options;
+using System.Net.Sockets;
 
 namespace System.Net.NetworkInformation
 {
@@ -6,6 +7,20 @@ namespace System.Net.NetworkInformation
     {
         public static IPAddress LinkLocalMulticast = IPAddress.Parse("ff02::1");
         public static IPAddress LinkLocalRouterMulticast = IPAddress.Parse("ff02::2");
+
+        internal static bool ShouldDiscover(this AddressFamily family, AutoDiscoveryType auto)
+        {
+            switch (family)
+            {
+                case AddressFamily.InterNetwork when auto.HasFlag(AutoDiscoveryType.IPv4):
+                    return true;
+                case AddressFamily.InterNetworkV6 when auto.HasFlag(AutoDiscoveryType.IPv6):
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
 
         public static IPAddress DeriveIPv6SolicitedNodeMulticastAddress(this IPAddress ip)
         {

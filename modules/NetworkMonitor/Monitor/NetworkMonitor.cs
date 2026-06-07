@@ -1,7 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
-using MadWizard.Desomnia.Network.Services;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 

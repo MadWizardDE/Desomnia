@@ -1,3 +1,5 @@
+using System.Net;
+
 namespace Makaretu.Dns
 {
     /// <summary>
@@ -29,6 +31,45 @@ namespace Makaretu.Dns
             /// e.g. turns the QU-flagged value back into <see cref="DnsClass.IN"/>.
             /// </summary>
             public DnsClass ClassWithoutMulticastFlag => (DnsClass)((ushort)question.Class & ~MulticastFlag);
+        }
+
+        private static IPProtocol ToProtocol(string protocolName) => protocolName switch
+        {
+            "tcp" => IPProtocol.TCP,
+            "udp" => IPProtocol.UDP,
+
+            _ => throw new FormatException("Unknown service protocol: " + protocolName),
+        };
+
+        extension(PTRRecord ptr)
+        {
+            public string ServiceName => ptr.Name.Labels[0].Replace("_", "");
+            public string InstanceName => ptr.DomainName.Labels[0];
+            public string ProtocolName => ptr.DomainName.Labels[1].Replace("_", "");
+
+            public IPProtocol Protocol => ToProtocol(ptr.ProtocolName);
+        }
+
+        extension(SRVRecord srv)
+        {
+            public string ServiceName => srv.Name.Labels[1].Replace("_", "");
+            public string ProtocolName => srv.Name.Labels[2].Replace("_", "");
+
+            public IPProtocol Protocol => ToProtocol(srv.ProtocolName);
+
+            public string InstanceName => srv.Name.Labels[0];
+            public string HostName => srv.Target.Labels[0];
+        }
+
+        extension(AddressRecord adr)
+        {
+            public string HostName => adr.Name.Labels[0];
+        }
+
+        extension(TXTRecord txt)
+        {
+            public string ServiceName => txt.Name.Labels[1].Replace("_", "");
+            public string InstanceName => txt.Name.Labels[0];
         }
     }
 }

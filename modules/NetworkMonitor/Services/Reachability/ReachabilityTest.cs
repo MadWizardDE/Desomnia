@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
+using MadWizard.Desomnia.Network.Watch;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;

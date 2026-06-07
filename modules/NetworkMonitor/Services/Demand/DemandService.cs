@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -180,7 +181,7 @@ namespace MadWizard.Desomnia.Network.Demand
 
         private void MaybeYieldLocalWatch()
         {
-            if (Monitor.Options.Yield)
+            if (Monitor.Options.Handoff)
             {
                 foreach (var watch in Monitor.OfType<LocalHostWatch>())
                 {

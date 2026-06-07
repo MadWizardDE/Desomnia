@@ -1,6 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Naming.MDNS;
 using MadWizard.Desomnia.Network.Neighborhood.Services;
+using MadWizard.Desomnia.Network.Watch;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 
@@ -21,11 +22,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                 foreach (HostDemandWatch watch in Monitor.OfType<HostDemandWatch>()) foreach (NetworkServiceWatch serviceWatch in watch)
                 {
-                    if (serviceWatch.AdvertiseOptions?.Type.HasFlag(AdvertiseType.Services) ?? false) // should we answer for this service?
+                    if (serviceWatch.AdvertiseOptions?.Type.HasFlag(AdvertiseType.Service) ?? false) // should we answer for this service?
                     {
                         if (serviceWatch.Service is TransportNetworkService service && service.LocalDomainName == question.Name)
                         {
-                            query.AnswerWith(watch.Host, service, delay: watch.AdvertiseOptions.Timeout);
+                            query.AnswerWith(watch.Host, service, options: new(watch.AdvertiseOptions));
                         }
                     }
                 }

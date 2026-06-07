@@ -3,7 +3,7 @@ using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public abstract class NetworkHostWatch : NetworkWatch<NetworkServiceWatch>
     {

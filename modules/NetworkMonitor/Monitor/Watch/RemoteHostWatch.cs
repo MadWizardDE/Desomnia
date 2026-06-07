@@ -13,10 +13,11 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Timers;
+
 using PingOptions = MadWizard.Desomnia.Network.Configuration.Options.PingOptions;
 using Timer = System.Timers.Timer;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public class RemoteHostWatch : HostDemandWatch
     {
@@ -26,7 +27,7 @@ namespace MadWizard.Desomnia.Network
         public required KnockService Knocking { private get; init; }
 
         public required PingOptions     PingOptions     { get; init; }
-        public required YieldOptions    YieldOptions    { get; init; }
+        public required HandoffOptions  HandoffOptions  { get; init; }
         public required WakeOptions     WakeOptions     { get; init; }
 
         public bool IsSuspended { get; private set; } = false;
@@ -49,7 +50,7 @@ namespace MadWizard.Desomnia.Network
             Seen += RemoteHostWatch_Seen;
             Unseen += RemoteHostWatch_Unseen;
 
-            UnMagicPacket += RemoteHostWatch_UnMagicPacket;
+            UnMagicPacket += async (@event) => await RequestHandoff();
 
             Suspended += async (@event) => HandleOffline(true);
             Stopped += async (@event) => HandleOffline(false);
@@ -65,6 +66,17 @@ namespace MadWizard.Desomnia.Network
             }
 
             return false;
+        }
+
+        internal async Task<bool> RequestHandoff()
+        {
+            _pingTimer?.Stop();
+
+            await Task.Delay(HandoffOptions.Timeout);
+
+            await DetermineIfHostCanBeSeen(true);
+
+            return IsSuspended;
         }
 
         private async Task DetermineIfHostCanBeSeen(bool hasSuspended = false)
@@ -102,7 +114,7 @@ namespace MadWizard.Desomnia.Network
                 Logger.LogDebug($"Received UnMagic Packet from \"{Host.Name}\", " +
                     $"triggered by {packet.SourceHardwareAddress.ToHexString()}");
 
-                TriggerEvent(nameof(UnMagicPacket));
+                _ = TriggerEventAsync(nameof(UnMagicPacket));
             }
             else
             {
@@ -203,6 +215,11 @@ namespace MadWizard.Desomnia.Network
         private int SendMagicPacket(IPAddress? hint = null)
         {
             var wol = new WakeOnLanPacket(Host.PhysicalAddress ?? throw new HostAbortedException($"Host '{Host.Name}' has no PhysicalAddress configured."));
+
+            if (WakeOptions.Password is byte[] password)
+            {
+                wol.Password = password;
+            }
 
             int countPackets = 0;
             foreach (var ip in (hint != null ? [hint] : Host.IPAddresses.ToArray()))
@@ -368,18 +385,6 @@ namespace MadWizard.Desomnia.Network
 
                 await DetermineIfHostCanBeSeen();
             }
-        }
-
-        private async Task RemoteHostWatch_UnMagicPacket(Event @event)
-        {
-            _pingTimer?.Stop();
-
-            _ = Task.Run(async() =>
-            {
-                await Task.Delay(YieldOptions.Timeout);
-
-                await DetermineIfHostCanBeSeen(true);
-            });
         }
 
         protected internal override void StopWatch()

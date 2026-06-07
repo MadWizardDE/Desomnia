@@ -2,7 +2,7 @@
 using MadWizard.Desomnia.Network.Demand;
 using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public abstract class NetworkWatch<T> : ResourceMonitor<T> where T : IInspectable
     {

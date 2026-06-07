@@ -1,16 +1,16 @@
-﻿namespace MadWizard.Desomnia.Network.Neighborhood.Address
+﻿namespace MadWizard.Desomnia.Network.Neighborhood.Options
 {
-    public struct IPAddressOptions
+    public struct ServiceOptions
     {
-        public IPAddressFlags   Flags   { get; set; }
-        public DateTime?        Expires { get; set; }
+        public IPAddressFlags Flags { get; set; }
+        public DateTime? Expires { get; set; }
 
-        public IPAddressOptions(IPAddressFlags flags)
+        public ServiceOptions(IPAddressFlags flags)
         {
             Flags = flags;
         }
 
-        public IPAddressOptions(TimeSpan? lifetime)
+        public ServiceOptions(TimeSpan? lifetime)
         {
             if (lifetime.HasValue)
             {
@@ -21,7 +21,7 @@
         public readonly bool HasFlags(IPAddressFlags flags) => Flags.HasFlag(flags);
     }
 
-    public enum IPAddressFlags
+    public enum NetworkServiceFlags
     {
         None = 0,
 

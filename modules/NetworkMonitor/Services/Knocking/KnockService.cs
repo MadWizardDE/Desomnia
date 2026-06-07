@@ -1,6 +1,5 @@
 ﻿using Autofac.Features.Indexed;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
-using MadWizard.Desomnia.Network.Services;
 using MadWizard.Desomnia.Network.Services.Knocking;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;

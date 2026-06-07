@@ -1,86 +1,14 @@
 ﻿using Autofac;
 using Autofac.Core;
-using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
-using MadWizard.Desomnia.Network.Configuration.Options;
-using MadWizard.Desomnia.Network.Discovery;
-using MadWizard.Desomnia.Network.Discovery.BuiltIn;
 using MadWizard.Desomnia.Network.Manager;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network.Context
 {
     public partial class NetworkContext
     {
-        private static void RegisterDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
-        {
-            // MAC-Discovery
-            builder.RegisterType<ARPPhysicalAddressDetector>()
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            builder.RegisterType<NDPPhysicalAddressDetector>()
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            // Host/Address-Discovery
-            builder.RegisterType<DNSIPAddressDetector>()
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            builder.RegisterType<HostAdvertismentDetector>()
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            builder.RegisterType<DHCPRequestDetector>()
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            // Router/Address-Discovery
-            builder.RegisterType<DefaultGatewayDetector>()
-                .WithParameter(TypedParameter.From(config.AutoDetect))
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-            builder.RegisterType<RouterAdvertismentDetector>()
-                .WithParameter(TypedParameter.From(config.AutoDetect))
-                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-        }
-
-        internal async Task DiscoverRouters()
-        {
-            Logger.LogDebug("Discovering routers...");
-
-            // register static routers
-            foreach (var configRouter in Config.Router)
-            {
-                foreach (var configVPNClient in configRouter.VPNClient)
-                {
-                    CreateHost(new TypedParameter(typeof(NetworkHostInfo), configVPNClient));
-                }
-
-                CreateHost(new TypedParameter(typeof(NetworkRouterInfo), configRouter));
-            }
-
-            // register dynamic routers
-            if (Config.AutoDetect.HasFlag(AutoDiscoveryType.Router))
-            {
-                if (Scope.ResolveOptional<IRouterDiscovery>() is IRouterDiscovery discovery)
-                {
-                    await discovery.DiscoverRouters(Network);
-                }
-            }
-        }
-
         internal async Task DiscoverHosts()
         {
             Logger.LogDebug("Discovering network hosts...");
@@ -106,21 +34,16 @@ namespace MadWizard.Desomnia.Network.Context
 
                 foreach (var configHostVirtual in configHost.VirtualHost)
                 {
-                    CreateHost(
-                        new TypedParameter(typeof(RemotePhysicalHostInfo), configHost),
-                        new TypedParameter(typeof(RemoteVirtualHostInfo), configHostVirtual)
-                    );
+                    CreateHost(new TypedParameter(typeof(RemoteVirtualHostInfo), configHostVirtual), TypedParameter.From(configHost));
                 }
             }
         }
 
         internal async Task DiscoverDynamicFilterHosts()
         {
-            List<FilterContext> filterContexts = [this];
-            foreach (var host in _hostContexts)
-                filterContexts.Add(host);
+            var contexts = new List<FilterContext>([this]).Concat(_hostContexts).Concat(_hostContexts.SelectMany(c => c));
 
-            foreach (var ctx in filterContexts)
+            foreach (var ctx in contexts)
             {
                 foreach (var host in ctx.FindMissingDynamicHosts(_hostContexts.Select(x => x.Host)).ToArray())
                 {
@@ -171,7 +94,24 @@ namespace MadWizard.Desomnia.Network.Context
         {
             var context = Scope.Resolve<NetworkHostContext>(parameters);
 
-            ConfigureNetworkMonitorWith(context);
+            Network.AddHost(context.Host);
+
+            if (context.Watch is NetworkHostWatch watch)
+            {
+                this.Monitor.StartTracking(watch);
+            }
+
+            context.Scope.CurrentScopeEnding += (sender, args) =>
+            {
+                Network.RemoveHost(context.Host);
+
+                if (context.Watch is NetworkHostWatch watch)
+                {
+                    this.Monitor.StopTracking(watch);
+                }
+
+                _hostContexts.Remove(context);
+            };
 
             _hostContexts.Add(context);
 
@@ -185,23 +125,6 @@ namespace MadWizard.Desomnia.Network.Context
             Scope.Resolve<NetworkJanitor>().MakeHostEligibleForSweeping(context.Host);
 
             return context;
-        }
-
-        private void ConfigureNetworkMonitorWith(NetworkHostContext context)
-        {
-            Network.AddHost(context.Host);
-
-            if (context.Watch is NetworkHostWatch watch)
-            {
-                foreach (var serviceWatch in context.ServiceWatches)
-                {
-                    watch.StartTracking(serviceWatch);
-                }
-
-                this.Monitor.StartTracking(watch);
-
-                context.TrackDynamicServices();
-            }
         }
     }
 }

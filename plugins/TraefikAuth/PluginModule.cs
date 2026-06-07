@@ -10,7 +10,7 @@ namespace MadWizard.Desomnia.Network.Traefik
         {
             foreach (var network in Config.NetworkMonitor)
             {
-                builder.RegisterType<NetworkPluginModule>().AsSelf()
+                builder.RegisterType<NetworkPluginModule>().As<Desomnia.Network.PluginModule>()
                     .WithParameter(TypedParameter.From(network))
                     .WithMetadata("name", network.Name)
                     .SingleInstance();
@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Network.Traefik
         }
     }
 
-    public class NetworkPluginModule : MadWizard.Desomnia.Network.NetworkPluginModule
+    public class NetworkPluginModule : Desomnia.Network.PluginModule
     {
         public required NetworkMonitorConfig Config { private get; init; }
 

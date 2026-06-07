@@ -1,7 +1,7 @@
-﻿using MadWizard.Desomnia.Network;
-using MadWizard.Desomnia.Network.Demand;
+﻿using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Address;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.Watch;
 using PacketDotNet;
 using System.Net;
 using System.Net.NetworkInformation;

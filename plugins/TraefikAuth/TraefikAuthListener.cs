@@ -23,7 +23,7 @@ namespace MadWizard.Desomnia.Network.Traefik
                 Logger.LogDebug("Listening on port 5000...");
             }
 
-            _http.Start(); // catch (Address already in use) on Linux
+            _http.Start(); // catch (Options already in use) on Linux
 
             Listen();
         }

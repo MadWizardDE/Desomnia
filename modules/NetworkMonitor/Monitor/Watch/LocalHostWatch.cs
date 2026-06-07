@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net.NetworkInformation;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public class LocalHostWatch : HostDemandWatch
     {

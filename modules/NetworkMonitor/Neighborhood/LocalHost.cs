@@ -1,10 +1,10 @@
-﻿using MadWizard.Desomnia.Network.Neighborhood.Address;
+﻿using MadWizard.Desomnia.Network.Neighborhood.Options;
 using System.Net;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Neighborhood
 {
-    internal class LocalHost(NetworkDevice device) : NetworkHost(Dns.GetHostName())
+    public class LocalHost(NetworkDevice device) : NetworkHost(Dns.GetHostName())
     {
         public override string Name => Dns.GetHostName();
 

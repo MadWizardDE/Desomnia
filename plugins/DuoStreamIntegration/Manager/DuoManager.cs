@@ -1,4 +1,5 @@
 ﻿using MadWizard.Desomnia.Service.Duo.Configuration;
+using MadWizard.Desomnia.Session.Manager;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -15,6 +16,8 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
         const ushort DEFAULT_PORT = 38299;
 
         public required ILogger<DuoManager> Logger { get; set; }
+
+        public required ISessionManager SessionManager { private get; init; }
 
         internal IDuoWebManager? API;
 
@@ -50,6 +53,9 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             await TriggerRefresh();
 
             this.Started?.Invoke(this, EventArgs.Empty);
+
+            SessionManager.UserLogon += SessionManager_UserLogon;
+            SessionManager.UserLogoff += SessionManager_UserLogoff;
         }
 
         protected async Task TriggerRefresh()
@@ -76,6 +82,9 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
 
         protected void TriggerStopped()
         {
+            SessionManager.UserLogoff -= SessionManager_UserLogoff;
+            SessionManager.UserLogon -= SessionManager_UserLogon;
+
             this.Stopped?.Invoke(this, EventArgs.Empty);
 
             foreach (var instance in this)
@@ -103,7 +112,11 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 info.OnStop ??= config.OnInstanceStopped;
                 info.OnLogout ??= config.OnInstanceLogout;
 
-                instances.Add(new DuoInstance(info, instancesKey.OpenSubKey(name!, writable: true)!));
+                var instance = new DuoInstance(info, instancesKey.OpenSubKey(name!, writable: true)!);
+
+                instance.Session = SessionManager.FirstOrDefault(instance.HasInitiated);
+
+                instances.Add(instance);
             }
 
             return instances;
@@ -164,6 +177,19 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 }
             }
         }
+
+        #region SessionManager events
+        private void SessionManager_UserLogon(object? sender, ISession session)
+        {
+            if (this.FirstOrDefault(instance => instance.HasInitiated(session)) is DuoInstance instance)
+                instance.Session = session;
+        }
+        private void SessionManager_UserLogoff(object? sender, ISession session)
+        {
+            if (this.FirstOrDefault(instance => instance.Session == session) is DuoInstance instance)
+                instance.Session = null;
+        }
+        #endregion
 
         public IEnumerator<DuoInstance> GetEnumerator()
         {

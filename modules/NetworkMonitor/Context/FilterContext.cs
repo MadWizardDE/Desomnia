@@ -15,15 +15,13 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public abstract class FilterContext : Context
     {
-        protected ILifetimeScope Scope { get; init; } = null!;
-
         private readonly bool _needsTCPData;
 
         private readonly ConcurrentBag<HostFilterRuleInfo> _dynamicHostFilters = [];
 
         private readonly ConcurrentDictionary<NetworkService, TrafficFilterRequest> _dynamicTrafficFilters = [];
 
-        protected FilterContext(ILifetimeScope parent)
+        protected FilterContext(ILifetimeScope parent) : base(parent)
         {
             _needsTCPData = parent.ResolveOptional<SystemUsageInspector>() is not null;
         }
@@ -150,6 +148,34 @@ namespace MadWizard.Desomnia.Network.Context
                 RegisterTrafficFilter(builder, new UDPTrafficType(filter.Port));
 
                 RememberDynamicHostFilters(filter);
+            }
+        }
+
+        protected void RegisterServiceFilter(ContainerBuilder builder, TransportNetworkService service)
+        {
+            foreach (var port in service.Ports)
+            {
+                switch (port.Protocol)
+                {
+                    case IPProtocol.TCP:
+                        builder.RegisterType<TCPServiceFilterRule>().As<PacketFilterRule>()
+                            .WithParameter(TypedParameter.From(FilterRuleType.Must))
+                            .WithParameter(TypedParameter.From<ushort>(port))
+                            .SingleInstance()
+                            .AsSelf();
+                        break;
+
+                    case IPProtocol.UDP:
+                        builder.RegisterType<UDPServiceFilterRule>().As<PacketFilterRule>()
+                            .WithParameter(TypedParameter.From(FilterRuleType.Must))
+                            .WithParameter(TypedParameter.From<ushort>(port))
+                            .SingleInstance()
+                            .AsSelf();
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"Protocol {port.Protocol} is not supported.");
+                }
             }
         }
 

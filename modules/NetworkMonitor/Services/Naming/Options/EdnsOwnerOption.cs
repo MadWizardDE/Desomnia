@@ -11,20 +11,15 @@ namespace MadWizard.Desomnia.Network.Naming.Options
     {
         public EdnsOwnerOption() => Type = (EdnsOptionType)4;  // draft-cheshire-edns0-owner-option
 
-        public byte Version { get; set; }
-        public byte Sequence { get; set; }
+        public byte             Version     { get; set; }
+        public byte             Sequence    { get; set; }
 
         /// <summary>The host's primary (interface) MAC.</summary>
-        public PhysicalAddress PrimaryMac { get; set; } = PhysicalAddress.None;
-
+        public PhysicalAddress  PrimaryMac  { get; set; } = PhysicalAddress.None;
         /// <summary>The MAC to actually target with the magic packet, when it differs from <see cref="PrimaryMac"/>.</summary>
-        public PhysicalAddress? WakeupMac { get; set; }
-
+        public PhysicalAddress? WakeupMac   { get; set; }
         /// <summary>Optional SecureOn Wake-on-LAN password (0, 4 or 6 bytes).</summary>
-        public byte[]? Password { get; set; }
-
-        /// <summary>The MAC a magic packet should be sent to.</summary>
-        public PhysicalAddress WakeTarget => WakeupMac ?? PrimaryMac;
+        public byte[]?          Password    { get; set; }
 
         public override void ReadData(WireReader reader, int length)
         {

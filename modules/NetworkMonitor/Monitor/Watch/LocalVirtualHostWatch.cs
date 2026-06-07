@@ -6,7 +6,7 @@ using PacketDotNet;
 using System.Net;
 using System.Net.NetworkInformation;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     internal class LocalVirtualHostWatch : LocalHostWatch, IDisposable
     {

@@ -1,3 +1,4 @@
+using MadWizard.Desomnia.Network.Watch;
 using MadWizard.Desomnia.Service.Duo.Configuration;
 using MadWizard.Desomnia.Service.Duo.Sunshine;
 using MadWizard.Desomnia.Session.Manager;
@@ -6,7 +7,7 @@ using Nito.AsyncEx;
 
 namespace MadWizard.Desomnia.Service.Duo.Manager
 {
-    public class DuoInstance : ResourceMonitor<SunshineServiceWatch>
+    public class DuoInstance : ResourceMonitor<NetworkServiceWatch>
     {
         private readonly RegistryKey Key;
 
@@ -24,11 +25,22 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             AddEventAction(nameof(Logout), info.OnLogout);
 
             Key = key;
+
+            Name = Key.Name.Split('\\').Last();
+            Port = Key.GetValue("Port") is int port ? (ushort)port : throw new ArgumentNullException("Port");
+            UserName = Key.GetValue("UserName") is string name ? name : throw new ArgumentNullException("UserName");
+            IsSandboxed = Key.GetValue("Sandboxed") is int sandboxed ? sandboxed == 1 : false;
+
+            Service = new SunshineService(Port);
         }
 
-        public string Name      => Key.Name.Split('\\').Last();
-        public ushort Port      => Key.GetValue("Port") is int port ? (ushort)port : throw new ArgumentNullException("Port");
-        public string UserName  => Key.GetValue("UserName") is string name ? name : throw new ArgumentNullException("UserName");
+        public string Name      { get; private set; }
+        public ushort Port      { get; private set; }
+        public string UserName  { get; private set; }
+
+        public bool IsSandboxed { get; private set; }
+
+        public SunshineService Service { get; private set; }
 
         public uint? SessionID
         {
@@ -48,11 +60,9 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
 
         public bool IsBusy => Semaphore.CurrentCount == 0;
 
-        public bool IsSandboxed => Key.GetValue("Sandboxed") is int sandboxed ? sandboxed == 1 : false;
-
         public bool? IsRunning
         {
-            get => field;
+            get;
 
             internal set
             {
@@ -70,7 +80,6 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 field = value;
             }
         }
-
 
         [EventContext]
         public ISession? Session
@@ -105,14 +114,14 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             return this.Name == session.ClientName && this.UserName == session.UserName;
         }
 
-        public override bool StartTracking(SunshineServiceWatch service, bool adopt = true)
+        public override bool StartTracking(NetworkServiceWatch watch, bool adopt = true)
         {
-            service.Demand += NetworkService_Demand;
+            watch.Demand += NetworkWatch_Demand; // implement Demand bubbling generically
 
-            return base.StartTracking(service, adopt);
+            return base.StartTracking(watch, adopt);
         }
 
-        private async Task NetworkService_Demand(Event @event)
+        private async Task NetworkWatch_Demand(Event @event)
         {
             if (@event is not InspectionEvent) // don't trigger for inspection events
             {
@@ -129,6 +138,13 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 return Task.CompletedTask; // only trigger "Demand" events if the instance is NOT running
 
             return base.TriggerEventAsync(@event);
+        }
+
+        public override void StopTracking(NetworkServiceWatch watch)
+        {
+            watch.Demand -= NetworkWatch_Demand; // implement Demand bubbling generically
+
+            base.StopTracking(watch);
         }
 
         protected override IEnumerable<UsageToken> InspectResource(TimeSpan interval)

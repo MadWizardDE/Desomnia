@@ -31,7 +31,7 @@ namespace MadWizard.Desomnia.Service
                     .AsSelf();
             }
 
-            // Address mappings
+            // Options mappings
             builder.RegisterType<HostsManager>()
                 .WithParameter(TypedParameter.From(HostsFilePath))
                 .AsImplementedInterfaces()

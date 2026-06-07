@@ -1,14 +1,15 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using System.Net;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Hosts
 {
     public class RemoteHostInfo : WatchedHostInfo
     {
         // Options
-        #region     AdvertiseOptions
-        bool?       AdvertiseIfStopped  { get; set; }
+        #region                 AdvertiseOptions
+        internal bool?          AdvertiseIfStopped  { get; set; }
 
         public override AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network)
         {
@@ -47,9 +48,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         internal string?        KnockSecretEncoding { get; set; }
         #endregion
 
-        #region     PingOptions
-        TimeSpan?   PingTimeout     { get; set; }
-        TimeSpan?   PingFrequency   { get; set; }
+        #region                 PingOptions
+        internal TimeSpan?      PingTimeout         { get; set; }
+        internal TimeSpan?      PingFrequency       { get; set; }
 
         public PingOptions MakePingOptions(NetworkMonitorConfig network) => new()
         {
@@ -58,34 +59,47 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         };
         #endregion
 
-        #region     WakeOptions
-        WakeType?   WakeType        { get; set; }
-        ushort?     WakePort        { get; set; }
-        TimeSpan?   WakeTimeout     { get; set; }
-        TimeSpan?   WakeRepeat      { get; set; }
-        bool?       WakePing        { get; set; }
+        #region                 WakeOptions
+        internal WakeType?      WakeType            { get; set; }
+        internal ushort?        WakePort            { get; set; }
+        internal string?        WakePassword        { get; set; }
+        internal byte[]?        WakePasswordBytes   { get; set; }
+        internal Encoding?      WakeEncoding        { get; set; }
+        internal TimeSpan?      WakeTimeout         { get; set; }
+        internal TimeSpan?      WakeRepeat          { get; set; }
+        internal bool?          WakePing            { get; set; }
 
-        bool        WakeSilent      { get; set; }
+        internal bool           WakeSilent          { get; set; }
 
-        public WakeOptions MakeWakeOptions(NetworkMonitorConfig network) => new()
+        public WakeOptions MakeWakeOptions(NetworkMonitorConfig network)
         {
-            Type = WakeType ?? network.WakeType,
-            Port = WakePort ?? network.WakePort,
+            if ((WakePassword ?? network.WakePassword) is string password)
+            {
+                WakePasswordBytes ??= (WakeEncoding ?? network.WakeEncoding).GetBytes(password);
+            }
 
-            Timeout = WakeTimeout ?? network.WakeTimeout,
-            Repeat = WakeRepeat ?? network.WakeRepeat,
-            Ping = WakePing ?? network.WakePing,
+            return new()
+            {
+                Type = WakeType ?? network.WakeType,
+                Port = WakePort ?? network.WakePort,
 
-            Silent = WakeSilent,
-        };
+                Password = WakePasswordBytes,
+
+                Timeout = WakeTimeout ?? network.WakeTimeout,
+                Repeat = WakeRepeat ?? network.WakeRepeat,
+                Ping = WakePing ?? network.WakePing,
+
+                Silent = WakeSilent,
+            };
+        }
         #endregion
 
-        #region         YieldOptions
-        TimeSpan?       YieldTimeout { get; set; }
+        #region                 HandoffOptions
+        internal TimeSpan?      HandoffTimeout        { get; set; }
 
-        public virtual YieldOptions MakeYieldOptions(NetworkMonitorConfig network) => new()
+        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
         {
-            Timeout = YieldTimeout ?? network.YieldTimeout,
+            Timeout = HandoffTimeout ?? network.HandoffTimeout,
         };
         #endregion
     }

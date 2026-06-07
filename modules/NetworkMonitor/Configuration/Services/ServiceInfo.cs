@@ -12,18 +12,20 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
     /// </summary>
     public class ServiceInfo
     {
-        public required string  Name        { get; set; }
-        public string?          ServiceName { get; set; }
+        public required string  Name                { get; set; }
+        public string?          ServiceName         { get; set; }
 
-        public IPProtocol       Protocol    { get; set; } = IPProtocol.TCP;
-        public required ushort  Port        { get; set; }
+        public IPProtocol       Protocol            { get; set; } = IPProtocol.TCP;
+        public ushort           Port                { get; set; }
 
-        public TrafficThreshold? MinTraffic { get; set; }
+        public TrafficThreshold? MinTraffic         { get; set; }
 
         // Options
         #region                 AdvertiseOptions
         internal AdvertiseType? Advertise           { get; set; }
         internal TimeSpan?      AdvertiseTimeout    { get; set; }
+        internal TimeSpan?      AdvertiseHostTTL    { get; set; }
+        internal TimeSpan?      AdvertiseServiceTTL { get; set; }
 
         public virtual AdvertiseOptions? MakeAdvertiseOptions()
         {
@@ -33,6 +35,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
                 {
                     Type = Advertise ?? throw new NullReferenceException("Advertise"),
                     Timeout = AdvertiseTimeout ?? throw new NullReferenceException("AdvertiseTimeout"),
+
+                    HostTTL = AdvertiseHostTTL,
+                    ServiceTTL = AdvertiseServiceTTL,
                 };
             }
 
@@ -41,18 +46,18 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         #endregion
 
         #region                 KnockOptions
-        internal string?        KnockMethod { get; set; }
+        internal string?        KnockMethod         { get; set; }
 
-        internal IPProtocol?    KnockProtocol { get; set; }
-        internal ushort?        KnockPort { get; set; }
+        internal IPProtocol?    KnockProtocol       { get; set; }
+        internal ushort?        KnockPort           { get; set; }
 
-        internal TimeSpan?      KnockDelay { get; set; }
-        internal TimeSpan?      KnockRepeat { get; set; }
-        internal TimeSpan?      KnockTimeout { get; set; }
+        internal TimeSpan?      KnockDelay          { get; set; }
+        internal TimeSpan?      KnockRepeat         { get; set; }
+        internal TimeSpan?      KnockTimeout        { get; set; }
 
         //                      KnockSecret
-        internal string?        KnockSecret { get; set; }
-        internal string?        KnockSecretAuth { get; set; }
+        internal string?        KnockSecret         { get; set; }
+        internal string?        KnockSecretAuth     { get; set; }
         internal DigestType?    KnockSecretAuthType { get; set; }
         internal string?        KnockSecretEncoding { get; set; }
 

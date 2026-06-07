@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public class RemoteVirtualHostWatch : RemoteHostWatch
     {

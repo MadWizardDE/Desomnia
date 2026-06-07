@@ -1,10 +1,8 @@
 using ConcurrentCollections;
 using MadWizard.Desomnia.Network.Naming.Options;
-using MadWizard.Desomnia.Network.SleepProxy;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -29,10 +27,11 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
         public required ILogger<MulticastDNSService> Logger { private get; init; }
 
-        public required IEnumerable<IMulticastDNSResolver>  Resolvers { private get; init; }
-        public required IEnumerable<ISleepProxyRegistrar>   Registrars { private get; init; }
+        public required Lazy<IEnumerable<IMulticastDNSResolver>> Resolvers { private get; init; }
 
         public required NetworkDevice Device { private get; init; }
+
+        public bool ForceUnicast { private get; set; } = false;
 
         /// <summary>
         /// Queries we are currently holding back on, each waiting to see whether another
@@ -53,7 +52,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
                 {
                     var update = new MulticastDNSUpdate(packet, message);
 
-                    foreach (var resolver in Resolvers)
+                    foreach (var resolver in Resolvers.Value)
                         resolver.Update(update);
 
                     query = update;
@@ -62,7 +61,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
                 {
                     query = new MulticastDNSQuery(packet, message);
 
-                    foreach (var resolver in Resolvers)
+                    foreach (var resolver in Resolvers.Value)
                         resolver.Resolve(query);
                 }
 
@@ -74,7 +73,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
                     lock (query) if (query.ShouldRespond() != DNSResponseType.None)
                     {
-                        RespondTo(query, Debugger.IsAttached || query.ShouldRespond() == DNSResponseType.Unicast);
+                        RespondTo(query, ForceUnicast || query.ShouldRespond() == DNSResponseType.Unicast);
                     }
                 }
                 catch (Exception ex)
@@ -150,10 +149,10 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
         private void SendPacket(EthernetPacket eth, IPPacket ip, UdpPacket udp)
         {
+            ip.PayloadPacket = udp;
+
             udp.UpdateCalculatedValues();
             udp.UpdateUdpChecksum();
-
-            ip.PayloadPacket = udp;
 
             ip.UpdateCalculatedValues();
             if (ip is IPv4Packet ipv4Packet)

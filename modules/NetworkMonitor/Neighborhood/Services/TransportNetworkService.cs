@@ -46,4 +46,15 @@ namespace MadWizard.Desomnia.Network.Neighborhood.Services
             return $"{port} (\"{Name}\")";
         }
     }
+
+    public static class NetworkHostExt
+    {
+        extension (IEnumerable<NetworkService> services)
+        {
+            public TransportNetworkService? WithPort(IPPort port)
+            {
+                return services.OfType<TransportNetworkService>().Where(t => t.Serves(port)).FirstOrDefault();
+            }
+        }
+    }
 }

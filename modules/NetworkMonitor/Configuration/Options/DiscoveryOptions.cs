@@ -9,20 +9,23 @@
     [Flags]
     public enum AutoDiscoveryType
     {
-        Nothing = 0,
+        Nothing     = 0,
 
-        MAC = 1 << 1,
+        MAC         = 1 << 1,
 
-        IPv4 = 1 << 2,
-        IPv6 = 1 << 3,
+        IPv4        = 1 << 2,
+        IPv6        = 1 << 3,
 
-        Router = 1 << 10,
-        VPN = 1 << 11,
+        IP          = IPv4 | IPv6,
 
-        SleepProxy = 1 << 15,
+        Router      = 1 << 10,
+        VPN         = 1 << 11,
 
-        Services = 1 << 20,
+        Host        = 1 << 15,
+        Service     = 1 << 16,
 
-        Everything = MAC | IPv4 | IPv6 | Router | VPN | SleepProxy | Services
+        SleepProxy  = 1 << 20,
+
+        Everything = MAC | IP | Router | VPN | SleepProxy | Service
     }
 }

@@ -2,11 +2,11 @@
 using MadWizard.Desomnia.Network.Neighborhood;
 using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network
+namespace MadWizard.Desomnia.Network.Watch
 {
     public class NetworkServiceWatch(NetworkService service) : NetworkWatch<Resource>
     {
-        public virtual bool IsHidden => false;
+        public virtual bool IsHidden { get; set; } = false;
 
         public NetworkService Service => service;
 
@@ -16,7 +16,7 @@ namespace MadWizard.Desomnia.Network
         public bool CanTriggerDemand(EthernetPacket trigger)
         {
             return IsIdle && HasEventHandlers(nameof(Demand)) && Service.Accepts(trigger);
-        } 
+        }
 
         protected internal override void ReportNetworkTraffic(EthernetPacket packet)
         {

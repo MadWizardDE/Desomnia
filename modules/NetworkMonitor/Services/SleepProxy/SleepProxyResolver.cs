@@ -1,6 +1,7 @@
 using MadWizard.Desomnia.Network.Naming.MDNS;
-using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 
@@ -11,14 +12,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     /// the proxy service itself (<c>_sleep-proxy._udp.local</c>) and the services that watched hosts
     /// have asked us to advertise on their behalf while they are asleep / unreachable.
     /// </summary>
-    /// <remarks>
-    /// First draft. It answers from what we already know (configured services on watched hosts); it does
-    /// not yet accept dynamic delegations (the DNS Update + EDNS0 Owner option a real client sends before
-    /// sleeping), nor does it craft the magic packet on demand. See the TODOs below.
-    /// </remarks>
     internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : IMulticastDNSResolver
     {
         public required ILogger<SleepProxyResolver> Logger { private get; init; }
+
+        public required SleepProxyRegistrar Registrar { private get; init; }
 
         void IMulticastDNSResolver.Resolve(MulticastDNSQuery query)
         {
@@ -41,38 +39,105 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         {
             try
             {
-                if (update.Owner is not EdnsOwnerOption owner)
-                {
-                    Logger.LogTrace("Ignoring DNS UPDATE without an EDNS0 Owner option (not a sleep-proxy registration).");
+                var owner = update.Owner ?? throw new FormatException("DNS UPDATE without an EDNS0 Owner option");
 
-                    return;
-                }
+                //Logger.LogInformation("Received a sleep-proxy registration for {}", owner.PrimaryMac);
 
-                var registration = new SleepProxyRegistration
+                // TODO Zone = ".local" prüfen
+
+                ValidateNames(update.AuthorityRecords, out string name, out string hostname);
+
+                var registration = new SleepProxyRegistration(owner, update.Lease)
                 {
-                    Records = update.AuthorityRecords,
-                    WakeMac = owner.WakeTarget,
-                    Password = owner.Password,
-                    Sequence = owner.Sequence,
-                    ClientAddress = update.SourceIPAddress,
-                    ClientPhysicalAddress = update.SourcePhysicalAddress,
-                    RequestedLease = update.Lease?.Duration ?? TimeSpan.Zero,
+                    Name = name,
+                    Hostname = hostname,
                 };
 
-                TimeSpan granted = TimeSpan.MaxValue;
+                // read IP addresses
+                foreach (var adr in update.AuthorityRecords.OfType<AddressRecord>())
+                    registration.IPAddresses[adr.Address] = new(IPAddressFlags.Static)
+                    {
+                        TTL = adr.TTL,
+                    };
 
-                if (granted > TimeSpan.Zero)
-                {
-                    update.GrantLease(granted);
-                }
-                else
-                    Logger.LogTrace("No registrar accepted the sleep-proxy registration from {ip}.", update.SourceIPAddress);
+                registration.Services.AddRange(ReadServices(update.AuthorityRecords));
+
+                var lease = Registrar.Register(registration);
+
+                update.GrantLease(lease.Duration);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to handle sleep-proxy registration");
+                Logger.LogError(ex, "Could not handle sleep-proxy registration"); // TODO send error message?
+            }
+        }
+
+        #region Reader for DNS data
+        void ValidateNames(IEnumerable<ResourceRecord> records, out string name, out string hostname)
+        {
+            static void Validate(ref string name, string str)
+            {
+                if (name == string.Empty)
+                    name = str;
+
+                else if (name != str)
+                {
+                    throw new FormatException($"'{name}' != '{str}'");
+                }
             }
 
+            name = string.Empty;
+            hostname = string.Empty;
+            foreach (var record in records)
+            {
+                switch (record)
+                {
+                    case PTRRecord ptr:
+                        Validate(ref name,      ptr.InstanceName);
+                        break;
+
+                    case SRVRecord srv:
+                        Validate(ref name,      srv.InstanceName);
+                        Validate(ref hostname,  srv.HostName);
+                        break;
+
+                    case AddressRecord adr:
+                        Validate(ref hostname,  adr.HostName);
+                        break;
+                }
+            }
+
+            if (name == string.Empty)
+                throw new FormatException("Could not determine instance name");
+            if (hostname == string.Empty)
+                throw new FormatException("Could not determine host name");
         }
+
+        IEnumerable<SleepProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
+        {
+            var services = records.OfType<PTRRecord>().Select(SleepProxyServiceInfo.ParsePTR).ToDictionary(info => info.ServiceName!);
+
+            foreach (var record in records)
+            {
+                switch (record)
+                {
+                    case SRVRecord srv when services[srv.ServiceName] is var service:
+                        if (service.Protocol != srv.Protocol)
+                            throw new FormatException($"Protocol mismatch @ '{srv.ServiceName}': {service.Protocol} != {srv.Protocol}");
+                        service.Port = srv.Port;
+                        service.Priority = srv.Priority;
+                        service.Weight = srv.Weight;
+                        service.AdvertiseHostTTL = srv.TTL;
+                        break;
+
+                    case TXTRecord txt when services[txt.ServiceName] is var service:
+                        service.TextRecords.AddRange(txt.Strings);
+                        break;
+                }
+            }
+
+            return services.Values;
+        }
+        #endregion
     }
 }

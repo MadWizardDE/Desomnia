@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Watch;
 
 namespace MadWizard.Desomnia.Network.Context.Parameters
 {

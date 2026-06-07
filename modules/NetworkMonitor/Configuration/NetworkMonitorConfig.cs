@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration
 {
@@ -62,16 +63,23 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal TimeSpan           DemandTimeout       { get; set; } = TimeSpan.FromSeconds(5);
         internal bool               DemandForward       { get; set; } = true;
         internal int                DemandParallel      { get; set; } = 1;
-
-        internal AdvertiseType      Advertise           { get; set; } = AdvertiseType.Lazy;
-        internal TimeSpan           AdvertiseTimeout    { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
-        internal bool               AdvertiseHostname   { get; set; } = true;
-        internal bool               AdvertiseServices   { get; set; } = false;
-        internal bool               AdvertiseIfStopped  { get; set; } = true;
         #endregion
 
-        #region Network :: YieldOptions
-        internal TimeSpan           YieldTimeout        { get; set; } = TimeSpan.FromSeconds(5);
+        #region Network :: AdvertisedOptions 
+        internal AdvertiseType      Advertise           { get; set; } = AdvertiseType.Lazy;
+        internal bool               AdvertiseHosts      { get; set; } = true;
+        internal bool               AdvertiseServices   { get; set; } = false;
+        internal bool               AdvertiseIfStopped  { get; set; } = true;
+        internal bool               AdvertiseUnicast    { get; set; } = false;
+
+        internal TimeSpan           AdvertiseTimeout    { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+
+        internal TimeSpan?          AdvertiseHostTTL    { get; set; }
+        internal TimeSpan?          AdvertiseServiceTTL { get; set; }
+        #endregion
+
+        #region Network :: HandoffOptions
+        internal TimeSpan           HandoffTimeout        { get; set; } = TimeSpan.FromSeconds(5);
         #endregion
 
         #region Network :: KnockOptions
@@ -98,6 +106,8 @@ namespace MadWizard.Desomnia.Network.Configuration
         #region Network :: WakeOptions
         internal WakeType           WakeType            { get; set; } = WakeType.Auto;
         internal ushort             WakePort            { get; set; } = 9;
+        internal string?            WakePassword        { get; set; }
+        internal Encoding           WakeEncoding        { get; set; } = Encoding.ASCII; // TODO: is this a good default, can it be set?
         internal TimeSpan           WakeTimeout         { get; set; } = TimeSpan.FromSeconds(10);
         internal TimeSpan?          WakeRepeat          { get; set; }
         internal bool               WakePing            { get; set; } = false;
@@ -114,7 +124,7 @@ namespace MadWizard.Desomnia.Network.Configuration
             Mode = this.WatchMode,
             Timeout = this.WatchTimeout,
             UDPPorts = this.WatchUDPPort != null ? [this.WatchUDPPort.Value] : [],
-            Yield = this.WatchYield
+            Handoff = this.WatchYield
         };
         #endregion
 

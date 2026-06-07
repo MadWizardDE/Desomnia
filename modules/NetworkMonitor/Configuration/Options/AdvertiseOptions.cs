@@ -5,8 +5,11 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
 {
     public readonly struct AdvertiseOptions
     {
-        public AdvertiseType    Type    { get; init; }
-        public TimeSpan         Timeout { get; init; }
+        public AdvertiseType    Type        { get; init; }
+        public TimeSpan         Timeout     { get; init; }
+
+        public TimeSpan?        HostTTL     { get; init; } // -> SRV record
+        public TimeSpan?        ServiceTTL  { get; init; } // -> PTR record
 
         public bool ShouldAdvertiseOnRemoteHostDemand(IPAddress ip)     => Type.HasFlag(AdvertiseType.Demand)  && ShouldAdvertise(ip);
         public bool ShouldAdvertiseOnRemoteHostSuspended(IPAddress ip)  => Type.HasFlag(AdvertiseType.Suspend) && ShouldAdvertise(ip);
@@ -26,29 +29,28 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
                     return false;
             }
         }
-
     }
 
     [Flags]
     public enum AdvertiseType
     {
-        Never = 0,
+        Never       = 0,
 
-        IPv4 = 1 << 1,
-        IPv6 = 1 << 2,
+        IPv4        = 1 << 1,
+        IPv6        = 1 << 2,
 
-        IP = IPv4 | IPv6,
+        IP          = IPv4 | IPv6,
 
-        Hostname = 1 << 5,
-        Services = 1 << 6,
+        Host        = 1 << 5,
+        Service     = 1 << 6,
 
-        Demand = 1 << 10, // advertise IPs when remote host is requested
-        Suspend = 1 << 11, // advertise IPs after the remote host has been suspended
-        Stop = 1 << 12, // advertise IPs after the remote host has been stopped (manually or on disconnect)
+        Demand      = 1 << 10, // advertise IPs when remote host is requested
+        Suspend     = 1 << 11, // advertise IPs after the remote host has been suspended
+        Stop        = 1 << 12, // advertise IPs after the remote host has been stopped (manually or on disconnect)
 
-        Resume = 1 << 15, // advertise IPs when the local host resumes from suspend
+        Resume      = 1 << 15, // advertise IPs when the local host resumes from suspend
 
-        Lazy = IP | Demand,
-        Eager = IP | Demand | Suspend | Resume
+        Lazy        = IP | Demand,
+        Eager       = IP | Demand | Suspend | Resume
     }
 }

@@ -1,0 +1,109 @@
+﻿using Autofac;
+using MadWizard.Desomnia.Network.Configuration;
+using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Discovery;
+using MadWizard.Desomnia.Network.Discovery.BuiltIn;
+using MadWizard.Desomnia.Network.Filter;
+using MadWizard.Desomnia.Network.Watch;
+using Microsoft.Extensions.Logging;
+using System.Net.Sockets;
+
+namespace MadWizard.Desomnia.Network.Context
+{
+    public partial class NetworkContext
+    {
+        private static void RegisterAddressDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
+        {
+            // MAC-Discovery
+            builder.RegisterType<ARPPhysicalAddressDetector>()
+                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
+            builder.RegisterType<NDPPhysicalAddressDetector>()
+                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
+
+            // Host/IP-Discovery
+            builder.RegisterType<DNSIPAddressDetector>()
+                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
+            builder.RegisterType<HostAdvertismentDetector>()
+                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
+
+            builder.RegisterType<DHCPRequestDetector>()
+                .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
+        }
+
+        internal async Task DiscoverAddresses()
+        {
+            Logger.LogDebug("Discovering addresses...");
+
+            foreach (var ctx in _hostContexts)
+            {
+                await ctx.DiscoverAddresses();
+            }
+        }
+    }
+
+    public partial class NetworkHostContext
+    {
+        internal async Task DiscoverAddresses()
+        {
+            if (Auto != AutoDiscoveryType.Nothing)
+            {
+                // Dynamically resolve IP addresses
+                if (Scope.ResolveOptional<IIPAddressDiscovery>() is IIPAddressDiscovery discoverIP)
+                {
+                    if (Auto.HasFlag(AutoDiscoveryType.IPv4))
+                        await discoverIP.DiscoverIPAddresses(Host, AddressFamily.InterNetwork);
+                    if (Auto.HasFlag(AutoDiscoveryType.IPv6))
+                        await discoverIP.DiscoverIPAddresses(Host, AddressFamily.InterNetworkV6);
+                }
+
+                // Dynamically resolve MAC address
+                if (Scope.ResolveOptional<IPhysicalAddressDiscovery>() is IPhysicalAddressDiscovery discoverMac)
+                {
+                    if (Auto.HasFlag(AutoDiscoveryType.MAC))
+                        await discoverMac.DiscoverAddress(Host);
+                }
+            }
+
+            ValidateAddresses();
+        }
+
+        private void ValidateAddresses()
+        {
+            using var scope = Logger.BeginHostScope(Host);
+
+            if (!Host.IPAddresses.Any())
+            {
+                Logger.LogWarning("Host \"{name}\" has no IP addresses configured.", Host.Name);
+            }
+
+            if (Watch is HostDemandWatch)
+            {
+                if (Host.PhysicalAddress is null && Host.IsInLocalRange())
+                {
+                    Logger.LogWarning("Host '{name}' has no MAC address configured.", Host.Name);
+                }
+            }
+
+            // Configure traffic filters TODO maybe move into dynamic callback
+            if (Auto.HasFlag(AutoDiscoveryType.IPv4) || Host.IPv4Addresses.Any())
+                Scope.UseTrafficType(new IPv4TrafficType());
+            if (Auto.HasFlag(AutoDiscoveryType.IPv6) || Host.IPv6Addresses.Any())
+                Scope.UseTrafficType(new IPv6TrafficType());
+        }
+    }
+}

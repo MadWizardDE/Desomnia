@@ -2,14 +2,16 @@
 {
     public readonly struct WakeOptions
     {
-        public WakeType     Type    { get; init; }
-        public ushort       Port    { get; init; }
+        public WakeType     Type        { get; init; }
+        public ushort       Port        { get; init; }
 
-        public TimeSpan     Timeout { get; init; }
-        public TimeSpan?    Repeat  { get; init; }
+        public byte[]?      Password    { get; init; }
 
-        public bool         Ping    { get; init; }
-        public bool         Silent  { get; init; }
+        public TimeSpan     Timeout     { get; init; }
+        public TimeSpan?    Repeat      { get; init; }
+
+        public bool         Ping        { get; init; }
+        public bool         Silent      { get; init; }
     }
 
     [Flags]

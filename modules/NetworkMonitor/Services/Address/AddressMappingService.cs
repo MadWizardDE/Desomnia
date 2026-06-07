@@ -1,6 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Address;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -24,7 +24,7 @@ namespace MadWizard.Desomnia.Network.Address
                 case AddressFamily.InterNetwork when respondTo?.PayloadPacket is ArpPacket arp
                     && arp.Operation == ArpOperation.Request && !arp.IsProbe()
                     && arp.TargetProtocolAddress.Equals(mapping.IPAddress):
-                    //Logger.LogDebug($"Received ARP request for Address {mapping.Address}");
+                    //Logger.LogDebug($"Received ARP request for Options {mapping.Options}");
                     SendARPResponse(mapping.IPAddress, mapping.PhysicalAddress, arp.SenderProtocolAddress, arp.SenderHardwareAddress);
                     break;
 
@@ -165,7 +165,7 @@ namespace MadWizard.Desomnia.Network.Address
                 Logger.LogDebug($"Sending ARP announcement <{ip} -> {mac.ToHexString()}> to {macTarget.ToHexString()}");
             }
 
-            //var response = new EthernetPacket(Address.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
+            //var response = new EthernetPacket(Options.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
             var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Request, PhysicalAddressExt.Empty, ip, mac, ip)
@@ -185,7 +185,7 @@ namespace MadWizard.Desomnia.Network.Address
 
             Logger.LogDebug($"Sending ARP response <{ip} -> {mac.ToHexString()}> to {ipTarget}");
 
-            //var response = new EthernetPacket(Address.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
+            //var response = new EthernetPacket(Options.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
             var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Response, macTarget, ipTarget, mac, ip)

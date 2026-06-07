@@ -1,21 +1,20 @@
-﻿using MadWizard.Desomnia.Network.Filter;
-using MadWizard.Desomnia.Network.Neighborhood;
+﻿using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Reachability;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
 
-namespace MadWizard.Desomnia.Network.Demand.Filter
+namespace MadWizard.Desomnia.Network.Filter
 {
-    internal class DemandRouterFilter : IDemandPacketFilter
+    internal class RouterFilter : IPacketFilter
     {
-        public required ILogger<DemandRouterFilter> Logger { private get; init; }
+        public required ILogger<RouterFilter> Logger { private get; init; }
 
         public required NetworkSegment Network { private get; init; }
 
         public required ReachabilityService Reachability { private get; init; }
 
-        bool IPacketFilter.ShouldFilter(EthernetPacket packet)
+        bool IPacketFilter.ShouldFilter(EthernetPacket packet, PacketFilterOptions options)
         {
             if (SentByRouter(packet) is NetworkRouter router)
             {
@@ -39,7 +38,7 @@ namespace MadWizard.Desomnia.Network.Demand.Filter
              * Has the user opted out of the router filtering?
              * 
              * Otherwise we won't allow the router to trigger a direct wake,
-             * unless another Address (probably from some remote system) has 
+             * unless another Options (probably from some remote system) has 
              * actually triggered the wake request.
              */
             if (router.Options.AllowWake || router.Options.AllowWakeByProxy)

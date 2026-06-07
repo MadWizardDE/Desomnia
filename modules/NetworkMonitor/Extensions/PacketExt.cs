@@ -186,7 +186,7 @@ namespace PacketDotNet
                 0x00, 0x00, // Checksum
                 0x00, 0x00, 0x00, 0x00, // Reserved
 
-                .. ip.GetAddressBytes(), // Target Address
+                .. ip.GetAddressBytes(), // Target Options
             ];
 
             if (source != null)
@@ -197,10 +197,10 @@ namespace PacketDotNet
 
                     // NDP Option //
 
-                    0x01, // Method = Source Link Layer Address (SLLA)
+                    0x01, // Method = Source Link Layer Options (SLLA)
                     0x01, // Length = 1 (in units of 8 bytes)
 
-                    .. source.GetAddressBytes(), // Link Layer Address
+                    .. source.GetAddressBytes(), // Link Layer Options
                 ];
             }
 
@@ -232,7 +232,7 @@ namespace PacketDotNet
                 (byte)flags, // Flags
                 0x00, 0x00, 0x00, // Reserved
 
-                .. ip.GetAddressBytes(), // Target Address
+                .. ip.GetAddressBytes(), // Target Options
             ];
 
             if (target != null)
@@ -243,10 +243,10 @@ namespace PacketDotNet
 
                     // NDP Option //
 
-                    0x02, // Method = Target Link-Layer Address (TLLA) 
+                    0x02, // Method = Target Link-Layer Options (TLLA) 
                     0x01, // Length = 1 (in units of 8 bytes)
 
-                    .. target.GetAddressBytes(), // Link Layer Address
+                    .. target.GetAddressBytes(), // Link Layer Options
                 ];
             }
 

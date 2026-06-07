@@ -9,8 +9,6 @@ namespace MadWizard.Desomnia.Network.Context.Watch
     {
         public required ILogger<CaptureWatchDog> Logger { private get; init; }
 
-        public required DynamicNetworkObserver Observer { private get; init; }
-
         public required NetworkDevice   Device { private get; init; }
         public required NetworkSegment  Network { private get; init; }
 

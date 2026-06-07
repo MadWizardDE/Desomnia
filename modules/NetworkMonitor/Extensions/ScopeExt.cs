@@ -16,6 +16,7 @@ namespace MadWizard.Desomnia.Network
     {
         public static readonly object NetworkLifetimeScopeTag = "Network";
         public static readonly object NetworkHostLifetimeScopeTag = "NetworkHost";
+        public static readonly object NetworkServiceLifetimeScopeTag = "NetworkService";
         public static readonly object NetworkKnockLifetimeScopeTag = "NetworkKnock";
         public static readonly object RequestLifetimeScopeTag = Autofac.Core.Lifetime.MatchingScopeLifetimeTags.RequestLifetimeScopeTag;
 

@@ -1,14 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using MadWizard.Desomnia.Network;
+using MadWizard.Desomnia.Network.Watch;
+using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Net.Sockets;
 using WindowsFirewallHelper;
 using WindowsFirewallHelper.FirewallRules;
 
-namespace MadWizard.Desomnia.Service.Duo.Sunshine
+namespace MadWizard.Desomnia.Service.Duo.Sunshine.Listener
 {
-    internal class SunshineServiceWatchFallback(ushort port) : SunshineServiceWatch(port)
+    internal class SunshineListener(SunshineService service) : NetworkServiceWatch(service)
     {
-        public required ILogger<SunshineServiceWatchFallback> Logger { private get; init; }
+        public required ILogger<SunshineListener> Logger { private get; init; }
 
         public required IFirewall       Firewall    { private get; init; }
         private         IFirewallRule?  Rule        { get; set; }
@@ -20,11 +22,11 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
             if (Rule is null)
             {
                 Rule = Firewall.CreatePortRule(
-                    name:       $"DesomniaDuoInstance:{port}",
+                    name:       $"DesomniaDuoInstance:{service.Port}",
                     profiles:   FirewallProfiles.Domain | FirewallProfiles.Private | FirewallProfiles.Public,
                     action:     FirewallAction.Allow,
                     protocol:   FirewallProtocol.TCP,
-                    portNumber: port
+                    portNumber: service.Port
                 );
 
                 if (Rule is FirewallWASRule wasRule)
@@ -34,7 +36,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
                         ?? null;
 
                     wasRule.ApplicationName = exePath;
-                    wasRule.Description = $"Needed to automatically start/stop the Duo instance with port {port}.";
+                    wasRule.Description = $"Needed to automatically start/stop the Duo instance with port {service.Port}.";
                 }
 
                 Firewall.Rules.Add(Rule);
@@ -45,7 +47,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
 
         public async void WaitForClient()
         {
-            using TcpListener listener = new(IPAddress.Any, Service.HTTP.Port);
+            using TcpListener listener = new(IPAddress.Any, service.HTTP.Port);
 
             try
             {
@@ -53,7 +55,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
 
                 listener.Start();
 
-                Logger.LogTrace($"Listening for incoming connections on port {Service.HTTP.Port}...");
+                Logger.LogTrace($"Listening for incoming connections on port {service.HTTP.Port}...");
 
                 _cancelSource = new();
 
@@ -88,7 +90,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
-                Logger.LogWarning("Could not listen for incoming connections on port {port}: Address already in use.", Service.HTTP.Port);
+                Logger.LogWarning("Could not listen for incoming connections on port {port}: Address already in use.", service.HTTP.Port);
             }
             catch (Exception ex)
             {
@@ -106,9 +108,9 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
         {
             // TODO check tcp connection attempts
 
-            if (Service.IsWaitingForClient)
+            if (service.IsWaitingForClient)
             {
-                if (Service.HasClientConnected)
+                if (service.HasClientConnected)
                     ReportNetworkTraffic();
             }
             else
@@ -116,7 +118,10 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
                 WaitForClient(); // long term safety net
             }
 
-            return base.InspectResource(interval);
+            if (HadThresholdTraffic(interval, out long bytes))
+            {
+                yield return new NetworkServiceUsage(service, bytes);
+            }
         }
 
         private void UnconfigureFirewall()
@@ -142,11 +147,11 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine
 
         public override void Dispose()
         {
-            base.Dispose();
-
             StopWaiting();
 
             UnconfigureFirewall();
+
+            base.Dispose();
         }
     }
 }

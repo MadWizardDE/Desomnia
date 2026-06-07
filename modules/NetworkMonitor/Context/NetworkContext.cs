@@ -26,11 +26,11 @@ namespace MadWizard.Desomnia.Network.Context
 
         public required IVirtualMachineManager VMManager { private get; init; }
 
-        public NetworkMonitorConfig Config { get; init; }
-
         public string Name { get; private init; }
 
-        public IEnumerable<NetworkPluginModule> Plugins { get; private init; }
+        public NetworkMonitorConfig Config { get; init; }
+
+        public IEnumerable<PluginModule> Plugins { get; private init; }
 
         public NetworkDevice    Device      { get => field ??= Scope.Resolve<NetworkDevice>();  }
         public NetworkSegment   Network     { get => field ??= Scope.Resolve<NetworkSegment>(); }
@@ -78,8 +78,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Name = Config.Name ?? @interface.Name;
 
-            Plugins = parent.Resolve<IEnumerable<Meta<NetworkPluginModule>>>() // TODO: add additional parameters
-                .Where(x => (string?)x.Metadata["name"] == config.Name)
+            Plugins = parent.Resolve<IEnumerable<Meta<PluginModule>>>()
+                .Where(x => x.Metadata["name"] is not string name || name == config.Name)
                 .Select(x => x.Value);
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkLifetimeScopeTag, builder =>
@@ -119,11 +119,13 @@ namespace MadWizard.Desomnia.Network.Context
                     .ConfigurePipeline(p => p.Use(new DefaultNetworkServiceOptions(config)))
                     .InstancePerDependency()
                     .AsSelf();
+                builder.RegisterType<NetworkHostServiceContext>()
+                    .InstancePerDependency()
+                    .AsSelf();
                 builder.RegisterType<NetworkKnockContext>()
                     .WithParameter(TypedParameter.From(config))
                     .InstancePerDependency()
                     .AsSelf();
-
 
                 builder.RegisterType<NetworkJanitor>()
                     .WithParameter(TypedParameter.From(config.MakeSweepOptions()))
@@ -167,10 +169,15 @@ namespace MadWizard.Desomnia.Network.Context
                         .InstancePerNetwork()
                         .AsSelf();
 
-                    builder.RegisterType<MulticastDNSService>()
+                    var mdns = builder.RegisterType<MulticastDNSService>()
                         .AsImplementedInterfaces()
                         .SingleInstance()
                         .AsSelf();
+
+                    mdns.OnActivated(args =>
+                    {
+                         args.Instance.ForceUnicast = config.AdvertiseUnicast;
+                    });
 
                     builder.RegisterType<HostnameResolver>()
                         .AsImplementedInterfaces()
@@ -218,7 +225,8 @@ namespace MadWizard.Desomnia.Network.Context
                     build.OnActivated(x => x.Instance.ShouldReplace = !allow.HasFlag(WakeOnLANMode.Default));
                 }
 
-                RegisterDiscovery(builder, config);
+                RegisterRouterDiscovery(builder, config);
+                RegisterAddressDiscovery(builder, config);
 
                 RegisterFilters(builder, config);
                 RegisterTrafficFilters(builder, config);
@@ -230,8 +238,6 @@ namespace MadWizard.Desomnia.Network.Context
             Logger = Scope.Resolve<ILogger<NetworkContext>>();
 
             Scope.Resolve<KnockService>(TypedParameter.From(_knockContexts.SelectMany(ctx => ctx.Stanzas)));
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
         }
 
         private void RegisterContextAwareLogger(ILifetimeScope parent, ContainerBuilder builder)

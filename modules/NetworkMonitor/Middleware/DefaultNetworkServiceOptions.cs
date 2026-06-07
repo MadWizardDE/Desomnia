@@ -41,6 +41,8 @@ namespace MadWizard.Desomnia.Network.Middleware
             {
                 service.Advertise               ??= options.Type;
                 service.AdvertiseTimeout        ??= options.Timeout;
+                service.AdvertiseHostTTL        ??= options.HostTTL;
+                service.AdvertiseServiceTTL     ??= options.ServiceTTL;
             }
         }
 

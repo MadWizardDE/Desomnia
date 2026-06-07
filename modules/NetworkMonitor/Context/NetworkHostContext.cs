@@ -1,308 +1,232 @@
 ﻿using Autofac;
+using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
-using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Context.Parameters;
-using MadWizard.Desomnia.Network.Discovery;
-using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Address;
-using MadWizard.Desomnia.Network.Neighborhood.Services;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using NLog;
 using System.Net.NetworkInformation;
-using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Context
 {
-    public class NetworkHostContext : FilterContext
+    public partial class NetworkHostContext : FilterContext, IIEnumerable<NetworkHostServiceContext>
     {
-        public NetworkHost          Host    { get; private init; }
-        public NetworkHostWatch?    Watch   { get; private init; }
+        public required ILogger<NetworkHostContext> Logger { private get; init; }
 
-        public ILogger<NetworkHostContext> Logger => field ??= Scope.Resolve<ILogger<NetworkHostContext>>();
+        public AutoDiscoveryType    Auto    { get; private set; }
 
-        public IEnumerable<NetworkServiceWatch> ServiceWatches => Scope.Resolve<IEnumerable<NetworkServiceWatch>>();
+        public NetworkHost          Host    { get => field ??= Scope.Resolve<NetworkHost>();                private init; }
+        public NetworkHostWatch?    Watch   { get => field ??= Scope.ResolveOptional<NetworkHostWatch>();   private init; }
+
+        private readonly IList<NetworkHostServiceContext> _serviceContexts = [];
 
         // Host
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, NetworkHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkHostInfo config) : base(parent)
         {
+            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
-                RegisterHost(builder, config);
+                var reg = builder.RegisterType<NetworkHost>().As<NetworkHost>()
+                    .OnActivated(args => ConfigureHost(args, config))
+                    .WithParameter(new TypedParameter(typeof(string), config.Name))
+                    .SingleInstance()
+                    .AsSelf();
             });
-
-            Host = ConfigureHost(networkConfig, config).Result;
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
         }
 
         // Router
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, NetworkRouterInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkRouterInfo config) : base(parent)
         {
+            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterType<NetworkRouter>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .WithParameter(NetworkHostsParameter.FindBy([.. config.VPNClient.Select(h => h.Name)]))
                     .WithParameter(TypedParameter.From(config.Options))
+                    .OnActivated(args => ConfigureHost(args, config))
                     .SingleInstance()
                     .AsSelf();
             });
-
-            Host = ConfigureHost(networkConfig, config).Result;
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
         }
 
         // LocalHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, LocalHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalHostInfo config) : base(parent)
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterType<LocalHost>().As<NetworkHost>()
+                    .OnActivated(args => ConfigureLocalHost(args, config))
                     .SingleInstance()
                     .AsSelf();
-
-                RegisterServices(builder, config.Services);
 
                 RegisterHostFilters(builder, config.HostFilterRule);
                 RegisterHostRangeFilters(builder, config.HostRangeFilterRule);
 
                 builder.RegisterType<LocalHostWatch>().As<NetworkHostWatch>()
-                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .WithProperty(TypedParameter.From(config.MinTraffic))
                     .SingleInstance()
                     .AsSelf();
             });
 
-            Host = ConfigureLocalHost(networkConfig, config).Result;
-            Watch = Scope.Resolve<LocalHostWatch>();
-
-            Watch.Threshold = config.MinTraffic;
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
+            CreateServices(config.Services);
         }
 
         // LocalVirtualHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, LocalVirtualHostInfo config, IVirtualMachine vm) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalVirtualHostInfo config, IVirtualMachine vm) : base(parent)
         {
+            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterType<VirtualNetworkHost>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .WithParameter(new LocalHostParameter<NetworkHost>())
                     .WithProperty(TypedParameter.From(vm.Address))
+                    .OnActivated(args => ConfigureHost(args, config))
                     .SingleInstance()
                     .AsSelf();
 
-                RegisterServices(builder, config.Services);
                 RegisterFilters(builder, config);
 
                 builder.RegisterType<LocalVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(vm))
-                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
             });
 
-            Host = ConfigureHost(networkConfig, config).Result;
-            Watch = ConfigureWatch(networkConfig, config);
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
+            CreateServices(config.Services);
         }
 
         // RemoteHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, RemotePhysicalHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemotePhysicalHostInfo config) : base(parent)
         {
+            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
-                RegisterHost(builder, config);
-                RegisterServices(builder, config.Services);
+                var reg = builder.RegisterType<NetworkHost>().As<NetworkHost>()
+                    .WithParameter(new TypedParameter(typeof(string), config.Name))
+                    .OnActivated(args => ConfigureHost(args, config))
+                    .SingleInstance()
+                    .AsSelf();
+
                 RegisterFilters(builder, config);
 
                 builder.RegisterType<RemoteHostWatch>().As<NetworkHostWatch>()
-                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakePingOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeWakeOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeYieldOptions(networkConfig)))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
+                    .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
             });
 
-            Host = ConfigureHost(networkConfig, config).Result;
-            Watch = ConfigureWatch(networkConfig, config);
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
+            CreateServices(config.Services);
         }
 
         // RemoteVirtualHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig networkConfig, RemotePhysicalHostInfo hostConfig, RemoteVirtualHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemoteVirtualHostInfo config, RemotePhysicalHostInfo configPhysical) : base(parent)
         {
+            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterType<VirtualNetworkHost>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
-                    .WithParameter(new NetworkHostParameter<NetworkHost>(hostConfig.Name))
+                    .WithParameter(new NetworkHostParameter<NetworkHost>(configPhysical.Name))
+                    .OnActivated(args => ConfigureHost(args, config))
                     .SingleInstance()
                     .AsSelf();
 
-                RegisterServices(builder, config.Services);
                 RegisterFilters(builder, config);
 
                 builder.RegisterType<RemoteVirtualHostWatch>().As<NetworkHostWatch>()
-                    .WithParameter(NetworkHostWatchParameter<RemoteHostWatch>.FindByHostName(hostConfig.Name))
-                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakePingOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeWakeOptions(networkConfig)))
-                    .WithParameter(TypedParameter.From(config.MakeYieldOptions(networkConfig)))
+                    .WithParameter(NetworkHostWatchParameter<RemoteHostWatch>.FindByHostName(configPhysical.Name))
+                    .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
+                    .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
-
             });
 
-            Host = ConfigureHost(networkConfig, config).Result;
-            Watch = ConfigureWatch(networkConfig, config);
-
-            parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
+            CreateServices(config.Services);
         }
 
-        private void RegisterHost(ContainerBuilder builder, NetworkHostInfo config)
+        private static void ConfigureHost(IActivatedEventArgs<NetworkHost> args, NetworkHostInfo config)
         {
-            builder.RegisterType<NetworkHost>().As<NetworkHost>()
-                .WithParameter(new TypedParameter(typeof(string), config.Name))
-                .SingleInstance()
-                .AsSelf();
-        }
+            var host = args.Instance;
 
-        private void RegisterServices(ContainerBuilder builder, IEnumerable<ServiceInfo> services)
-        {
-            foreach (var info in services)
+            var logger = args.Context.Resolve<ILogger<NetworkHostContext>>();
+
+            using (logger.BeginHostScope(host))
             {
-                var registerService = builder.RegisterType<TransportNetworkService>().As<NetworkService>()
-                    .WithParameter(TypedParameter.From(info.Name))
-                    .WithParameter(TypedParameter.From(info.TransportService))
-                    .SingleInstance()
-                    .AsSelf();
+                logger.LogDebug("Configuring host '{name}':", config.Name);
 
-                if (info.ServiceName is string name)
+                // Configure hostname
+                if (config.HostName != null)
                 {
-                    registerService.WithProperty(TypedParameter.From(info.ServiceName));
+                    host.HostName = config.HostName;
                 }
 
-                var registerWatch = builder.RegisterType<NetworkServiceWatch>()
-                    .WithParameter(NetworkServiceParameter.FindByName(info.Name))
-                    .WithProperty(TypedParameter.From(info.MakeAdvertiseOptions()))
-                    .WithProperty(TypedParameter.From(info.MakeKnockOptions()))
-                    .WithProperty(TypedParameter.From(info.MinTraffic))
-                    .SingleInstance()
-                    .AsSelf();
-
-                registerWatch.OnActivated(args =>
+                // Configure static MAC address
+                if ((host.PhysicalAddress ??= config.MAC) is PhysicalAddress mac)
                 {
-                    args.Instance.AddEventAction(nameof(NetworkServiceWatch.Demand), info.OnDemand);
-                    args.Instance.AddEventAction(nameof(NetworkServiceWatch.Idle), info.OnIdle);
-                });
+                    logger.LogHostPhysicalAddressChanged(host, mac);
+                }
 
-                RegisterServiceFilter(builder, info);
-            }
-        }
-
-        private async Task<LocalHost> ConfigureLocalHost(NetworkMonitorConfig configNetwork, LocalHostInfo config)
-        {
-            var host = Scope.Resolve<LocalHost>();
-
-            using var scope = Logger.BeginHostScope(host);
-
-            Logger.LogDebug("Configuring localhost:");
-
-            Logger.LogDebug("{family} '{address}'", "MAC", host.PhysicalAddress?.ToHexString());
-
-            foreach (var ip in host.IPAddresses)
-                Logger.LogDebug("{family} '{address}'", ip.ToFamilyName(), ip);
-
-            // Configure traffic filters
-
-            if (config.Services.Any())
-            {
-                if (host.IPv4Addresses.Any())
-                    Scope.UseTrafficType(new IPv4TrafficType());
-                if (host.IPv6Addresses.Any())
-                    Scope.UseTrafficType(new IPv6TrafficType());
-            }
-
-            return host;
-        }
-
-        private async Task<NetworkHost> ConfigureHost(NetworkMonitorConfig configNetwork, NetworkHostInfo config)
-        {
-            var host = Scope.Resolve<NetworkHost>();
-
-            using var scope = Logger.BeginHostScope(host);
-
-            Logger.LogDebug("Configuring host '{name}':", config.Name);
-
-            // Configure hostname
-            if (config.HostName != null)
-            {
-                host.HostName = config.HostName;
-            }
-
-            var autoDetect = config.AutoDetect ?? configNetwork.AutoDetect;
-
-            // Configure static MAC address
-            if ((host.PhysicalAddress ??= config.MAC) is PhysicalAddress mac)
-            {
-                Logger.LogHostPhysicalAddressChanged(host, mac);
-            }
-
-            // Configure static Address addresses
-            foreach (var ip in config.IPAddresses)
-            {
-                if (host.AddAddress(ip, new(IPAddressFlags.Static)))
+                // Configure static IP addresses
+                foreach (var ip in config.IPAddresses)
                 {
-                    Logger.LogHostAddressAdded(host, ip);
+                    if (host.AddAddress(ip, new(IPAddressFlags.Static)))
+                    {
+                        logger.LogHostAddressAdded(host, ip);
+                    }
                 }
             }
-
-            // Dynamically resolve Address addresses
-            if (Scope.ResolveOptional<IIPAddressDiscovery>() is IIPAddressDiscovery discoverIP)
-            {
-                if (autoDetect.HasFlag(AutoDiscoveryType.IPv4))
-                    await discoverIP.DiscoverIPAddresses(host, AddressFamily.InterNetwork);
-                if (autoDetect.HasFlag(AutoDiscoveryType.IPv6))
-                    await discoverIP.DiscoverIPAddresses(host, AddressFamily.InterNetworkV6);
-            }
-
-            // Dynamically resolve MAC address
-            if (Scope.ResolveOptional<IPhysicalAddressDiscovery>() is IPhysicalAddressDiscovery discoverMac)
-            {
-                if (autoDetect.HasFlag(AutoDiscoveryType.MAC))
-                    await discoverMac.DiscoverAddress(host);
-            }
-
-            if (!host.IPAddresses.Any())
-            {
-                Logger.LogWarning("Host \"{name}\" has no IP addresses configured.", config.Name);
-            }
-
-            // Configure traffic filters
-            if (autoDetect.HasFlag(AutoDiscoveryType.IPv4) || host.IPv4Addresses.Any())
-                Scope.UseTrafficType(new IPv4TrafficType());
-            if (autoDetect.HasFlag(AutoDiscoveryType.IPv6) || host.IPv6Addresses.Any())
-                Scope.UseTrafficType(new IPv6TrafficType());
-
-            return host;
         }
 
-        private NetworkHostWatch ConfigureWatch(NetworkMonitorConfig configNetwork, WatchedHostInfo config)
+        private static void ConfigureLocalHost(IActivatedEventArgs<LocalHost> args, LocalHostInfo config)
         {
-            var watch = Scope.Resolve<NetworkHostWatch>();
+            var logger = args.Context.Resolve<ILogger<NetworkHostContext>>();
+
+            if (logger.IsEnabled(Microsoft.Extensions.Logging.LogLevel.Debug))
+            {
+                var host = args.Instance;
+
+                using (logger.BeginHostScope(host))
+                {
+                    logger.LogDebug("Configuring localhost:");
+
+                    if (host.PhysicalAddress is PhysicalAddress mac)
+                        logger.LogHostPhysicalAddressChanged(host, mac);
+
+                    foreach (var ip in host.IPAddresses)
+                        logger.LogHostAddressAdded(host, ip);
+                }
+            }
+        }
+
+        private static void ConfigureWatch(IActivatedEventArgs<NetworkHostWatch> args, WatchedHostInfo config)
+        {
+            var watch = args.Instance;
 
             watch.Threshold = config.MinTraffic;
 
@@ -316,20 +240,9 @@ namespace MadWizard.Desomnia.Network.Context
                 watch.AddEventAction(nameof(HostDemandWatch.Stopped), config.OnStop);
 
                 watch.AddEventAction(nameof(HostDemandWatch.MagicPacket), config.OnMagicPacket);
-
-                if (watch.Host.PhysicalAddress is null && watch.Host.IsInLocalRange())
-                {
-                    Logger.LogWarning("Host '{name}' has no MAC address configured.", config.Name);
-                }
             }
-
-            return watch;
         }
 
-        internal void TrackDynamicServices()
-        {
-            Watch?.TrackingStarted += (sender, args) => AddDynamicTrafficFilters(Host, args.Inspectable.Service);
-            Watch?.TrackingStopped += (sender, args) => RemoveDynamicTrafficFilters(Host, args.Inspectable.Service);
-        }
+        IEnumerator<NetworkHostServiceContext> IEnumerable<NetworkHostServiceContext>.GetEnumerator() => _serviceContexts.GetEnumerator();
     }
 }

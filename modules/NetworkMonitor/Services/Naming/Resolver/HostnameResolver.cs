@@ -1,6 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Address;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.Watch;
 using Makaretu.Dns;
 using System.Net;
 using System.Net.Sockets;
@@ -30,7 +31,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS.Resolver
                 // advertise information we need in order to answer on their behalf.
                 if (ResolveHost(question) is NetworkHost host && Monitor[host] is HostDemandWatch watch)
                 {
-                    if (watch.AdvertiseOptions.Type.HasFlag(AdvertiseType.Hostname)) // should we answer for this host?
+                    if (watch.AdvertiseOptions.Type.HasFlag(AdvertiseType.Host)) // should we answer for this host?
                         foreach (IPAddress ip in host.IPAddresses)
                         {
                             // Only advertise statically configured addresses; everything else was
@@ -43,7 +44,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS.Resolver
                             if (ip.AddressFamily == AddressFamily.InterNetworkV6 && !wantIPv6)
                                 continue;
 
-                            query.AnswerWith(host, ip, watch.AdvertiseOptions.Timeout);
+                            query.AnswerWith(host, ip, new(watch.AdvertiseOptions, true));
                         }
                 }
             }
