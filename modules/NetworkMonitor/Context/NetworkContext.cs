@@ -270,6 +270,7 @@ namespace MadWizard.Desomnia.Network.Context
 
             RegisterHostFilters(builder, config.HostFilterRule);
             RegisterHostRangeFilters(builder, config.HostRangeFilterRule);
+            RegisterEveryHostFilter(builder, config.EveryHostFilterRule);
             RegisterForeignHostFilter(builder, config.ForeignHostFilterRule);
             RegisterServiceFilters(builder, config.ServiceFilterRules);
             RegisterPingFilter(builder, config.PingFilterRule);

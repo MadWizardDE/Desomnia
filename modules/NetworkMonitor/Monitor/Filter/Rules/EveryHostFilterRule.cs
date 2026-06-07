@@ -3,7 +3,7 @@ using PacketDotNet;
 
 namespace MadWizard.Desomnia.Network.Monitor.Filter.Rules
 {
-    public abstract class NestedHostFilterRule : PacketFilterRule
+    public class EveryHostFilterRule : PacketFilterRule
     {
         public IEnumerable<HostFilterRule> HostRules { get; set; } = [];
 

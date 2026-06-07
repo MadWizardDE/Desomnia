@@ -3,7 +3,7 @@ using PacketDotNet;
 
 namespace MadWizard.Desomnia.Network.Monitor.Filter.Rules
 {
-    internal class ForeignHostFilterRule(LocalNetworkRange lan) : NestedHostFilterRule
+    internal class ForeignHostFilterRule(LocalNetworkRange lan) : EveryHostFilterRule
     {
         override public bool Matches(EthernetPacket packet)
         {

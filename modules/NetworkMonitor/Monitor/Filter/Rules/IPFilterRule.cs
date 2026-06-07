@@ -2,7 +2,7 @@
 
 namespace MadWizard.Desomnia.Network.Filter.Rules
 {
-    public abstract class IPFilterRule : NestedHostFilterRule
+    public abstract class IPFilterRule : EveryHostFilterRule
     {
 
     }

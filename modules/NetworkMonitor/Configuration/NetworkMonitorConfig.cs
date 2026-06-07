@@ -138,10 +138,14 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IList<NetworkHostRangeInfo>      HostRange           { get; private set; } = [];
         public IList<DynamicHostRangeInfo>      DynamicHostRange    { get; private set; } = [];
 
-        public IEnumerable<NetworkHostRangeInfo> Ranges => HostRange.Concat(DynamicHostRange).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
-        public IEnumerable<NetworkHostInfo> Hosts => Router.Concat(Host).Concat(RemoteHost).Concat(RemoteHost.SelectMany(r => r.VirtualHost));
+        public IEnumerable<NetworkHostRangeInfo> Ranges => HostRange.Concat(DynamicHostRange)
+            .Concat(EveryHostFilterRule?.HostRange ?? []).Concat(EveryHostFilterRule?.DynamicHostRange ?? [])
+            .Concat(ForeignHostFilterRule?.HostRange ?? []).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
+        public IEnumerable<NetworkHostInfo> Hosts => Router.Concat(Host).Concat(RemoteHost).Concat(RemoteHost.SelectMany(r => r.VirtualHost))
+            .Concat(EveryHostFilterRule?.Host ?? []).Concat(ForeignHostFilterRule?.Host ?? []);
 
         // Filter-Rules (networkwide)
+        public EveryHostFilterRuleInfo? EveryHostFilterRule { get; set; }
         public ForeignHostFilterRuleInfo? ForeignHostFilterRule { get; set; }
         public IEnumerable<ServiceFilterRuleInfo> ServiceFilterRules => ServiceFilterRule.Concat(HTTPFilterRule);
         public IList<ServiceFilterRuleInfo> ServiceFilterRule { get; set; } = [];

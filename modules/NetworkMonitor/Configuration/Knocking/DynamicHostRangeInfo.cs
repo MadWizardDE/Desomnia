@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Knocking
         // Packet Filter Rules
         public IList<HostFilterRuleInfo> HostFilterRule { get; set; } = [];
         public IList<HostRangeFilterRuleInfo> HostRangeFilterRule { get; set; } = [];
-        // KnockEvent Filter Rules
+        // KnockEvent Filter Rules // TODO
         public IList<ServiceFilterRuleInfo> ServiceFilterRule { get; set; } = [];
     }
 

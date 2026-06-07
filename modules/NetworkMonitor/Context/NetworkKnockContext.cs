@@ -55,8 +55,6 @@ namespace MadWizard.Desomnia.Network.Context
                 });
 
                 Stanzas.Add(ConfigureStanza(scope));
-
-                parent.Disposer.AddInstanceForDisposal(scope); // automatic child scope disposal
             }
 
             parent.UseTrafficType(knockProtocol switch

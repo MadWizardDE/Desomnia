@@ -21,7 +21,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
             Parallel    = DemandParallel    ?? network.DemandParallel,
             Forward     = false
         };
+        #endregion
 
+        #region AdvertiseOptions
         public AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
             Type        = AdvertiseType.Never,

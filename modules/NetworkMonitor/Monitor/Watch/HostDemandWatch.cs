@@ -159,12 +159,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
             if (this.OfType<ServiceFilterWatch>() is var serviceFilter && serviceFilter.Any())
             {
-                options.BlockByDefault = true;
-
                 foreach (var serviceWatch in serviceFilter.Where(w => w.Service.Accepts(packet)))
                 {
                     return !serviceWatch.Filter.Value.ShouldFilter(packet, options);
                 }
+
+                options.BlockByDefault = true;
             }
 
             return !Filter.Value.ShouldFilter(packet, options);

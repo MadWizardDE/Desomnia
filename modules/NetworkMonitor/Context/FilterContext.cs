@@ -92,11 +92,11 @@ namespace MadWizard.Desomnia.Network.Context
             }
         }
 
-        protected void RegisterForeignHostFilter(ContainerBuilder builder, ForeignHostFilterRuleInfo? filter)
+        private void RegisterManyHostFilter<I, F>(ContainerBuilder builder, I? filter) where I : EveryHostFilterRuleInfo where F : EveryHostFilterRule
         {
             if (filter != null)
             {
-                var register = builder.RegisterType<ForeignHostFilterRule>().As<PacketFilterRule>()
+                var register = builder.RegisterType<F>().As<PacketFilterRule>()
                     .WithParameter(TypedParameter.From(filter.Type))
                     .WithProperty(HostFilterRulesParameter.From(filter))
                     .SingleInstance()
@@ -105,6 +105,12 @@ namespace MadWizard.Desomnia.Network.Context
                 RememberDynamicHostFilters(filter);
             }
         }
+
+        protected void RegisterEveryHostFilter(ContainerBuilder builder, EveryHostFilterRuleInfo? filter) => 
+            RegisterManyHostFilter<EveryHostFilterRuleInfo, EveryHostFilterRule>(builder, filter);
+
+        protected void RegisterForeignHostFilter(ContainerBuilder builder, ForeignHostFilterRuleInfo? filter) =>
+            RegisterManyHostFilter<ForeignHostFilterRuleInfo, ForeignHostFilterRule>(builder, filter);
 
         protected void RegisterServiceFilters(ContainerBuilder builder, IEnumerable<ServiceFilterRuleInfo> filters)
         {
