@@ -28,9 +28,9 @@ namespace MadWizard.Desomnia.Network.Context
 
         internal async Task DiscoverDynamicFilterHosts()
         {
-            var contexts = new List<FilterContext>([this])
+            var contexts = ((IEnumerable<FilterContext>)[this])
                 .Concat(_hostContexts).Concat(_hostContexts.SelectMany(ctx => ctx))
-                .Concat(_knockContexts);
+                .Concat(_knockContexts).ToList();
 
             foreach (var ctx in contexts)
             {

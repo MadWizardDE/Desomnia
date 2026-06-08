@@ -84,9 +84,17 @@ namespace MadWizard.Desomnia.Network
                         goto next;
                     }
 
-                    await StartupContext(config, @interface);
+                    try
+                    {
+                        await StartupContext(config, @interface);
 
-                    goto next;
+                        goto next;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Failed to startup monitoring context for '{Interface}'",
+                            @interface.Name + (config.Name is string name ? $" [{name}]" : "") );
+                    }
                 }
 
                 next: continue; // allow only one config match per interface
@@ -112,22 +120,31 @@ namespace MadWizard.Desomnia.Network
         {
             var owned = CreateContext(config, @interface); var context = owned.Value;
 
-            context.Device.StartCapture();
+            try
+            {
+                context.Device.StartCapture();
 
-            await context.DiscoverRouters();
-            await context.DiscoverHosts();
-            await context.DiscoverHostRanges();
+                await context.DiscoverRouters();
+                await context.DiscoverHosts();
+                await context.DiscoverHostRanges();
 
-            await context.DiscoverDynamicFilterHosts();
+                await context.DiscoverDynamicFilterHosts();
 
-            await context.DiscoverAddresses();
-            await context.DiscoverServices();
+                await context.DiscoverAddresses();
+                await context.DiscoverServices();
 
-            context.Monitor.StartMonitoring();
+                context.Monitor.StartMonitoring();
 
-            MonitoringStarted?.Invoke(this, context.Monitor);
+                MonitoringStarted?.Invoke(this, context.Monitor);
 
-            _contexts.Add(owned);
+                _contexts.Add(owned);
+            }
+            catch (Exception)
+            {
+                owned.Dispose();
+
+                throw;
+            }
         }
 
         private async Task ShutdownContext(Owned<NetworkContext> context)
