@@ -146,7 +146,7 @@ namespace Microsoft.Extensions.Logging
                     tokens.Add("remote");
 
                 if (host.ShouldAddressExpire(ip, out var expires))
-                    tokens.Add($"expires={DateTime.Now - expires}");
+                    tokens.Add($"expires={expires -DateTime.Now}");
                 else if (host[ip].HasFlags(IPAddressFlags.Static))
                     tokens.Add("static");
 

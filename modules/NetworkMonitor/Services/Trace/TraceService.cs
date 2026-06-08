@@ -1,7 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Context;
-using MadWizard.Desomnia.Network.Filter;
+﻿using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -23,7 +21,7 @@ namespace MadWizard.Desomnia.Network.Trace
             foreach (var host in Hosts)
             {
                 if (host.PhysicalAddress == null)
-                    Logger.LogWarning($"${host.Name} has no MAC address");
+                    Logger.LogWarning($"{host.Name} has no MAC address");
                 else
                     Logger.LogDebug(host.Name);
             }
