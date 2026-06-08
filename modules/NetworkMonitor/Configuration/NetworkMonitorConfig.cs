@@ -14,7 +14,7 @@ using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration
 {
-    public class NetworkMonitorConfig : LocalHostInfo
+    public class NetworkMonitorConfig : LocalHostInfo, IIEnumerable<NetworkHostInfo>
     {
         const long DEFAULT_TIMEOUT_MS = 500;
 
@@ -26,7 +26,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         public bool             UseBPF          { get; set; } = true;
 
-        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; } = DefaultWakeOnLAN();
+        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; } = DefaultWakeOnLANMode();
 
         // Actions
         public DelayedAction?   OnIdle          { get; set; }
@@ -138,12 +138,6 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IList<NetworkHostRangeInfo>      HostRange           { get; private set; } = [];
         public IList<DynamicHostRangeInfo>      DynamicHostRange    { get; private set; } = [];
 
-        public IEnumerable<NetworkHostRangeInfo> Ranges => HostRange.Concat(DynamicHostRange)
-            .Concat(EveryHostFilterRule?.HostRange ?? []).Concat(EveryHostFilterRule?.DynamicHostRange ?? [])
-            .Concat(ForeignHostFilterRule?.HostRange ?? []).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
-        public IEnumerable<NetworkHostInfo> Hosts => Router.Concat(Host).Concat(RemoteHost).Concat(RemoteHost.SelectMany(r => r.VirtualHost))
-            .Concat(EveryHostFilterRule?.Host ?? []).Concat(ForeignHostFilterRule?.Host ?? []);
-
         // Filter-Rules (networkwide)
         public EveryHostFilterRuleInfo? EveryHostFilterRule { get; set; }
         public ForeignHostFilterRuleInfo? ForeignHostFilterRule { get; set; }
@@ -152,7 +146,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         public IList<HTTPFilterRuleInfo> HTTPFilterRule { get; set; } = [];
         public PingFilterRuleInfo? PingFilterRule { get; set; }
 
-        private static WakeOnLANMode? DefaultWakeOnLAN()
+        private static WakeOnLANMode? DefaultWakeOnLANMode()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -161,6 +155,25 @@ namespace MadWizard.Desomnia.Network.Configuration
 
             return null;
         }
+
+        #region Host(-Range) enumeration
+        public IEnumerable<NetworkHostRangeInfo> Ranges => HostRange.Concat(DynamicHostRange)
+            .Concat(EveryHostFilterRule?.HostRange ?? []).Concat(EveryHostFilterRule?.DynamicHostRange ?? [])
+            .Concat(ForeignHostFilterRule?.HostRange ?? []).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
+
+        public IEnumerable<NetworkHostInfo> Hosts => Host
+            .Concat(Ranges.SelectMany(range => range.Host)) // all hosts in all host ranges
+            .Concat(EveryHostFilterRule?.Host ?? [])
+            .Concat(ForeignHostFilterRule?.Host ?? []);
+
+        /// <returns>All configured hosts, regardless of type.</returns>
+        IEnumerator<NetworkHostInfo> IEnumerable<NetworkHostInfo>.GetEnumerator() => Hosts
+            .Concat(Router)
+            .Concat(RemoteHost)
+            .Concat(RemoteHost.SelectMany(r => r.VirtualHost))
+            .Concat(LocalHost?.VirtualHost ?? [])
+            .Concat(VirtualHost).GetEnumerator();
+        #endregion
 
         static NetworkMonitorConfig() // we want to use native types
         {

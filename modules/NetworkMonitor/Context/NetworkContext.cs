@@ -151,9 +151,9 @@ namespace MadWizard.Desomnia.Network.Context
                     reg.OnActivated(x => x.Instance.GatewayTimeout = config.PingTimeout);
                 }
 
-                if (config.Hosts.Any(h => h.Trace))
+                if (config.Where(h => h.Trace) is var tracedHosts && tracedHosts.Any())
                 {
-                    string[] hosts = [.. config.Hosts.Where(h => h.Trace).Select(h => h.Name)];
+                    string[] hosts = [.. tracedHosts.Select(h => h.Name)];
 
                     builder.RegisterType<TraceService>()
                         .WithParameter(TypedParameter.From(new TraceService.Options() { Hosts = hosts }))
@@ -232,12 +232,20 @@ namespace MadWizard.Desomnia.Network.Context
                 RegisterTrafficFilters(builder, config);
                 RegisterHostRanges(builder, config);
 
-                foreach (var plugin in Plugins) builder.RegisterModule(plugin);
+                RegisterPlugins(builder);
             });
 
             Logger = Scope.Resolve<ILogger<NetworkContext>>();
 
             Scope.Resolve<KnockService>(TypedParameter.From(_knockContexts.SelectMany(ctx => ctx.Stanzas)));
+        }
+
+        private void RegisterPlugins(ContainerBuilder builder)
+        {
+            foreach (var plugin in Plugins)
+            {
+                builder.RegisterModule(plugin);
+            }
         }
 
         private void RegisterContextAwareLogger(ILifetimeScope parent, ContainerBuilder builder)
@@ -291,21 +299,6 @@ namespace MadWizard.Desomnia.Network.Context
             }
 
             RegisterTrafficFilter(builder, [.. shapes]);
-        }
-
-        private void RegisterHostRanges(ContainerBuilder builder, NetworkMonitorConfig config)
-        {
-            builder.RegisterType<LocalNetworkRange>()
-                .SingleInstance()
-                .AsSelf();
-
-            foreach (var range in config.Ranges)
-            {
-                builder.RegisterType<NetworkHostRange>()
-                    .Named<NetworkHostRange>(range.Name)
-                    .SingleInstance()
-                    .AsSelf();
-            }
         }
 
         public bool Matches(object token)

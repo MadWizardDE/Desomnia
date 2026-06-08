@@ -15,33 +15,22 @@ namespace MadWizard.Desomnia.Network.Context
 
             CreateLocalHost();
 
-            foreach (var configHost in Config.Host)
+            foreach (var configHost in Config.Hosts)
             {
                 CreateHost(new TypedParameter(typeof(NetworkHostInfo), configHost));
             }
 
-            foreach (var configRange in Config.Ranges)
-            {
-                foreach (var configHostInRange in configRange.Host)
-                {
-                    CreateHost(new TypedParameter(typeof(NetworkHostInfo), configHostInRange));
-                }
-            }
-
             foreach (var configHost in Config.RemoteHost)
             {
-                CreateHost(new TypedParameter(typeof(RemotePhysicalHostInfo), configHost));
-
-                foreach (var configHostVirtual in configHost.VirtualHost)
-                {
-                    CreateHost(new TypedParameter(typeof(RemoteVirtualHostInfo), configHostVirtual), TypedParameter.From(configHost));
-                }
+                CreateRemoteHost(configHost);
             }
         }
 
         internal async Task DiscoverDynamicFilterHosts()
         {
-            var contexts = new List<FilterContext>([this]).Concat(_hostContexts).Concat(_hostContexts.SelectMany(c => c));
+            var contexts = new List<FilterContext>([this])
+                .Concat(_hostContexts).Concat(_hostContexts.SelectMany(ctx => ctx))
+                .Concat(_knockContexts);
 
             foreach (var ctx in contexts)
             {
@@ -87,6 +76,16 @@ namespace MadWizard.Desomnia.Network.Context
                         new TypedParameter(typeof(IVirtualMachine), vm)
                     );
                 }
+            }
+        }
+
+        private void CreateRemoteHost(RemotePhysicalHostInfo configHost)
+        {
+            CreateHost(new TypedParameter(typeof(RemotePhysicalHostInfo), configHost));
+
+            foreach (var configHostVirtual in configHost.VirtualHost)
+            {
+                CreateHost(new TypedParameter(typeof(RemoteVirtualHostInfo), configHostVirtual), TypedParameter.From(configHost));
             }
         }
 

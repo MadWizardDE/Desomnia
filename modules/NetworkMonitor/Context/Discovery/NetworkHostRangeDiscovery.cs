@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,21 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public partial class NetworkContext
     {
+        private void RegisterHostRanges(ContainerBuilder builder, NetworkMonitorConfig config)
+        {
+            builder.RegisterType<LocalNetworkRange>()
+                .SingleInstance()
+                .AsSelf();
+
+            foreach (var range in config.Ranges)
+            {
+                builder.RegisterType<NetworkHostRange>()
+                    .Named<NetworkHostRange>(range.Name)
+                    .SingleInstance()
+                    .AsSelf();
+            }
+        }
+
         internal async Task DiscoverHostRanges()
         {
             Logger.LogDebug("Discovering network host ranges...");

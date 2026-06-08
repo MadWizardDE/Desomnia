@@ -19,10 +19,12 @@ namespace MadWizard.Desomnia.Network.Context
     {
         public required ILogger<NetworkKnockContext> Logger { private get; init; }
 
+        readonly IList<ILifetimeScope> _scopes = [];
+
+        public IEnumerable<KnockStanza> Stanzas => field ??= _scopes.Select(scope => scope.Resolve<KnockStanza>());
+
         readonly NetworkSegment _targetNetwork;
         readonly NetworkHostRange _targetRange;
-
-        public IList<KnockStanza> Stanzas { get; private init; } = [];
 
         public NetworkKnockContext(ILifetimeScope parent, NetworkMonitorConfig network, DynamicHostRangeInfo config) : base(parent, "knock")
         {
@@ -52,9 +54,9 @@ namespace MadWizard.Desomnia.Network.Context
                     RegisterKnockFilter(builder, config);
                 });
 
-                Stanzas.Add(scope.Resolve<KnockStanza>());
-
                 parent.Disposer.AddInstanceForDisposal(scope);
+
+                _scopes.Add(scope);
             }
 
             parent.UseTrafficType(port);
