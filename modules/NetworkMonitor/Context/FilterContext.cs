@@ -15,15 +15,26 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public abstract class FilterContext : Context
     {
+        /// <summary> This is to create isolated filters. </summary>
+        private string? _tagName;
+
         private readonly bool _needsTCPData;
 
         private readonly ConcurrentBag<HostFilterRuleInfo> _dynamicHostFilters = [];
 
         private readonly ConcurrentDictionary<NetworkService, TrafficFilterRequest> _dynamicTrafficFilters = [];
 
-        protected FilterContext(ILifetimeScope parent) : base(parent)
+        protected FilterContext(ILifetimeScope parent, string? tagName = null) : base(parent)
         {
             _needsTCPData = parent.ResolveOptional<SystemUsageInspector>() is not null;
+
+            _tagName = tagName;
+        }
+
+        protected void RegisterTaggedPacketRuleFilter(ContainerBuilder builder)
+        {
+            builder.RegisterComposite<PacketRuleFilter, IPacketFilter>()
+                .WithParameter(new PacketRuleFiltersParameter(_tagName));
         }
 
         protected void RegisterFilters(ContainerBuilder builder, WatchedHostInfo info)
@@ -50,6 +61,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(filter.Type))
                     .WithParameter(NetworkHostParameter<NetworkHost>.FindBy(filter.Name!))
                     .As<PacketFilterRule>().As<HostFilterRule>()
+                    .WithMetadata("tag", _tagName)
                     .SingleInstance();
 
                 _dynamicHostFilters.Add(filter);
@@ -60,6 +72,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(filter.Type))
                     .WithParameter(TypedParameter.From(filter.IPAddresses))
                     .As<PacketFilterRule>().As<HostFilterRule>()
+                    .WithMetadata("tag", _tagName)
                     .SingleInstance();
             }
         }
@@ -80,6 +93,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(filter.Type))
                     .WithParameter(NetworkHostRangeParameter.FindBy(filter.Name!))
                     .As<PacketFilterRule>().As<HostRangeFilterRule>()
+                    .WithMetadata("tag", _tagName)
                     .SingleInstance();
             }
             else if (filter.AddressRange is IPAddressRange addressRange)
@@ -106,7 +120,7 @@ namespace MadWizard.Desomnia.Network.Context
             }
         }
 
-        protected void RegisterEveryHostFilter(ContainerBuilder builder, EveryHostFilterRuleInfo? filter) => 
+        protected void RegisterEveryHostFilter(ContainerBuilder builder, EveryHostFilterRuleInfo? filter) =>
             RegisterManyHostFilter<EveryHostFilterRuleInfo, EveryHostFilterRule>(builder, filter);
 
         protected void RegisterForeignHostFilter(ContainerBuilder builder, ForeignHostFilterRuleInfo? filter) =>
@@ -135,6 +149,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(filter.Type))
                     .WithParameter(TypedParameter.From(filter.Port))
                     .WithProperty(HostFilterRulesParameter.From(filter))
+                    .WithMetadata("tag", _tagName)
                     .SingleInstance()
                     .AsSelf();
 

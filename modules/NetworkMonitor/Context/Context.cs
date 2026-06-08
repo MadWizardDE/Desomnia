@@ -11,10 +11,7 @@ namespace MadWizard.Desomnia.Network.Context
 
             init
             {
-                field = value;
-
-                parent.Disposer.AddInstanceForDisposal(Scope); // automatic child scope disposal
-
+                parent.Disposer.AddInstanceForDisposal(field = value); // automatic child scope disposal
             }
         } = null!;
 
@@ -27,7 +24,7 @@ namespace MadWizard.Desomnia.Network.Context
 
         public void Dispose()
         {
-            Scope.Dispose();
+            Scope?.Dispose();
         }
     }
 }

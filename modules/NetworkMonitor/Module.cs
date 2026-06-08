@@ -45,14 +45,12 @@ namespace MadWizard.Desomnia.Network
                     .SingleInstance()
                     .AsSelf();
 
-                // Composites
+                // Composites //
+
                 builder.RegisterComposite<CompositeRouterDiscovery, IRouterDiscovery>();
                 builder.RegisterComposite<CompositeIPAddressDiscovery, IIPAddressDiscovery>();
                 builder.RegisterComposite<CompositePhysicalAddressDiscovery, IPhysicalAddressDiscovery>();
                 builder.RegisterComposite<CompositeVirtualMachineManager, IVirtualMachineManager>();
-
-                builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
-                builder.RegisterComposite<CompositeKnockFilter,  IKnockFilter>();
 
                 // Knock-Methods
                 builder.RegisterType<PlainTextKnockMethod>()
@@ -61,14 +59,14 @@ namespace MadWizard.Desomnia.Network
                     .AsImplementedInterfaces()
                     .SingleInstance();
 
-                // Network Context
+                // Network Context //
+
                 builder.RegisterType<NetworkContext>()
                     .InstancePerOwned<NetworkContext>()
                     .AsSelf();
 
-                // --- Network Scope ---- //
+                // Global Network Filters //
 
-                // Global Network Filters
                 builder.RegisterType<TrafficFilterRequest>()
                     .InstancePerDependency()
                     .AsSelf();
@@ -76,7 +74,21 @@ namespace MadWizard.Desomnia.Network
                     .AsImplementedInterfaces()
                     .InstancePerNetwork();
 
-                // Network Services
+                // Packet Filters //
+
+                builder.RegisterType<RouterFilter>()
+                    .As<IPacketFilter>()
+                    .InstancePerNetwork();
+                builder.RegisterType<PacketRuleFilter>()
+                    .As<IPacketFilter>()
+                    .InstancePerMatchingLifetimeScope(
+                        MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag,
+                        MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag);
+
+                builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
+
+                // Network Services //
+
                 builder.RegisterType<AddressMappingService>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork()
@@ -98,7 +110,8 @@ namespace MadWizard.Desomnia.Network
                     .InstancePerNetwork()
                     .AsSelf();
 
-                // Demand Triggers
+                // Demand Triggers //
+
                 builder.RegisterType<DemandByIP>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork();
@@ -111,18 +124,6 @@ namespace MadWizard.Desomnia.Network
                 builder.RegisterType<DemandByWOL>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork();
-
-                // --- Network Host Scope ---- //
-
-                // Demand Filters
-                builder.RegisterType<RouterFilter>()
-                    .As<IPacketFilter>()
-                    .InstancePerNetwork();
-                builder.RegisterType<PacketRuleFilter>()
-                    .As<IPacketFilter>()
-                    .InstancePerMatchingLifetimeScope(
-                        MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, 
-                        MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag);
 
                 // --- Request Scope ---- //
 

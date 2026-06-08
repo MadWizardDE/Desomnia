@@ -1,10 +1,10 @@
 ﻿using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network.Knocking.Filter.Rules
+namespace MadWizard.Desomnia.Network.Knocking.Filter
 {
-    public class KnockSourceIPFilterRule : KnockFilterRule
+    public class KnockSourceIPFilter : IKnockFilter
     {
-        public override bool Matches(IPPacket packet, KnockEvent knock)
+        public bool ShouldFilter(IPPacket packet, KnockEvent knock)
         {
             if (!packet.SourceAddress.Equals(knock.SourceAddress))
             {

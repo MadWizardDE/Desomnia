@@ -2,10 +2,9 @@
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Context.Parameters;
-using MadWizard.Desomnia.Network.Filter;
-using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Knocking.Events;
+using MadWizard.Desomnia.Network.Knocking.Filter;
 using MadWizard.Desomnia.Network.Knocking.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using MadWizard.Desomnia.Network.Neighborhood;
@@ -25,49 +24,47 @@ namespace MadWizard.Desomnia.Network.Context
 
         public IList<KnockStanza> Stanzas { get; private init; } = [];
 
-        public NetworkKnockContext(ILifetimeScope parent, NetworkMonitorConfig network, DynamicHostRangeInfo config) : base(parent)
+        public NetworkKnockContext(ILifetimeScope parent, NetworkMonitorConfig network, DynamicHostRangeInfo config) : base(parent, "knock")
         {
-            string knockMethod = config.KnockMethod ?? network.KnockMethod;
-            IPProtocol knockProtocol = config.KnockProtocol ?? network.KnockProtocol;
-            ushort knockPort = config.KnockPort ?? network.KnockPort;
-            TimeSpan knockTimeout = config.KnockTimeout ?? network.KnockTimeout;
+            var port = new IPPort(config.KnockProtocol ?? network.KnockProtocol, config.KnockPort ?? network.KnockPort);
 
             _targetNetwork = parent.Resolve<NetworkSegment>();
             _targetRange = parent.ResolveNamed<NetworkHostRange>(config.Name!);
 
             foreach (var secret in config.SharedSecret)
             {
-                var scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkKnockLifetimeScopeTag, builder =>
+                var scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.KnockLifetimeScopeTag, builder =>
                 {
                     var label = $"{config.Name}{(secret.Label != null ? $"::{secret.Label}" : "")}"; // maybe mit index?
 
-                    builder.RegisterType<KnockStanza>()
-                        .WithParameter(TypedParameter.From(label)) 
+                    var stanza = builder.RegisterType<KnockStanza>()
+                        .WithParameter(TypedParameter.From(label))
+                        .WithParameter(TypedParameter.From(port))
                         .WithParameter(TypedParameter.From(BuildSharedSecret(secret)))
-                        .WithParameter(TypedNamedResolvedParameter<IKnockDetector>.FindBy(knockMethod))
-                        .WithParameter(TypedParameter.From(new IPPort(knockProtocol, knockPort)))
-                        .WithParameter(TypedParameter.From(knockTimeout))
+                        .WithParameter(TypedNamedResolvedParameter<IKnockDetector>.FindBy(config.KnockMethod ?? network.KnockMethod))
+                        .WithParameter(TypedParameter.From(config.KnockTimeout ?? network.KnockTimeout))
                         .SingleInstance()
                         .AsSelf();
+
+                    stanza.OnActivated(args => args.Instance.Knocked += KnockStanza_Knocked);
 
                     RegisterPacketFilter(builder, config);
                     RegisterKnockFilter(builder, config);
                 });
 
-                Stanzas.Add(ConfigureStanza(scope));
+                Stanzas.Add(scope.Resolve<KnockStanza>());
+
+                parent.Disposer.AddInstanceForDisposal(scope);
             }
 
-            parent.UseTrafficType(knockProtocol switch
-            {
-                IPProtocol.TCP => new TCPTrafficType(knockPort),
-                IPProtocol.UDP => new UDPTrafficType(knockPort),
-
-                _ => throw new NotImplementedException("Unknown knockProtocol: " + knockProtocol),
-            });
+            parent.UseTrafficType(port);
         }
 
+        #region Filter Registration
         private void RegisterPacketFilter(ContainerBuilder builder, DynamicHostRangeInfo config)
         {
+            RegisterTaggedPacketRuleFilter(builder);
+
             RegisterHostFilters(builder, config.HostFilterRule);
             RegisterHostRangeFilters(builder, config.HostRangeFilterRule);
         }
@@ -76,40 +73,37 @@ namespace MadWizard.Desomnia.Network.Context
         {
             if (config.ProofIP)
             {
-                builder.RegisterType<KnockSourceIPFilterRule>()
-                    .WithParameter(TypedParameter.From(FilterRuleType.MustNot))
-                    .As<KnockFilterRule>()
+                builder.RegisterType<KnockSourceIPFilter>().As<IKnockFilter>()
                     .SingleInstance();
             }
 
             if (config.ProofTime is TimeSpan time)
             {
-                builder.RegisterType<KnockTimeFilterRule>()
-                    .WithParameter(TypedParameter.From(FilterRuleType.MustNot))
+                builder.RegisterType<KnockTimeFilter>().As<IKnockFilter>()
                     .WithParameter(TypedParameter.From(time))
-                    .As<KnockFilterRule>()
                     .SingleInstance();
             }
 
-            foreach (var filter in config.ServiceFilterRule)
+
+            if (config.ServiceFilterRule.Any())
             {
-                builder.RegisterType<KnockPortFilterRule>()
-                    .WithParameter(TypedParameter.From(filter.Type))
-                    .WithParameter(TypedParameter.From(filter.Protocol))
-                    .WithParameter(TypedParameter.From(filter.Port))
-                    .As<KnockFilterRule>()
+                builder.RegisterType<KnockRuleFilter>().As<IKnockFilter>()
                     .SingleInstance();
+
+                foreach (var filter in config.ServiceFilterRule)
+                {
+                    builder.RegisterType<KnockPortFilterRule>()
+                        .WithParameter(TypedParameter.From(filter.Type))
+                        .WithParameter(TypedParameter.From(filter.Protocol))
+                        .WithParameter(TypedParameter.From(filter.Port))
+                        .As<KnockFilterRule>()
+                        .SingleInstance();
+                }
             }
+
+            builder.RegisterComposite<CompositeKnockFilter, IKnockFilter>();
         }
-
-        private KnockStanza ConfigureStanza(ILifetimeScope scope)
-        {
-            var stanza = scope.Resolve<KnockStanza>();
-
-            stanza.Knocked += KnockStanza_Knocked;
-
-            return stanza;
-        }
+        #endregion
 
         private async void KnockStanza_Knocked(object? sender, KnockEventArgs args)
         {
