@@ -79,7 +79,18 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: HandoffOptions
-        internal TimeSpan           HandoffTimeout        { get; set; } = TimeSpan.FromSeconds(5);
+        internal TimeSpan           HandoffTimeout      { get; set; } = TimeSpan.FromSeconds(5);
+        #endregion
+
+        #region Network :: SleepProxyOptions
+        internal TimeSpan           SleepProxyMinLease  { get; set; } = TimeSpan.FromMinutes(30);
+        internal TimeSpan           SleepProxyMaxLease  { get; set; } = TimeSpan.FromDays(365);
+
+        public SleepProxyOptions MakeSleepProxyOptions() => new()
+        {
+            MinLeaseDuration = SleepProxyMinLease,
+            MaxLeaseDuration = SleepProxyMaxLease
+        };
         #endregion
 
         #region Network :: KnockOptions

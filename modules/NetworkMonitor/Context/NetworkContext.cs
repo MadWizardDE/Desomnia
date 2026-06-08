@@ -14,6 +14,7 @@ using MadWizard.Desomnia.Network.Naming.MDNS;
 using MadWizard.Desomnia.Network.Naming.MDNS.Resolver;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.SleepProxy;
+using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using MadWizard.Desomnia.Network.Trace;
 using Microsoft.Extensions.Logging;
 using System.Net.NetworkInformation;
@@ -200,6 +201,11 @@ namespace MadWizard.Desomnia.Network.Context
                                 TotalPower      = 70,
                             }
                         };
+
+                        builder.RegisterType<SleepProxyRegistrar>()
+                            .WithParameter(TypedParameter.From(config.MakeSleepProxyOptions()))
+                            .SingleInstance()
+                            .AsSelf();
 
                         builder.RegisterType<SleepProxyResolver>()
                             .WithParameter(new LocalHostParameter<NetworkHost>())
