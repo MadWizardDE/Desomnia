@@ -120,7 +120,9 @@ namespace MadWizard.Desomnia.Network
                     .InstancePerNetwork();
                 builder.RegisterType<PacketRuleFilter>()
                     .As<IPacketFilter>()
-                    .InstancePerNetworkHost();
+                    .InstancePerMatchingLifetimeScope(
+                        MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, 
+                        MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag);
 
                 // --- Request Scope ---- //
 
