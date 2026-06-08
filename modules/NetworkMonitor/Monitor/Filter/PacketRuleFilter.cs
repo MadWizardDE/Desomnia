@@ -9,7 +9,8 @@ namespace MadWizard.Desomnia.Network.Filter
 
         public virtual bool ShouldFilter(EthernetPacket packet, PacketFilterOptions options)
         {
-            bool needMatch = Rules.Any(rule => rule.Type == FilterRuleType.Must) || options.BlockByDefault;
+            options.BlockByDefault |= Rules.Any(rule => rule.Type == FilterRuleType.Must);
+            options.NeedsIPTraffic |= Rules.Any(rule => rule is IPFilterRule);
 
             foreach (var rule in Rules)
             {
@@ -22,17 +23,17 @@ namespace MadWizard.Desomnia.Network.Filter
 
                     if (rule.Type == FilterRuleType.Must || rule.Type == FilterRuleType.May)
                     {
-                        needMatch = false; // no need to find a match anymore
+                        options.BlockByDefault = false; // no need to find a match anymore
                     }
                 }
             }
 
-            if (Rules.Any(rule => rule is IPFilterRule) && !packet.IsIPUnicast())
+            if (options.NeedsIPTraffic && !packet.IsIPUnicast())
             {
                 throw new IPUnicastNeededException(packet.FindTargetIPAddress()!);
             }
 
-            return needMatch;
+            return options.BlockByDefault;
         }
     }
 }

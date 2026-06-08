@@ -5,6 +5,7 @@ namespace MadWizard.Desomnia.Network.Filter
     public struct PacketFilterOptions
     {
         public bool BlockByDefault;
+        public bool NeedsIPTraffic;
     }
 
     public interface IPacketFilter

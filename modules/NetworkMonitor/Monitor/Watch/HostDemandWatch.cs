@@ -164,7 +164,7 @@ namespace MadWizard.Desomnia.Network.Watch
                     return !serviceWatch.Filter.Value.ShouldFilter(packet, options);
                 }
 
-                options.BlockByDefault = true;
+                options.BlockByDefault = options.NeedsIPTraffic = true;
             }
 
             return !Filter.Value.ShouldFilter(packet, options);
