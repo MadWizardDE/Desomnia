@@ -1,7 +1,8 @@
 ﻿using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
@@ -16,6 +17,7 @@ namespace MadWizard.Desomnia.Network.Address
 
         public required NetworkDevice   Device  { private get; init; }
         public required NetworkSegment  Network { private get; init; }
+        public required NetworkMonitor  Monitor { private get; init; }
 
         public void Advertise(AddressMapping mapping, EthernetPacket? respondTo = null)
         {
@@ -48,7 +50,7 @@ namespace MadWizard.Desomnia.Network.Address
         }
 
         #region Manage static address mappings
-        private IEnumerable<NetworkHost> EligibleHosts => Network.Where(host => host is not LocalHost && host is not NetworkRouter);
+        private IEnumerable<NetworkHost> EligibleHosts => Monitor.Where(watch => watch is not LocalHostWatch).Select(watch => watch.Host);
 
         void INetworkService.Startup()
         {
