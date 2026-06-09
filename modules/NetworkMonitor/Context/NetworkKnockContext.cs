@@ -111,7 +111,7 @@ namespace MadWizard.Desomnia.Network.Context
         {
             var stanza = (KnockStanza)sender!;
 
-            var ip = args.Knock.SourceAddress;
+            var ip = args.SourceEndPoint.Address;
 
             var range = new IPAddressRange(ip);
 

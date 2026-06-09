@@ -1,5 +1,4 @@
-﻿using PacketDotNet;
-using System.Net;
+﻿using System.Net;
 
 namespace MadWizard.Desomnia.Network.Knocking.Filter.Rules
 {
@@ -7,7 +6,7 @@ namespace MadWizard.Desomnia.Network.Knocking.Filter.Rules
     {
         public KnockPortFilterRule(IPProtocol protocol, ushort port) : this(new(protocol, port)) { }
 
-        public override bool Matches(IPPacket packet, KnockEvent knock)
+        public override bool Matches(IPEndPoint source, KnockEvent knock)
         {
             if (knock.TargetPort is IPPort)
             {

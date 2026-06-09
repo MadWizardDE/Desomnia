@@ -23,11 +23,13 @@ namespace MadWizard.Desomnia.Network.Services.Knocking
 
         public event EventHandler<KnockEventArgs>? Knocked;
 
-        internal void TriggerKnockEvent(KnockEvent knock)
+        internal void TriggerKnockEvent(IPEndPoint source,  KnockEvent knock)
         {
             Knocked?.Invoke(this, new()
             {
-                Knock   = knock,
+                SourceEndPoint = source,
+
+                Knock = knock,
                 Timeout = Timeout,
             });
         }

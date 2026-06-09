@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood;
 using PacketDotNet;
+using System.Data;
 using System.Net;
 
 namespace MadWizard.Desomnia.Network.Demand
@@ -13,31 +14,8 @@ namespace MadWizard.Desomnia.Network.Demand
         public NetworkHost Host { get; private init; } = host;
         public NetworkService? Service { get; set; }
 
-        public IPAddress? SourceAddress => TriggerIPPacket?.SourceAddress;
-
-        public IPEndPoint? TargetEndPoint
-        {
-            get
-            {
-                if (ip is not null)
-                {
-                    if (TriggerIPPacket is IPPacket packet)
-                    {
-                        switch (packet.PayloadPacket)
-                        {
-                            case TcpPacket tcp:
-                                return new TCPEndPoint(packet.DestinationAddress, tcp.DestinationPort);
-                            case UdpPacket udp:
-                                return new UDPEndPoint(packet.DestinationAddress, udp.DestinationPort);
-                        }
-                    }
-
-                    return new IPEndPoint(ip, 0);
-                }
-
-                return null;
-            }
-        }
+        public IPAddress?   SourceAddress   => TriggerIPPacket?.SourceAddress;
+        public IPEndPoint?  TargetEndPoint  => TriggerIPPacket?.DestinationEndPoint ?? (ip is not null ? new IPEndPoint(ip, 0) : null);
 
         public bool CanBeForwarded { get; set; } = false;
 

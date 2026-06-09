@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Network.Knocking
             foreach (var stanza in Stanzas)
             {
                 Logger.LogDebug($"Listening on {stanza.Port} for SPA stanza '{stanza.Label}'" +
-                    $" using <{stanza.Detector.GetType().FullName}>");
+                    $" using <{stanza.Detector.Name}>");
             }
         }
 
@@ -28,19 +28,28 @@ namespace MadWizard.Desomnia.Network.Knocking
         {
             if (packet.PayloadPacket is IPPacket ip && ip.PayloadPacket is TransportPacket transport) // TODO: filter for target TriggerIPPacket?
             {
+                var source = ip.SourceEndPoint;
+
                 foreach (var stanza in Stanzas.Where(stanza => stanza.Port.Accepts(transport)))
                 {
-                    if (stanza.PacketFilter.ShouldFilter(packet)) continue; // maybe filter packet
-
-                    foreach (var knock in stanza.Detector.Examine(ip, stanza.Secret))
+                    try
                     {
-                        if (stanza.KnockFilter.ShouldFilter(ip, knock)) continue; // maybe filter knock
+                        if (stanza.PacketFilter.ShouldFilter(packet)) continue; // maybe filter packet
 
-                        Logger.LogDebug($"Received valid knock from {ip.SourceAddress}" +
-                            (knock.TargetPort != null ? $" to access {knock.TargetPort}" : "") +
-                            $" via stanza '{stanza.Label}'");
+                        foreach (var knock in stanza.Detector.Examine(ip, stanza.Secret))
+                        {
+                            if (stanza.KnockFilter.ShouldFilter(source, knock)) continue; // maybe filter knock
 
-                        stanza.TriggerKnockEvent(knock);
+                            Logger.LogDebug($"Received valid knock from {ip.SourceAddress}" +
+                                (knock.TargetPort != null ? $" to access {knock.TargetPort}" : "") +
+                                $" via stanza '{stanza.Label}'");
+
+                            stanza.TriggerKnockEvent(source, knock);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Could not process knock stanza '{Label}' using <{Method}>", stanza.Label, stanza.Detector.Name);
                     }
                 }
             }

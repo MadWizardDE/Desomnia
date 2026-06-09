@@ -54,7 +54,7 @@ namespace MadWizard.Desomnia.Network.FirewallKnockOperator
                 yield return new KnockEvent
                 {
                     Time = payload.Timestamp.DateTime,
-                    SourceAddress = payload.SourceAddress,
+                    RemoteAddress = payload.SourceAddress,
                     TargetPort = payload.TargetPort,
                 };
             }

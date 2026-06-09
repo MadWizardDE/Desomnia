@@ -1,12 +1,12 @@
-﻿using PacketDotNet;
+﻿using System.Net;
 
 namespace MadWizard.Desomnia.Network.Knocking.Filter
 {
     public class KnockSourceIPFilter : IKnockFilter
     {
-        public bool ShouldFilter(IPPacket packet, KnockEvent knock)
+        public bool ShouldFilter(IPEndPoint source, KnockEvent knock)
         {
-            if (!packet.SourceAddress.Equals(knock.SourceAddress))
+            if (!source.Address.Equals(knock.RemoteAddress))
             {
                 return true;
             }

@@ -1,6 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking.Filter.Rules;
-using PacketDotNet;
+using System.Net;
 
 namespace MadWizard.Desomnia.Network.Knocking.Filter
 {
@@ -8,13 +8,13 @@ namespace MadWizard.Desomnia.Network.Knocking.Filter
     {
         public required IEnumerable<KnockFilterRule> Rules { protected get; init; }
 
-        public bool ShouldFilter(IPPacket packet, KnockEvent knock)
+        public bool ShouldFilter(IPEndPoint source, KnockEvent knock)
         {
             bool needMatch = Rules.Any(rule => rule.Type == FilterRuleType.Must);
 
             foreach (var rule in Rules)
             {
-                if (rule.Matches(packet, knock))
+                if (rule.Matches(source, knock))
                 {
                     if (rule.Type == FilterRuleType.MustNot)
                     {

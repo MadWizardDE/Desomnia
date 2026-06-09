@@ -147,6 +147,43 @@ namespace PacketDotNet
             throw new Exception("Could not copy EthernetPacket");
         }
 
+        extension(IPPacket packet)
+        {
+            public IPEndPoint SourceEndPoint
+            {
+                get
+                {
+                    switch (packet.PayloadPacket)
+                    {
+                        case TcpPacket tcp:
+                            return new TCPEndPoint(packet.SourceAddress, tcp.SourcePort);
+                        case UdpPacket udp:
+                            return new UDPEndPoint(packet.SourceAddress, udp.SourcePort);
+
+                        default:
+                            return new IPEndPoint(packet.SourceAddress, 0);
+                    }
+                }
+            }
+
+            public IPEndPoint DestinationEndPoint
+            {
+                get
+                {
+                    switch (packet.PayloadPacket)
+                    {
+                        case TcpPacket tcp:
+                            return new TCPEndPoint(packet.DestinationAddress, tcp.DestinationPort);
+                        case UdpPacket udp:
+                            return new UDPEndPoint(packet.DestinationAddress, udp.DestinationPort);
+
+                        default:
+                            return new IPEndPoint(packet.DestinationAddress, 0);
+                    }
+                }
+            }
+        }
+
         public static IPv6Packet WithNDPRouterSolicitation(this IPv6Packet packet)
         {
             packet.Protocol = ProtocolType.IcmpV6;
