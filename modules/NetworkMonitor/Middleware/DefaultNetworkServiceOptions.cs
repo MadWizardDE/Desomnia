@@ -11,10 +11,16 @@ namespace MadWizard.Desomnia.Network.Middleware
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
+            if (context.FirstParameterOfType<LocalHostInfo>() is LocalHostInfo configLocal)
+            {
+                ApplyDefaultHandoffOptions(configLocal);
+            }
+
             if (context.FirstParameterOfType<WatchedHostInfo>() is WatchedHostInfo configHost)
             {
                 ApplyDefaultActions(configHost);
                 ApplyDefaultAdvertiseOptions(configHost);
+                ApplyDefaultHandoffOptions(configHost);
             }
 
             if (context.FirstParameterOfType<RemoteHostInfo>() is RemoteHostInfo configRemote)
@@ -43,6 +49,28 @@ namespace MadWizard.Desomnia.Network.Middleware
                 service.AdvertiseTimeout        ??= options.Timeout;
                 service.AdvertiseHostTTL        ??= options.HostTTL;
                 service.AdvertiseServiceTTL     ??= options.ServiceTTL;
+            }
+        }
+
+        private void ApplyDefaultHandoffOptions(LocalHostInfo configHost)
+        {
+            var options = configHost.MakeHandoffOptions(config);
+
+            foreach (var service in configHost.Services)
+            {
+                service.Handoff ??= options.Type;
+                service.HandoffTimeout ??= options.Timeout;
+            }
+        }
+
+        private void ApplyDefaultHandoffOptions(WatchedHostInfo configHost)
+        {
+            var options = configHost.MakeHandoffOptions(config);
+
+            foreach (var service in configHost.Services)
+            {
+                service.Handoff ??= options.Type;
+                service.HandoffTimeout ??= options.Timeout;
             }
         }
 

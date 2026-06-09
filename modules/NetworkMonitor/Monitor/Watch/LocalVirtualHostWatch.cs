@@ -68,7 +68,7 @@ namespace MadWizard.Desomnia.Network.Watch
         {
             if (AdvertiseOptions.Type == AdvertiseType.Never)
             {
-                YieldWatch();
+                MaybeHandoffWatch();
             }
         }
 

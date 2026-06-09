@@ -70,6 +70,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 builder.RegisterType<LocalHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .WithProperty(TypedParameter.From(config.MinTraffic))
                     .SingleInstance()
@@ -99,6 +100,7 @@ namespace MadWizard.Desomnia.Network.Context
                 builder.RegisterType<LocalVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(vm))
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
@@ -125,6 +127,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 builder.RegisterType<RemoteHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
@@ -156,10 +159,10 @@ namespace MadWizard.Desomnia.Network.Context
                 builder.RegisterType<RemoteVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(NetworkHostWatchParameter<RemoteHostWatch>.FindByHostName(configPhysical.Name))
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
-                    .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();

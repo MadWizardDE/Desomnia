@@ -33,6 +33,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 var watch = builder.RegisterType<ServiceFilterWatch>().As<NetworkServiceWatch>()
                     .WithProperty(TypedParameter.From(info.MakeAdvertiseOptions()))
+                    .WithProperty(TypedParameter.From(info.MakeHandoffOptions()))
                     .WithProperty(TypedParameter.From(info.MakeKnockOptions()))
                     .WithProperty(TypedParameter.From(info.MinTraffic))
                     .SingleInstance()

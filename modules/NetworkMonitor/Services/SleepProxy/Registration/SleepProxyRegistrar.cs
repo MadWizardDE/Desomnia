@@ -16,30 +16,18 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         readonly HashSet<SleepProxyLease> _activeLeases = [];
 
-        private TimeSpan DetermineLeaseDuration(TimeSpan? requested)
-        {
-            if (requested < options.MinLeaseDuration)
-                return options.MinLeaseDuration;
-            else if (requested > options.MaxLeaseDuration)
-                return options.MaxLeaseDuration;
-            else if (requested is TimeSpan duration)
-                return duration;
-
-            return options.MaxLeaseDuration;
-        }
-
         public SleepProxyLease Register(SleepProxyRegistration reg)
         {
             var lease = new SleepProxyLease
             {
-                Duration = DetermineLeaseDuration(reg.RequestedLease)
+                Duration = options.DetermineLeaseDuration(reg.RequestedLease)
             };
 
             if (Context.FindHostContextBy(reg.PhysicalAddress) is not NetworkHostContext ctxHost)
             {
                 ctxHost = CreateHost(reg);
 
-                lease.TrackContext(ctxHost);
+                lease.AddInstanceForDisposal(ctxHost);
             }
 
             foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
@@ -60,7 +48,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                     ctxService = ctxHost.CreateService(serviceInfo);
 
-                    lease.TrackContext(ctxService);
+                    lease.AddInstanceForDisposal(ctxService);
                 }
             }
             else if (reg.Services.Count > 0)

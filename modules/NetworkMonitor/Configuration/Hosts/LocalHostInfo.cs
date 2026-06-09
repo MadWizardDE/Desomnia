@@ -31,6 +31,17 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         };
         #endregion
 
+        #region         HandoffOptions
+        HandoffType?    Handoff         { get; set; }
+        TimeSpan?       HandoffTimeout  { get; set; }
+
+        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
+        {
+            Type = Handoff ?? network.Handoff,
+            Timeout = HandoffTimeout ?? network.HandoffTimeout,
+        };
+        #endregion
+
         // Ports
         public IList<ServiceInfo> Service { get; set; } = [];
         public IList<HTTPServiceInfo> HTTPService { get; set; } = [];

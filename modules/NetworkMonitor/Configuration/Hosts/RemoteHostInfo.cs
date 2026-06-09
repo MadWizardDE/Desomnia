@@ -93,14 +93,5 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
             };
         }
         #endregion
-
-        #region                 HandoffOptions
-        internal TimeSpan?      HandoffTimeout        { get; set; }
-
-        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
-        {
-            Timeout = HandoffTimeout ?? network.HandoffTimeout,
-        };
-        #endregion
     }
 }

@@ -181,12 +181,9 @@ namespace MadWizard.Desomnia.Network.Demand
 
         private void MaybeYieldLocalWatch()
         {
-            if (Monitor.Options.Handoff)
+            foreach (var watch in Monitor.OfType<LocalHostWatch>())
             {
-                foreach (var watch in Monitor.OfType<LocalHostWatch>())
-                {
-                    watch.YieldWatch();
-                }
+                watch.MaybeHandoffWatch();
             }
         }
         #endregion

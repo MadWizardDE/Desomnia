@@ -4,5 +4,17 @@
     {
         public TimeSpan MinLeaseDuration { get; init; }
         public TimeSpan MaxLeaseDuration { get; init; }
+
+        public TimeSpan DetermineLeaseDuration(TimeSpan? requestedDuration, TimeSpan? defaultDuration = null)
+        {
+            if (requestedDuration < MinLeaseDuration)
+                return MinLeaseDuration;
+            else if (requestedDuration > MaxLeaseDuration)
+                return MaxLeaseDuration;
+            else if (requestedDuration is TimeSpan duration)
+                return duration;
+
+            return defaultDuration ?? MaxLeaseDuration;
+        }
     }
 }

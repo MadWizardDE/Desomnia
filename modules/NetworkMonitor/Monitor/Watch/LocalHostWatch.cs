@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Neighborhood;
+﻿using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net.NetworkInformation;
@@ -19,11 +20,20 @@ namespace MadWizard.Desomnia.Network.Watch
             return false;
         }
 
-        internal protected virtual void YieldWatch()
+        internal protected virtual void MaybeHandoffWatch()
         {
-            SendUnMagicPacket(Host);
+            if (HandoffOptions.Type != HandoffType.None)
+            {
+                if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
+                {
+                    // SOMEDAY: Implement SleepProxy client protocol
+                }
 
-            // SOMEDAY: Implement SleepProxy client protocol
+                if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
+                {
+                    SendUnMagicPacket(Host);
+                }
+            }
         }
 
         private void SendUnMagicPacket(NetworkHost host)

@@ -27,7 +27,6 @@ namespace MadWizard.Desomnia.Network.Watch
         public required KnockService Knocking { private get; init; }
 
         public required PingOptions     PingOptions     { get; init; }
-        public required HandoffOptions  HandoffOptions  { get; init; }
         public required WakeOptions     WakeOptions     { get; init; }
 
         public bool IsSuspended { get; private set; } = false;

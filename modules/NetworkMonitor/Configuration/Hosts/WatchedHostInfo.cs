@@ -49,6 +49,17 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         };
         #endregion
 
+        #region                     HandoffOptions
+        internal HandoffType?       Handoff             { get; set; }
+        internal TimeSpan?          HandoffTimeout      { get; set; }
+
+        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
+        {
+            Type = Handoff ?? network.Handoff,
+            Timeout = HandoffTimeout ?? network.HandoffTimeout,
+        };
+        #endregion
+
         // Events
         public NamedAction?         OnServiceDemand     { get; set; }
         public NamedAction?         OnDemand            { get; set; } = new NamedAction("wake");

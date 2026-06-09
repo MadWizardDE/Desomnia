@@ -83,6 +83,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: HandoffOptions
+        internal HandoffType        Handoff             { get; set; } = HandoffType.None;
         internal TimeSpan           HandoffTimeout      { get; set; } = TimeSpan.FromSeconds(5);
         #endregion
 
@@ -132,14 +133,12 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal WatchMode          WatchMode           { get; set; } = WatchMode.Normal;
         internal TimeSpan?          WatchTimeout        { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why do we need this?
         internal ushort?            WatchUDPPort        { get; set; } = null;
-        internal bool               WatchYield          { get; set; } = false;
 
         public WatchOptions MakeWatchOptions() => new()
         {
             Mode = this.WatchMode,
             Timeout = this.WatchTimeout,
             UDPPorts = this.WatchUDPPort != null ? [this.WatchUDPPort.Value] : [],
-            Handoff = this.WatchYield
         };
         #endregion
 

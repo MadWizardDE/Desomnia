@@ -22,7 +22,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                 foreach (HostDemandWatch watch in Monitor.OfType<HostDemandWatch>()) foreach (NetworkServiceWatch serviceWatch in watch)
                 {
-                    if (serviceWatch.AdvertiseOptions?.Type.HasFlag(AdvertiseType.Service) ?? false) // should we answer for this service?
+                    if (serviceWatch.AdvertiseOptions.Type.HasFlag(AdvertiseType.Service)) // should we answer for this service?
                     {
                         if (serviceWatch.Service is TransportNetworkService service && service.LocalDomainName == question.Name)
                         {

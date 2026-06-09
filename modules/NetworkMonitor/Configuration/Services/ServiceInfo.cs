@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         internal TimeSpan?      AdvertiseHostTTL    { get; set; }
         internal TimeSpan?      AdvertiseServiceTTL { get; set; }
 
-        public virtual AdvertiseOptions? MakeAdvertiseOptions()
+        public virtual AdvertiseOptions MakeAdvertiseOptions()
         {
             if (Advertise != null)
             {
@@ -41,7 +41,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
                 };
             }
 
-            return null;
+            return default;
         }
         #endregion
 
@@ -84,6 +84,25 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
                 };
 
             return null; // ist kein remote service
+        }
+        #endregion
+
+        #region                 HandoffOptions
+        internal HandoffType?   Handoff             { get; set; }
+        internal TimeSpan?      HandoffTimeout      { get; set; }
+
+        public virtual HandoffOptions MakeHandoffOptions()
+        {
+            if (Advertise != null)
+            {
+                return new() // wird von network -> host -> service übertragen
+                {
+                    Type = Handoff ?? throw new NullReferenceException("Handoff"),
+                    Timeout = HandoffTimeout ?? throw new NullReferenceException("HandoffTimeout"),
+                };
+            }
+
+            return default;
         }
         #endregion
 

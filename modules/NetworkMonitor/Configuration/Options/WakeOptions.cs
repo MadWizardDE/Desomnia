@@ -17,14 +17,14 @@
     [Flags]
     public enum WakeType
     {
-        None = 0,
+        None        = 0,
 
-        Link = 1,
-        Network = 2,
+        Link        = 1 << 1,
+        Network     = 1 << 2,
 
-        Unicast = 4,
-        Broadcast = 8,
+        Unicast     = 1 << 10,
+        Broadcast   = 1 << 11,
 
-        Auto = 128,
+        Auto        = 1 << 20,
     }
 }
