@@ -16,8 +16,6 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public partial class NetworkHostContext : FilterContext, IIEnumerable<NetworkHostServiceContext>
     {
-        public required ILogger<NetworkHostContext> Logger { private get; init; }
-
         public AutoDiscoveryType    Auto    { get; private set; }
 
         public NetworkHost          Host    { get => field ??= Scope.Resolve<NetworkHost>();                private init; }
@@ -78,7 +76,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateServices(config.Services);
+            CreateStaticServices(config.Services);
         }
 
         // LocalVirtualHost
@@ -107,7 +105,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateServices(config.Services);
+            CreateStaticServices(config.Services);
         }
 
         // RemoteHost
@@ -136,7 +134,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateServices(config.Services);
+            CreateStaticServices(config.Services);
         }
 
         // RemoteVirtualHost
@@ -167,7 +165,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateServices(config.Services);
+            CreateStaticServices(config.Services);
         }
 
         private static void ConfigureHost(IActivatedEventArgs<NetworkHost> args, NetworkHostInfo config)

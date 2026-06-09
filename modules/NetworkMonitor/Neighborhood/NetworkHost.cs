@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood.Events;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
+using MadWizard.Desomnia.Network.Neighborhood.Services;
 using Makaretu.Dns;
 using System.Collections.Concurrent;
 using System.Net;
@@ -132,16 +133,18 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         #endregion
 
         #region Service management
-        public virtual bool AddService(NetworkService service, ServiceOptions options = default)
+        public virtual void AddService(NetworkService service, ServiceOptions options = default)
         {
-            
-            // FIXME check if service is already present?!
+            if (service is TransportNetworkService tran)
+            {
+                foreach (var t in _services.Keys.OfType<TransportNetworkService>())
+                    if (t.Ports.Intersect(tran.Ports).Any())
+                        throw new ArgumentException($"TransportNetworkService {t} conflicts with {tran}.");
+            }
 
             _services[service] = options;
 
             ServiceAdded?.Invoke(this, new(service, options.Expires));
-
-            return true;
         }
 
         public virtual bool RemoveService(NetworkService service, bool expired = false)

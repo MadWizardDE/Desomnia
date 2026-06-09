@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Neighborhood.Services;
 using MadWizard.Desomnia.Network.Watch;
 
@@ -11,9 +12,11 @@ namespace MadWizard.Desomnia.Network.Context
         public NetworkService       Service     => field ??= Scope.Resolve<NetworkService>();
         public NetworkServiceWatch  Watch       => field ??= Scope.Resolve<NetworkServiceWatch>();
 
-        protected NetworkHostServiceContext(ILifetimeScope parent) : base(parent) { }
+        public ServiceOptions Options { get; init; }
 
-        public NetworkHostServiceContext(ILifetimeScope parent, ServiceInfo info) : base(parent)
+        protected NetworkHostServiceContext(ILifetimeScope parent, ServiceOptions options = default) : base(parent) { Options = options; }
+
+        public NetworkHostServiceContext(ILifetimeScope parent, ServiceInfo info, ServiceOptions options = default) : this(parent, options)
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag, builder =>
             {

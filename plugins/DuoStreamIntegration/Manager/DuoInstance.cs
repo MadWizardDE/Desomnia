@@ -31,7 +31,7 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             UserName = Key.GetValue("UserName") is string name ? name : throw new ArgumentNullException("UserName");
             IsSandboxed = Key.GetValue("Sandboxed") is int sandboxed ? sandboxed == 1 : false;
 
-            Service = new SunshineService(Port);
+            Service = new SunshineService(Name, Port);
         }
 
         public string Name      { get; private set; }

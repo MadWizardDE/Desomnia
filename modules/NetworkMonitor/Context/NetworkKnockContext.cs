@@ -9,7 +9,6 @@ using MadWizard.Desomnia.Network.Knocking.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Services.Knocking;
-using Microsoft.Extensions.Logging;
 using NetTools;
 using System.Net;
 
@@ -17,8 +16,6 @@ namespace MadWizard.Desomnia.Network.Context
 {
     internal class NetworkKnockContext : FilterContext
     {
-        public required ILogger<NetworkKnockContext> Logger { private get; init; }
-
         readonly IList<ILifetimeScope> _scopes = [];
 
         public IEnumerable<KnockStanza> Stanzas => field ??= _scopes.Select(scope => scope.Resolve<KnockStanza>());

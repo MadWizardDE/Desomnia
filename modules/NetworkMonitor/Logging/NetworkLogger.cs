@@ -6,11 +6,10 @@ using System.Reactive.Disposables;
 
 namespace MadWizard.Desomnia.Network.Logging
 {
-    internal class NetworkLogger<T>(ILogger<T> logger, ILifetimeScope scope) : ILogger<T>
+    internal class NetworkLogger<T>(IComponentContext ctx, ILogger<T> logger) : ILogger<T> 
     {
-        public required NetworkContext Network { private get; set; }
-
-        private NetworkHost? Host { get; } = scope.ResolveOptional<NetworkHost>();
+        public NetworkContext   Network = ctx.Resolve<NetworkContext>();
+        public NetworkHost?     Host    = ctx.ResolveOptional<NetworkHost>();
 
         private IDisposable? MaybeBeginNetworkScope()
         {

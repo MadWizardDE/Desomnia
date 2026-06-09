@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Process
                 StartTracking(CreateWatch(info));
             }
 
-            Logger.LogDebug("Startup complete");
+            Logger.LogDebug("Startup complete; {Count} procceses watched.", config.Process.Count);
         }
     }
 }

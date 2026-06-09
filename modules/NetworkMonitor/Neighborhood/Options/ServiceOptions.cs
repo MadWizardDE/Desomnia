@@ -2,10 +2,10 @@
 {
     public struct ServiceOptions
     {
-        public IPAddressFlags Flags { get; set; }
+        public ServiceFlags Flags { get; set; }
         public DateTime? Expires { get; set; }
 
-        public ServiceOptions(IPAddressFlags flags)
+        public ServiceOptions(ServiceFlags flags)
         {
             Flags = flags;
         }
@@ -18,10 +18,10 @@
             }
         }
 
-        public readonly bool HasFlags(IPAddressFlags flags) => Flags.HasFlag(flags);
+        public readonly bool HasFlags(ServiceFlags flags) => Flags.HasFlag(flags);
     }
 
-    public enum NetworkServiceFlags
+    public enum ServiceFlags
     {
         None = 0,
 

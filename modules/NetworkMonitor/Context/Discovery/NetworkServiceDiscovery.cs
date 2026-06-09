@@ -2,6 +2,7 @@
 using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
+using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
@@ -40,39 +41,54 @@ namespace MadWizard.Desomnia.Network.Context
 
     public partial class NetworkHostContext
     {
-        public void CreateServices(IEnumerable<ServiceInfo> services)
+        internal void CreateStaticServices(IEnumerable<ServiceInfo> services)
         {
             foreach (var info in services)
             {
-                CreateService(info);
+                CreateService(info, new(ServiceFlags.Static));
             }
         }
 
-        public NetworkHostServiceContext CreateService(ServiceInfo info)
+        public NetworkHostServiceContext CreateService(ServiceInfo info, ServiceOptions options = default)
         {
-            return CreateService<NetworkHostServiceContext>(new TypedParameter(typeof(ServiceInfo), info));
+            return CreateService<NetworkHostServiceContext>(
+                new TypedParameter(typeof(ServiceInfo), info), 
+                new TypedParameter(typeof(ServiceOptions), options));
         }
 
         public T CreateService<T>(params Parameter[] parameters) where T : NetworkHostServiceContext
         {
-            var context = Scope.Resolve<T>(parameters);
+            var ctx = Scope.Resolve<T>(parameters);
 
-            Host.AddService(context.Service);
-
-            Watch?.StartTracking(context.Watch);
-
-            context.Scope.CurrentScopeEnding += (sender, args) =>
+            try
             {
-                Host.RemoveService(context.Service);
+                Host.AddService(ctx.Service, ctx.Options);
 
-                Watch?.StopTracking(context.Watch);
+                Logger.LogHostServiceAdded(Host, ctx.Service);
+            }
+            catch (Exception) // service probably already exists
+            {
+                ctx.Dispose();
 
-                _serviceContexts.Remove(context);
+                throw;
+            }
+
+            Watch?.StartTracking(ctx.Watch);
+
+            ctx.Scope.CurrentScopeEnding += (sender, args) =>
+            {
+                Host.RemoveService(ctx.Service);
+
+                Logger.LogHostServiceRemoved(Host, ctx.Service);
+
+                Watch?.StopTracking(ctx.Watch);
+
+                _serviceContexts.Remove(ctx);
             };
 
-            _serviceContexts.Add(context);
+            _serviceContexts.Add(ctx);
 
-            return context;
+            return ctx;
         }
     }
 }

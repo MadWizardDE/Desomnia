@@ -12,6 +12,7 @@ using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Middleware;
 using MadWizard.Desomnia.Network.Reachability;
 using Microsoft.Extensions.Configuration.Xml;
+using System.ComponentModel;
 
 namespace MadWizard.Desomnia.Network
 {
@@ -141,5 +142,12 @@ namespace MadWizard.Desomnia.Network
     public abstract class PluginModule : Autofac.Module
     {
         //public virtual void Build(ContainerBuilder builder) { }
+
+        public class Metadata
+        {
+            [DefaultValue(null)]
+            public string? Name { get; set; }
+        }
     }
+
 }

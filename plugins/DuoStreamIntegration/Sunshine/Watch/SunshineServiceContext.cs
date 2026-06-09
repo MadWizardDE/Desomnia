@@ -7,7 +7,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 {
     internal class SunshineServiceContext : NetworkHostServiceContext
     {
-        protected SunshineServiceContext(ILifetimeScope parent, SunshineService service) : base(parent)
+        public SunshineServiceContext(ILifetimeScope parent, SunshineService service) : base(parent)
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag, builder =>
             {

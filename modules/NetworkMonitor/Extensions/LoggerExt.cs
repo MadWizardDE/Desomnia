@@ -167,6 +167,33 @@ namespace Microsoft.Extensions.Logging
                     host.Name);
             }
         }
+
+        public static void LogHostServiceAdded(this ILogger logger, NetworkHost host, NetworkService service)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                using var scope = logger.BeginHostScope(host);
+
+                List<string> tokens = [];
+                if (host[service].HasFlags(ServiceFlags.Static))
+                    tokens.Add("static");
+
+                logger.LogDebug("Add service {Service} to host '{HostName}' {Flags}",
+                    service, host.Name, tokens.Any() ? "[" + string.Join(", ", tokens) + "]" : "");
+            }
+        }
+
+        public static void LogHostServiceRemoved(this ILogger logger, NetworkHost host, NetworkService service, bool hasExpired = false)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                using var scope = logger.BeginHostScope(host);
+
+                logger.LogDebug("Removed service {Service} from host '{HostName}'"
+                    + (hasExpired ? " (expired)" : ""),
+                    service, host.Name);
+            }
+        }
     }
 
     file static class LogHelper

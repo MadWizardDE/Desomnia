@@ -11,8 +11,8 @@ namespace MadWizard.Desomnia.Network.Traefik
             foreach (var network in Config.NetworkMonitor)
             {
                 builder.RegisterType<NetworkPluginModule>().As<Desomnia.Network.PluginModule>()
+                    .WithMetadata<Network.PluginModule.Metadata>(meta => meta.For(m => m.Name, network.Name))
                     .WithParameter(TypedParameter.From(network))
-                    .WithMetadata("name", network.Name)
                     .SingleInstance();
             }
 

@@ -184,6 +184,9 @@ namespace MadWizard.Desomnia.Network.Context
                             .WithParameter(TypedParameter.From<ushort>(port))
                             .SingleInstance()
                             .AsSelf();
+
+                        RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
+
                         break;
 
                     case IPProtocol.UDP:
@@ -192,6 +195,9 @@ namespace MadWizard.Desomnia.Network.Context
                             .WithParameter(TypedParameter.From<ushort>(port))
                             .SingleInstance()
                             .AsSelf();
+
+                        RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
+
                         break;
 
                     default:

@@ -92,8 +92,8 @@ namespace MadWizard.Desomnia.Network
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex, "Failed to startup monitoring context for '{Interface}'",
-                            @interface.Name + (config.Name is string name ? $" [{name}]" : "") );
+                        Logger.LogError(ex, $"Failed to startup monitoring context for '{@interface.Name}'"
+                            + (config.Label is string label ? $" ['{label}']" : ""));
                     }
                 }
 

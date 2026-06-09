@@ -19,7 +19,9 @@ namespace MadWizard.Desomnia.Network.Configuration
         const long DEFAULT_TIMEOUT_MS = 500;
 
         // Network-Identification
-        public string?          Name            { get => (field?.StartsWith("NetworkMonitor#") ?? false) ? null : field; init; }
+        public required string  Name            { get; init; }
+
+        public string?          Label           { get => !Name.StartsWith("NetworkMonitor#") ? Name : null; }
 
         public string?          Interface       { get; set; }
         public IPNetwork?       Network         { get; set; }

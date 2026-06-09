@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 {
-    internal class SunshineServiceContextAdapter(DuoManager manager) : IStartable, INetworkService, IDisposable
+    internal class SunshineServiceContextAdapter(DuoManager manager) : INetworkService
     {
         public required ILogger<SunshineServiceContextAdapter> Logger { get; set; }
 
@@ -15,34 +15,38 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 
         private Dictionary<DuoInstance, SunshineServiceContext> _services = [];
 
-        void IStartable.Start()
-        {
-            manager.Started += Manager_Started;
-            manager.Stopped += Manager_Stopped;
-        }
-
-        private void Manager_Started(object? sender, EventArgs e)
-        {
-            ((INetworkService)this).Startup();
-        }
-
         void INetworkService.Startup()
+        {
+            WatchInstances();
+
+            manager.Started += WatchInstances;
+            manager.Stopped += UnWatchInstaces;
+        }
+
+        private void WatchInstances(object? sender = null, EventArgs? e = null)
         {
             var ctxLocalHost = Context.First(ctx => ctx.Host is LocalHost);
 
             foreach (var instance in manager)
             {
-                Logger.LogInformation($"Monitoring {instance}:{instance.Port}" + (instance.IsRunning == true ? " (running)" : ""));
+                try
+                {
+                    Logger.LogInformation($"Monitoring {instance}:{instance.Port}" + (instance.IsRunning == true ? " (running)" : ""));
 
-                var context = ctxLocalHost.CreateService<SunshineServiceContext>(TypedParameter.From(instance.Service));
+                    var context = ctxLocalHost.CreateService<SunshineServiceContext>(TypedParameter.From(instance.Service));
 
-                instance.StartTracking(context.Watch);
+                    instance.StartTracking(context.Watch);
 
-                _services.Add(instance, context);
+                    _services.Add(instance, context);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"NOT Monitoring {instance}:{instance.Port} -> could not create service context");
+                }
             }
         }
 
-        void INetworkService.Shutdown()
+        private void UnWatchInstaces(object? sender = null, EventArgs? e = null)
         {
             foreach (var srv in _services)
             {
@@ -54,15 +58,12 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
             _services.Clear();
         }
 
-        private void Manager_Stopped(object? sender, EventArgs e)
+        void INetworkService.Shutdown()
         {
-            ((INetworkService)this).Shutdown();
-        }
+            manager.Stopped -= UnWatchInstaces;
+            manager.Started -= WatchInstances;
 
-        void IDisposable.Dispose()
-        {
-            manager.Started -= Manager_Started;
-            manager.Stopped -= Manager_Stopped;
+            UnWatchInstaces();
         }
     }
 }

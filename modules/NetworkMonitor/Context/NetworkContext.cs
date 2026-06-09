@@ -23,8 +23,6 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public partial class NetworkContext : FilterContext, IIEnumerable<NetworkHostContext>
     {
-        public ILogger<NetworkContext> Logger { private get; init; }
-
         public required IVirtualMachineManager VMManager { private get; init; }
 
         public string Name { get; private init; }
@@ -77,10 +75,10 @@ namespace MadWizard.Desomnia.Network.Context
         {
             Config = config;
 
-            Name = Config.Name ?? @interface.Name;
+            Name = Config.Label ?? @interface.Name;
 
-            Plugins = parent.Resolve<IEnumerable<Meta<PluginModule>>>()
-                .Where(x => x.Metadata["name"] is not string name || name == config.Name)
+            Plugins = parent.Resolve<IEnumerable<Meta<PluginModule, PluginModule.Metadata>>>()
+                .Where(x => x.Metadata.Name is not string name || name == config.Name)
                 .Select(x => x.Value);
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkLifetimeScopeTag, builder =>
@@ -241,8 +239,6 @@ namespace MadWizard.Desomnia.Network.Context
                 RegisterPlugins(builder);
             });
 
-            Logger = Scope.Resolve<ILogger<NetworkContext>>();
-
             Scope.Resolve<KnockService>(TypedParameter.From(_knockContexts.SelectMany(ctx => ctx.Stanzas)));
         }
 
@@ -256,20 +252,22 @@ namespace MadWizard.Desomnia.Network.Context
 
         private void RegisterContextAwareLogger(ILifetimeScope parent, ContainerBuilder builder)
         {
-            builder.RegisterGeneric(typeof(NetworkLogger<>))
-               .InstancePerDependency()
-               .AsSelf();
+            //builder.RegisterGeneric(typeof(NetworkLogger<>))
+            //   .InstancePerDependency()
+            //   .AsSelf();
 
             builder.RegisterGeneric((context, typeArguments, parameters) =>
             {
-                var t = typeArguments[0];
+                var t = typeArguments [0];
 
                 var loggerServiceType = typeof(ILogger<>).MakeGenericType(t);
                 var wrapperType = typeof(NetworkLogger<>).MakeGenericType(t);
 
                 var rootLogger = parent.Resolve(loggerServiceType); // The actual ILogger implementation is root scoped and should resolve to that.
 
-                return context.Resolve(wrapperType, new TypedParameter(loggerServiceType, rootLogger));
+                object instance = Activator.CreateInstance(wrapperType, context, rootLogger)!;
+
+                return instance;
             }).As(typeof(ILogger<>)).InstancePerLifetimeScope();
 
             //builder.RegisterGenericDecorator(typeof(LoggerContextDecorator<>), typeof(ILogger<>));

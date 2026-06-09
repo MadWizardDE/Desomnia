@@ -43,7 +43,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood.Services
 
         public override string ToString()
         {
-            return $"{port} (\"{Name}\")";
+            return $"{port}{(Ports.Count() > 1 ? "(+)" : "")} (\"{Name}\")";
         }
     }
 
