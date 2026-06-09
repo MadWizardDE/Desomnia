@@ -47,11 +47,23 @@ namespace MadWizard.Desomnia.Network.Context
 
         internal async Task DiscoverAddresses()
         {
-            Logger.LogDebug("Discovering addresses...");
 
-            foreach (var ctx in _hostContexts)
+            if (Config.AutoParallel)
             {
-                await ctx.DiscoverAddresses();
+                Logger.LogDebug("Discovering addresses (in parallel)...");
+
+                var tasks = _hostContexts.Select(ctx => ctx.DiscoverAddresses());
+
+                await Task.WhenAll(tasks);
+            }
+            else
+            {
+                Logger.LogDebug("Discovering addresses...");
+
+                foreach (var ctx in _hostContexts)
+                {
+                    await ctx.DiscoverAddresses();
+                }
             }
         }
     }

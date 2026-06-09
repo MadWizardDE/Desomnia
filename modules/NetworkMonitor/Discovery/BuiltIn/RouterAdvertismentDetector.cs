@@ -31,7 +31,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                 async void Capture(object? sender, EthernetPacket packet)
                 {
                     if (await ProcessPacketMaybeAsync(packet))
-                        semaphore.MaybeRelease();
+                        semaphore.FinallyRelease();
                 }
 
                 Device.EthernetCaptured += Capture;

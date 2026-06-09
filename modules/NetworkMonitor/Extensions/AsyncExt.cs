@@ -9,7 +9,7 @@
             return new SemaphoreLease(semaphore);
         }
 
-        public static int MaybeRelease(this SemaphoreSlim semaphore)
+        public static int FinallyRelease(this SemaphoreSlim semaphore)
         {
             try
             {

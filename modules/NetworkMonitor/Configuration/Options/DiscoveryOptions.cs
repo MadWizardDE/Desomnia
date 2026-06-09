@@ -4,6 +4,8 @@
     {
         public TimeSpan Timeout { get; init; }
         public TimeSpan? Refresh { get; init; }
+
+        public bool Parallel { get; init; }
     }
 
     [Flags]

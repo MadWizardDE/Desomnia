@@ -37,13 +37,15 @@ namespace MadWizard.Desomnia.Network.Configuration
         // Options
         #region Network :: AutoDiscoveryOptions
         public AutoDiscoveryType    AutoDetect          { get; set; } = AutoDiscoveryType.Nothing;
-        private TimeSpan            AutoTimeout         { get; set; } = TimeSpan.FromSeconds(5);
-        private TimeSpan?           AutoRefresh         { get; set; }
+        internal TimeSpan           AutoTimeout         { get; set; } = TimeSpan.FromSeconds(2);
+        internal TimeSpan?          AutoRefresh         { get; set; }
+        internal bool               AutoParallel        { get; set; } = true;
 
         public DiscoveryOptions MakeAutoDiscoveryOptions() => new()
         {
             Timeout = this.AutoTimeout,
-            Refresh = this.AutoRefresh
+            Refresh = this.AutoRefresh,
+            Parallel = this.AutoParallel
         };
         #endregion
 
