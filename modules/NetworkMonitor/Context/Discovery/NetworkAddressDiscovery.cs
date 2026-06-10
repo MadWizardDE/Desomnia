@@ -4,6 +4,7 @@ using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Discovery;
 using MadWizard.Desomnia.Network.Discovery.BuiltIn;
 using MadWizard.Desomnia.Network.Filter;
+using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using System.Net.Sockets;
@@ -47,12 +48,13 @@ namespace MadWizard.Desomnia.Network.Context
 
         internal async Task DiscoverAddresses()
         {
+            var nonRouterContexts = _hostContexts.Where(ctx => ctx.Host is not NetworkRouter);
 
             if (Config.AutoParallel)
             {
                 Logger.LogDebug("Discovering addresses (in parallel)...");
 
-                var tasks = _hostContexts.Select(ctx => ctx.DiscoverAddresses());
+                var tasks = nonRouterContexts.Select(ctx => ctx.DiscoverAddresses());
 
                 await Task.WhenAll(tasks);
             }
@@ -60,7 +62,7 @@ namespace MadWizard.Desomnia.Network.Context
             {
                 Logger.LogDebug("Discovering addresses...");
 
-                foreach (var ctx in _hostContexts)
+                foreach (var ctx in nonRouterContexts)
                 {
                     await ctx.DiscoverAddresses();
                 }

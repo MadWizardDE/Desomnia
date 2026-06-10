@@ -39,7 +39,9 @@ namespace MadWizard.Desomnia.Network.Context
                     CreateHost(new TypedParameter(typeof(NetworkHostInfo), configVPNClient));
                 }
 
-                CreateHost(new TypedParameter(typeof(NetworkRouterInfo), configRouter));
+                var router = CreateHost(new TypedParameter(typeof(NetworkRouterInfo), configRouter));
+
+                await router.DiscoverAddresses();
             }
 
             // register dynamic routers

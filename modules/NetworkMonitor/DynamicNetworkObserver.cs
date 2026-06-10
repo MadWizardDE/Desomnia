@@ -124,9 +124,10 @@ namespace MadWizard.Desomnia.Network
             {
                 context.Device.StartCapture();
 
-                await context.DiscoverRouters();
                 await context.DiscoverHosts();
                 await context.DiscoverHostRanges();
+
+                await context.DiscoverRouters();
 
                 await context.DiscoverDynamicFilterHosts();
 

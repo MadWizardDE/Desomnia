@@ -28,8 +28,6 @@ namespace MadWizard.Desomnia.Network.Knocking
         {
             if (packet.PayloadPacket is IPPacket ip && ip.PayloadPacket is TransportPacket transport) // TODO: filter for target TriggerIPPacket?
             {
-                var source = ip.SourceEndPoint;
-
                 foreach (var stanza in Stanzas.Where(stanza => stanza.Port.Accepts(transport)))
                 {
                     try
@@ -38,13 +36,13 @@ namespace MadWizard.Desomnia.Network.Knocking
 
                         foreach (var knock in stanza.Detector.Examine(ip, stanza.Secret))
                         {
-                            if (stanza.KnockFilter.ShouldFilter(source, knock)) continue; // maybe filter knock
+                            if (stanza.KnockFilter.ShouldFilter(ip.SourceEndPoint, knock)) continue; // maybe filter knock
 
                             Logger.LogDebug($"Received valid knock from {ip.SourceAddress}" +
                                 (knock.TargetPort != null ? $" to access {knock.TargetPort}" : "") +
                                 $" via stanza '{stanza.Label}'");
 
-                            stanza.TriggerKnockEvent(source, knock);
+                            stanza.TriggerKnockEvent(ip.SourceEndPoint, knock);
                         }
                     }
                     catch (Exception ex)

@@ -40,7 +40,9 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
                 Logger.LogDebug($"Using default gateway");
 
-                NetworkContext.CreateHost(new TypedParameter(typeof(NetworkRouterInfo), info));
+                var ctx = NetworkContext.CreateHost(new TypedParameter(typeof(NetworkRouterInfo), info));
+
+                await ctx.DiscoverAddresses();
             }
         }
     }
