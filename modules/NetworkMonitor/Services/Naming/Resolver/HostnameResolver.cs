@@ -6,14 +6,14 @@ using Makaretu.Dns;
 using System.Net;
 using System.Net.Sockets;
 
-namespace MadWizard.Desomnia.Network.Naming.MDNS.Resolver
+namespace MadWizard.Desomnia.Network.Naming.Resolver
 {
     internal class HostnameResolver : IMulticastDNSResolver
     {
         public required NetworkMonitor Monitor { private get; init; }
         public required NetworkSegment Network { private get; init; }
 
-        void IMulticastDNSResolver.Resolve(MulticastDNSQuery query)
+        void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
             foreach (var question in query.Questions)
             {

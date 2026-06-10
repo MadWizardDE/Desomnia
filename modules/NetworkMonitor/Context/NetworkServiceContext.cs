@@ -7,22 +7,22 @@ using MadWizard.Desomnia.Network.Watch;
 
 namespace MadWizard.Desomnia.Network.Context
 {
-    public class NetworkHostServiceContext : FilterContext
+    public class NetworkServiceContext : FilterContext
     {
         public NetworkService       Service     => field ??= Scope.Resolve<NetworkService>();
         public NetworkServiceWatch  Watch       => field ??= Scope.Resolve<NetworkServiceWatch>();
 
         public ServiceOptions Options { get; init; }
 
-        protected NetworkHostServiceContext(ILifetimeScope parent, ServiceOptions options = default) : base(parent) { Options = options; }
+        protected NetworkServiceContext(ILifetimeScope parent, ServiceOptions options = default) : base(parent) { Options = options; }
 
-        public NetworkHostServiceContext(ILifetimeScope parent, ServiceInfo info, ServiceOptions options = default) : this(parent, options)
+        public NetworkServiceContext(ILifetimeScope parent, WatchedServiceInfo info, ServiceOptions options = default) : this(parent, options)
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag, builder =>
             {
                 var service = builder.RegisterType<TransportNetworkService>().As<NetworkService>()
                     .WithParameter(TypedParameter.From(info.Name))
-                    .WithParameter(TypedParameter.From(info.TransportService))
+                    .WithParameter(TypedParameter.From(info.IPPort))
                     .SingleInstance()
                     .AsSelf();
 

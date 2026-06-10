@@ -3,6 +3,7 @@ using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Context.Parameters;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
@@ -14,14 +15,14 @@ using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Context
 {
-    public partial class NetworkHostContext : FilterContext, IIEnumerable<NetworkHostServiceContext>
+    public partial class NetworkHostContext : FilterContext, IIEnumerable<NetworkServiceContext>
     {
         public AutoDiscoveryType    Auto    { get; private set; }
 
         public NetworkHost          Host    { get => field ??= Scope.Resolve<NetworkHost>();                private init; }
         public NetworkHostWatch?    Watch   { get => field ??= Scope.ResolveOptional<NetworkHostWatch>();   private init; }
 
-        private readonly IList<NetworkHostServiceContext> _serviceContexts = [];
+        private readonly IList<NetworkServiceContext> _serviceContexts = [];
 
         // Host
         public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkHostInfo config) : base(parent)
@@ -77,7 +78,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateStaticServices(config.Services);
+            CreateStaticWatchedServices(config.Services);
         }
 
         // LocalVirtualHost
@@ -107,7 +108,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateStaticServices(config.Services);
+            CreateStaticWatchedServices(config.Services);
         }
 
         // RemoteHost
@@ -137,7 +138,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateStaticServices(config.Services);
+            CreateStaticWatchedServices(config.Services);
         }
 
         // RemoteVirtualHost
@@ -168,7 +169,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .AsSelf();
             });
 
-            CreateStaticServices(config.Services);
+            CreateStaticWatchedServices(config.Services);
         }
 
         private static void ConfigureHost(IActivatedEventArgs<NetworkHost> args, NetworkHostInfo config)
@@ -200,6 +201,16 @@ namespace MadWizard.Desomnia.Network.Context
                     {
                         logger.LogHostAddressAdded(host, ip);
                     }
+                }
+
+                // Configure static non-watched services
+                foreach (var info in config.Services.Where(i => i is not WatchedServiceInfo))
+                {
+                    var service = info.Service;
+
+                    host.AddService(service, new(ServiceFlags.Static));
+
+                    logger.LogHostServiceAdded(host, service);
                 }
             }
         }
@@ -244,6 +255,6 @@ namespace MadWizard.Desomnia.Network.Context
             }
         }
 
-        IEnumerator<NetworkHostServiceContext> IEnumerable<NetworkHostServiceContext>.GetEnumerator() => _serviceContexts.GetEnumerator();
+        IEnumerator<NetworkServiceContext> IEnumerable<NetworkServiceContext>.GetEnumerator() => _serviceContexts.GetEnumerator();
     }
 }

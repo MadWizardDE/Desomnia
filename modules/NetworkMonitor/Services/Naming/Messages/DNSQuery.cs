@@ -6,36 +6,22 @@ using PacketDotNet;
 using System.Net;
 using System.Net.NetworkInformation;
 
-namespace MadWizard.Desomnia.Network.Naming.MDNS
+namespace MadWizard.Desomnia.Network.Naming
 {
-    public class MulticastDNSQuery(EthernetPacket packet, Message message)
+    public class DNSQuery(EthernetPacket packet, Message message)
     {
         public PhysicalAddress  SourcePhysicalAddress   => field ??= packet.FindSourcePhysicalAddress() ?? throw new ArgumentException("Source MAC missing");
         public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
         public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
 
-        public IEnumerable<EdnsOption>  Options         => message.AdditionalRecords.OfType<OPTRecord>().SelectMany(opt => opt.Options);
-        public IEnumerable<Question>    Questions       => message.Questions;
+        public IEnumerable<EdnsOption> Options => message.AdditionalRecords.OfType<OPTRecord>().SelectMany(opt => opt.Options);
+        public IEnumerable<Question> Questions => message.Questions;
 
         internal TimeSpan Delay { get; private set; } = TimeSpan.Zero;
 
+        internal Message Request => message;
+
         internal Message Response { get; init; } = new Message() { QR = true, AA = true };
-
-        internal virtual DNSResponseType ShouldRespond()
-        {
-            if (Response.Answers.Count > 0)
-            {
-                if (SourcePort != MulticastDNSService.MulticastPort) // legacy protocol
-                    return DNSResponseType.Unicast;
-
-                if (Questions.All(question => question.QU)) // client requests unicast
-                    return DNSResponseType.Unicast;
-
-                return DNSResponseType.Multicast;
-            }
-
-            return DNSResponseType.None;
-        }
 
         private void AnswerWith(ResourceRecord record, TimeSpan delay = default)
         {
@@ -69,7 +55,7 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
 
             Response.AdditionalRecords.Add(new SRVRecord
             {
-                Name = instance, 
+                Name = instance,
                 Target = host.LocalDomainName,
                 Port = service.Port,
 
@@ -96,16 +82,16 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
         public struct AnswerOptions
         {
             /// <summary>TTL for advertised host address records (RFC 6762 §10 recommends 120 s for host names).</summary>
-            public TimeSpan HostTTL     { readonly get => field == default ? TimeSpan.FromSeconds(120)  : field; set; }
+            public TimeSpan HostTTL { readonly get => field == default ? TimeSpan.FromSeconds(120) : field; set; }
             // RFC 6762 §10: shared records (PTRs) get a long TTL, host-specific records (SRV/TXT/A) a short one.
-            public TimeSpan ServiceTTL  { readonly get => field == default ? TimeSpan.FromMinutes(75)   : field; set; }
+            public TimeSpan ServiceTTL { readonly get => field == default ? TimeSpan.FromMinutes(75) : field; set; }
 
-            public TimeSpan Delay       { get; set; }
+            public TimeSpan Delay { get; set; }
 
             public AnswerOptions(AdvertiseOptions options, bool delay = false)
             {
                 if (options.HostTTL is TimeSpan ttlHost)
-                    HostTTL     = ttlHost;
+                    HostTTL = ttlHost;
                 if (options.ServiceTTL is TimeSpan ttlService)
                     ServiceTTL = ttlService;
 
@@ -116,13 +102,4 @@ namespace MadWizard.Desomnia.Network.Naming.MDNS
             }
         }
     }
-
-    internal enum DNSResponseType
-    {
-        None = 0,
-
-        Unicast,
-        Multicast
-    }
-
 }

@@ -4,9 +4,9 @@ using System.Net;
 
 namespace MadWizard.Desomnia.Network.Configuration.Services
 {
-    public class HTTPServiceInfo : ServiceInfo
+    public class WatchedHTTPServiceInfo : WatchedServiceInfo
     {
-        public HTTPServiceInfo()
+        public WatchedHTTPServiceInfo()
         {
             Name = "HTTP";
             Protocol = IPProtocol.TCP;

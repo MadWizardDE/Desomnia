@@ -23,7 +23,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 Duration = options.DetermineLeaseDuration(reg.RequestedLease)
             };
 
-            if (Context.FindHostContextBy(reg.PhysicalAddress) is not NetworkHostContext ctxHost)
+            if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
             {
                 ctxHost = CreateHost(reg);
 
@@ -39,14 +39,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 foreach (var serviceInfo in reg.Services)
                 {
-                    if (ctxHost.FindServiceContextBy(serviceInfo.TransportService) is NetworkHostServiceContext ctxService)
+                    if (ctxHost.FindServiceContextBy(serviceInfo.IPPort) is NetworkServiceContext ctxService)
                     {
-                        Logger.LogWarning("Already watching service at {Port} for {Host}", serviceInfo.TransportService, ctxHost.Host.Name);
+                        Logger.LogWarning("Already watching service at {Port} for {Host}", serviceInfo.IPPort, ctxHost.Host.Name);
 
                         continue;
                     }
 
-                    ctxService = ctxHost.CreateService(serviceInfo);
+                    ctxService = ctxHost.CreateWatchedService(serviceInfo);
 
                     lease.AddInstanceForDisposal(ctxService);
                 }
@@ -85,7 +85,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             hostInfo.AutoDetect = AutoDiscoveryType.IP | AutoDiscoveryType.Host | AutoDiscoveryType.Service;
 
             hostInfo.HostName = reg.Hostname;
-            hostInfo.MAC = reg.PhysicalAddress;
+            hostInfo.MAC = reg.PrimaryAddress;
 
             hostInfo.WakePasswordBytes = reg.Password;
 

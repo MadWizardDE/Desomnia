@@ -167,7 +167,7 @@ namespace MadWizard.Desomnia.Network.Address
                 Logger.LogDebug($"Sending ARP announcement <{ip} -> {mac.ToHexString()}> to {macTarget.ToHexString()}");
             }
 
-            //var response = new EthernetPacket(Options.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
+            //var response = new EthernetPacket(Options.ParseMetrics("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
             var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Request, PhysicalAddressExt.Empty, ip, mac, ip)
@@ -187,7 +187,7 @@ namespace MadWizard.Desomnia.Network.Address
 
             Logger.LogDebug($"Sending ARP response <{ip} -> {mac.ToHexString()}> to {ipTarget}");
 
-            //var response = new EthernetPacket(Options.TryParseFormat("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
+            //var response = new EthernetPacket(Options.ParseMetrics("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
             var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Response, macTarget, ipTarget, mac, ip)

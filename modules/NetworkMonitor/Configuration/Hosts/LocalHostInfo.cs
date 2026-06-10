@@ -43,9 +43,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         // Ports
-        public IList<ServiceInfo> Service { get; set; } = [];
-        public IList<HTTPServiceInfo> HTTPService { get; set; } = [];
-        public IEnumerable<ServiceInfo> Services => Service.Concat(HTTPService);
+        public IList<WatchedServiceInfo> Service { get; set; } = [];
+        public IList<WatchedHTTPServiceInfo> HTTPService { get; set; } = [];
+        public IEnumerable<WatchedServiceInfo> Services => Service.Concat(HTTPService);
 
         // Virtual-Hosts
         public IList<LocalVirtualHostInfo> VirtualHost { get; set; } = [];

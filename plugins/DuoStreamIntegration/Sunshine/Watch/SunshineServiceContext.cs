@@ -5,7 +5,7 @@ using MadWizard.Desomnia.Network.Watch;
 
 namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 {
-    internal class SunshineServiceContext : NetworkHostServiceContext
+    internal class SunshineServiceContext : NetworkServiceContext
     {
         public SunshineServiceContext(ILifetimeScope parent, SunshineService service) : base(parent)
         {

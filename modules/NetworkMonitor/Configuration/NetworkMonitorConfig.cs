@@ -6,6 +6,8 @@ using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using MadWizard.Desomnia.Network.Manager;
+using MadWizard.Desomnia.Network.Naming;
+using MadWizard.Desomnia.Network.SleepProxy;
 using System.ComponentModel;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -92,6 +94,8 @@ namespace MadWizard.Desomnia.Network.Configuration
         #region Network :: SleepProxyOptions
         internal TimeSpan           SleepProxyMinLease  { get; set; } = TimeSpan.FromMinutes(30);
         internal TimeSpan           SleepProxyMaxLease  { get; set; } = TimeSpan.FromDays(365);
+        internal SleepProxyMetrics  SleepProxyMetrics   { get; set; } = SleepProxyMetrics.Best;
+        internal ushort             SleepProxyPort      { get; set; } = MulticastDNSService.MulticastPort;
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {
@@ -147,6 +151,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         // Hosts
         public LocalHostInfo?                   LocalHost   { get; private set; }
         public IList<RemotePhysicalHostInfo>    RemoteHost  { get; private set; } = [];
+        public IList<NetworkSleepProxyInfo>     SleepProxy  { get; private set; } = [];
         public IList<NetworkRouterInfo>         Router      { get; private set; } = [];
         public IList<NetworkHostInfo>           Host        { get; private set; } = [];
 
@@ -178,6 +183,7 @@ namespace MadWizard.Desomnia.Network.Configuration
             .Concat(ForeignHostFilterRule?.HostRange ?? []).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
 
         public IEnumerable<NetworkHostInfo> Hosts => Host
+            .Concat(SleepProxy)
             .Concat(Ranges.SelectMany(range => range.Host)) // all hosts in all host ranges
             .Concat(EveryHostFilterRule?.Host ?? [])
             .Concat(ForeignHostFilterRule?.Host ?? []);

@@ -64,11 +64,18 @@ namespace MadWizard.Desomnia.Network.Watch
             }
         }
 
-        private void HandleSuspended()
+        private async void HandleSuspended()
         {
             if (AdvertiseOptions.Type == AdvertiseType.Never)
             {
-                MaybeHandoffWatch();
+                try
+                {
+                    await MaybeHandoffWatch();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Could not handoff local virtual watch '{host}'", Host.Name);
+                }
             }
         }
 

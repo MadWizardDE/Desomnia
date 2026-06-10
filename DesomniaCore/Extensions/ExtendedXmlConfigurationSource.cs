@@ -155,7 +155,7 @@ namespace Microsoft.Extensions.Configuration.Xml
                         if (!(counters ??= []).ContainsKey(elementName))
                             counters[elementName] = 0;
 
-                        var name = source.NamelessCollectionElements[elementName](element, ++counters[elementName]);
+                        var name = source.NamelessCollectionElements[elementName](child, ++counters[elementName]);
 
                         child.Add(new XAttribute(NAME_ATTRIBUTE_NAME, name));
                     }

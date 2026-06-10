@@ -10,8 +10,8 @@ using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Logging;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Middleware;
-using MadWizard.Desomnia.Network.Naming.MDNS;
-using MadWizard.Desomnia.Network.Naming.MDNS.Resolver;
+using MadWizard.Desomnia.Network.Naming;
+using MadWizard.Desomnia.Network.Naming.Resolver;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.SleepProxy;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
@@ -118,7 +118,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .ConfigurePipeline(p => p.Use(new DefaultNetworkServiceOptions(config)))
                     .InstancePerDependency()
                     .AsSelf();
-                builder.RegisterType<NetworkHostServiceContext>()
+                builder.RegisterType<NetworkServiceContext>()
                     .InstancePerDependency()
                     .AsSelf();
                 builder.RegisterType<NetworkKnockContext>()
@@ -184,20 +184,9 @@ namespace MadWizard.Desomnia.Network.Context
 
                     if (true) // TODO when enable Sleep Proxy?
                     {
-                        var service = new SleepProxyService(MulticastDNSService.MulticastPort)
+                        var service = new SleepProxyService(Config.SleepProxyPort)
                         {
-                            /// <summary>
-                            /// Desomnia's default metric: deliberately HIGH (poor) so genuine proxies always win — we only
-                            /// want to be the last-resort responder, in keeping with the non-invasive design.
-                            /// </summary>
-
-                            Metrics = new()
-                            {
-                                Type            = 90,   // incidental software on a general-purpose host
-                                Portability     = 40,   // TODO: detect battery vs. mains and adjust
-                                MarginalPower   = 70,
-                                TotalPower      = 70,
-                            }
+                            Metrics = Config.SleepProxyMetrics
                         };
 
                         builder.RegisterType<SleepProxyRegistrar>()

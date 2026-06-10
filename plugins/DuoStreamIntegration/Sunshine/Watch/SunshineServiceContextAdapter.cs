@@ -33,7 +33,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
                 {
                     Logger.LogInformation($"Monitoring {instance}:{instance.Port}" + (instance.IsRunning == true ? " (running)" : ""));
 
-                    var context = ctxLocalHost.CreateService<SunshineServiceContext>(TypedParameter.From(instance.Service));
+                    var context = ctxLocalHost.CreateWatchedService<SunshineServiceContext>(TypedParameter.From(instance.Service));
 
                     instance.StartTracking(context.Watch);
 

@@ -182,8 +182,30 @@ namespace MadWizard.Desomnia.Network
             return false;
         }
 
-        public void SendPacket(EthernetPacket packet)
+        private static void PreparePacketToSend(EthernetPacket packet)
         {
+            if (packet.Extract<UdpPacket>() is UdpPacket udp)
+            {
+                udp.UpdateCalculatedValues();
+                udp.UpdateUdpChecksum();
+            }
+
+            if (packet.Extract<IPPacket>() is IPPacket ip)
+            {
+                ip.UpdateCalculatedValues();
+
+                if (ip is IPv4Packet ipv4Packet)
+                    ipv4Packet.UpdateIPChecksum();
+            }
+        }
+
+        public void SendPacket(EthernetPacket packet, bool prepare = false)
+        {
+            if (prepare)
+            {
+                PreparePacketToSend(packet);
+            }
+
             try
             {
                 if (!Filters.Select(filter => filter.FilterOutgoing(packet)).Where(f => f == true).Any())

@@ -13,7 +13,7 @@ namespace MadWizard.Desomnia.Network.Context
 
         extension (NetworkHostContext context)
         {
-            internal NetworkHostServiceContext? FindServiceContextBy(IPPort port) => context.FirstOrDefault(ctx => ctx.Service is TransportNetworkService t && t.Port == port);
+            internal NetworkServiceContext? FindServiceContextBy(IPPort port) => context.FirstOrDefault(ctx => ctx.Service is TransportNetworkService t && t.Port == port);
         }
     }
 }

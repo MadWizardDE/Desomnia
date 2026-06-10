@@ -5,7 +5,6 @@ using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using SharpPcap;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -37,11 +36,6 @@ namespace MadWizard.Desomnia.Network.Demand
                 case WatchMode.Promiscuous:
                     return true;
             }
-        }
-
-        async void INetworkService.Resume()
-        {
-            await MaybeAdvertiseWatch();
         }
 
         void INetworkService.ProcessPacket(EthernetPacket packet)
@@ -144,48 +138,5 @@ namespace MadWizard.Desomnia.Network.Demand
                 request.Result ??= DemandResult.Timeout;
             }
         }
-
-        void INetworkService.Suspend()
-        {
-            try
-            {
-                MaybeYieldLocalWatch();
-            }
-            catch (PcapException ex)
-            {
-                Logger.LogError("Could not yield local watches: " + ex.Message);
-            }
-        }
-
-        #region Lifecycle
-        private async Task MaybeAdvertiseWatch()
-        {
-            foreach (var watch in Monitor.OfType<HostDemandWatch>())
-            {
-                using var scope = Logger.BeginHostScope(watch.Host);
-
-                if (watch.Host.IPAddresses.Where(watch.AdvertiseOptions.ShouldAdvertiseOnLocalHostResume) is var ips && ips.Any())
-                {
-                    Logger.LogDebug($"Resuming operation, taking ownership of watched IP addresses...");
-
-                    foreach (var ip in ips)
-                    {
-                        if (await watch.RequestIPUnicastTrafficTo(ip) is PhysicalAddress mac)
-                        {
-                            AddressMapping.Advertise(new(ip, mac));
-                        }
-                    }
-                }
-            }
-        }
-
-        private void MaybeYieldLocalWatch()
-        {
-            foreach (var watch in Monitor.OfType<LocalHostWatch>())
-            {
-                watch.MaybeHandoffWatch();
-            }
-        }
-        #endregion
     }
 }

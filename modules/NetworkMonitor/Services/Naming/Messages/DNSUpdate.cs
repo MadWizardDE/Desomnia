@@ -2,31 +2,17 @@
 using Makaretu.Dns;
 using PacketDotNet;
 
-namespace MadWizard.Desomnia.Network.Naming.MDNS
+namespace MadWizard.Desomnia.Network.Naming
 {
-    public class MulticastDNSUpdate : MulticastDNSQuery
+    public class DNSUpdate : DNSQuery
     {
-        internal MulticastDNSUpdate(EthernetPacket eth, Message message) : base(eth, message)
+        internal DNSUpdate(EthernetPacket eth, Message message) : base(eth, message)
         {
-            AuthorityRecords = message.AuthorityRecords;
-
             Response = new Message { Id = message.Id, QR = true, Opcode = MessageOperation.Update };
         }
 
         public EdnsOwnerOption? Owner => Options.OfType<EdnsOwnerOption>().FirstOrDefault();
         public EdnsLeaseOption? Lease => Options.OfType<EdnsLeaseOption>().FirstOrDefault();
-
-        public IReadOnlyList<ResourceRecord> AuthorityRecords { get; init; }
-
-        internal override DNSResponseType ShouldRespond()
-        {
-            if (Response.AdditionalRecords.Count > 0)
-            {
-                return DNSResponseType.Unicast;
-            }
-
-            return DNSResponseType.None;
-        }
 
         internal void GrantLease(TimeSpan duration)
         {

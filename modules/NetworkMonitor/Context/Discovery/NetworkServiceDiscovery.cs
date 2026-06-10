@@ -41,22 +41,22 @@ namespace MadWizard.Desomnia.Network.Context
 
     public partial class NetworkHostContext
     {
-        internal void CreateStaticServices(IEnumerable<ServiceInfo> services)
+        internal void CreateStaticWatchedServices(IEnumerable<WatchedServiceInfo> services)
         {
             foreach (var info in services)
             {
-                CreateService(info, new(ServiceFlags.Static));
+                CreateWatchedService(info, new(ServiceFlags.Static));
             }
         }
 
-        public NetworkHostServiceContext CreateService(ServiceInfo info, ServiceOptions options = default)
+        public NetworkServiceContext CreateWatchedService(WatchedServiceInfo info, ServiceOptions options = default)
         {
-            return CreateService<NetworkHostServiceContext>(
-                new TypedParameter(typeof(ServiceInfo), info), 
+            return CreateWatchedService<NetworkServiceContext>(
+                new TypedParameter(typeof(WatchedServiceInfo), info), 
                 new TypedParameter(typeof(ServiceOptions), options));
         }
 
-        public T CreateService<T>(params Parameter[] parameters) where T : NetworkHostServiceContext
+        public T CreateWatchedService<T>(params Parameter[] parameters) where T : NetworkServiceContext
         {
             var ctx = Scope.Resolve<T>(parameters);
 

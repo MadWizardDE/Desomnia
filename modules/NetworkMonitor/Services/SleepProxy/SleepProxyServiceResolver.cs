@@ -1,5 +1,5 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
-using MadWizard.Desomnia.Network.Naming.MDNS;
+using MadWizard.Desomnia.Network.Naming;
 using MadWizard.Desomnia.Network.Neighborhood.Services;
 using MadWizard.Desomnia.Network.Watch;
 using Makaretu.Dns;
@@ -13,7 +13,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
         public required NetworkMonitor Monitor { private get; init; }
 
-        void IMulticastDNSResolver.Resolve(MulticastDNSQuery query)
+        void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
             foreach (var question in query.Questions.Where(q => q.Type is (DnsType.PTR or DnsType.ANY)))
             {

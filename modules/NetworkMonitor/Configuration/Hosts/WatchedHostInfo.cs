@@ -72,9 +72,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         public NamedAction?         OnMagicPacket       { get; set; }
 
         // Services
-        public IList<ServiceInfo> Service { get; set; } = [];
-        public IList<HTTPServiceInfo> HTTPService { get; set; } = [];
-        public IEnumerable<ServiceInfo> Services => Service.Concat(HTTPService);
+        public IList<WatchedServiceInfo> Service { get; set; } = [];
+        public IList<WatchedHTTPServiceInfo> HTTPService { get; set; } = [];
+        public override IEnumerable<WatchedServiceInfo> Services => Service.Concat(HTTPService);
 
         // Filter-Rules
         public IList<HostFilterRuleInfo> HostFilterRule { get; set; } = [];

@@ -1,4 +1,4 @@
-using MadWizard.Desomnia.Network.Naming.MDNS;
+using MadWizard.Desomnia.Network.Naming;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
@@ -12,13 +12,13 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     /// the proxy service itself (<c>_sleep-proxy._udp.local</c>) and the services that watched hosts
     /// have asked us to advertise on their behalf while they are asleep / unreachable.
     /// </summary>
-    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : IMulticastDNSResolver
+    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : DNSService(service.Port), IMulticastDNSResolver
     {
         public required ILogger<SleepProxyResolver> Logger { private get; init; }
 
         public required SleepProxyRegistrar Registrar { private get; init; }
 
-        void IMulticastDNSResolver.Resolve(MulticastDNSQuery query)
+        void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
             foreach (var question in query.Questions.Where(q => q.Type is (DnsType.PTR or DnsType.ANY)))
             {
@@ -35,7 +35,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// Handles a Sleep Proxy registration: a DNS UPDATE whose OPT record carries an EDNS0 Owner option.
         /// The records to defend are in the UPDATE (authority) section; the wake info is in the Owner option.
         /// </summary>
-        void IMulticastDNSResolver.Update(MulticastDNSUpdate update)
+        protected override void ProcessUpdate(DNSUpdate update)
         {
             try
             {
@@ -45,22 +45,18 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                 // TODO Zone = ".local" prüfen
 
-                ValidateNames(update.AuthorityRecords, out string name, out string hostname);
+                ValidateNames(update.Request.AuthorityRecords, out string name, out string hostname);
 
-                var registration = new SleepProxyRegistration(owner, update.Lease)
-                {
-                    Name = name,
-                    Hostname = hostname,
-                };
+                var registration = new SleepProxyRegistration(name, hostname, owner, update.Lease);
 
                 // read IP addresses
-                foreach (var adr in update.AuthorityRecords.OfType<AddressRecord>())
+                foreach (var adr in update.Request.AuthorityRecords.OfType<AddressRecord>())
                     registration.IPAddresses[adr.Address] = new(IPAddressFlags.Static)
                     {
                         TTL = adr.TTL,
                     };
 
-                registration.Services.AddRange(ReadServices(update.AuthorityRecords));
+                registration.Services.AddRange(ReadServices(update.Request.AuthorityRecords));
 
                 var lease = Registrar.Register(registration);
 
@@ -113,9 +109,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy
                 throw new FormatException("Could not determine host name");
         }
 
-        IEnumerable<SleepProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
+        IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
         {
-            var services = records.OfType<PTRRecord>().Select(SleepProxyServiceInfo.ParsePTR).ToDictionary(info => info.ServiceName!);
+            var services = records.OfType<PTRRecord>().Select(ProxyServiceInfo.ParsePTR).ToDictionary(info => info.ServiceName!);
 
             foreach (var record in records)
             {

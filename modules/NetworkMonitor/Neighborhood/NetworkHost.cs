@@ -11,32 +11,18 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 {
     public class NetworkHost(string name)
     {
+        public required NetworkSegment Network { get; init; }
+
         public virtual string Name { get; init; } = name;
         public virtual string HostName { get => field ?? Name; set; } = null!;
 
         /// <summary>The mDNS name of this host, e.g. "desktop.local".</summary>
         public DomainName LocalDomainName => new(HostName, "local");
 
-        public required NetworkSegment Network { get; init; }
-
         public virtual PhysicalAddress? PhysicalAddress { get; set { field = value;  PhysicalAddressChanged?.Invoke(this, new(value!)); } }
 
+        #region IP addresses
         readonly ConcurrentDictionary<IPAddress, IPAddressOptions> _addresses = [];
-
-        public virtual IEnumerable<IPAddress> IPAddresses => _addresses.Keys;
-        public IEnumerable<IPAddress> IPv4Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork);
-        public IEnumerable<IPAddress> IPv6Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6);
-
-        public event EventHandler<AddressAddedEventArgs>? AddressAdded;
-        public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
-        public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
-
-        readonly ConcurrentDictionary<NetworkService, ServiceOptions> _services = [];
-
-        public virtual IEnumerable<NetworkService> Services => _services.Keys;
-
-        public event EventHandler<ServiceAddedEventArgs>? ServiceAdded;
-        public event EventHandler<ServiceRemovedEventArgs>? ServiceRemoved;
 
         public virtual IPAddressOptions this[IPAddress ip]
         {
@@ -50,20 +36,15 @@ namespace MadWizard.Desomnia.Network.Neighborhood
                 throw new KeyNotFoundException("IP = " + ip.ToString());
             }
         }
-        public virtual ServiceOptions   this[NetworkService service]
-        {
-            get
-            {
-                if (_services.TryGetValue(service, out var options))
-                {
-                    return options;
-                }
 
-                throw new KeyNotFoundException("NetworkService = " + service.ToString());
-            }
-        }
+        public virtual IEnumerable<IPAddress> IPAddresses => _addresses.Keys;
+        public IEnumerable<IPAddress> IPv4Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork);
+        public IEnumerable<IPAddress> IPv6Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6);
 
-        #region IP address management
+        public event EventHandler<AddressAddedEventArgs>? AddressAdded;
+        public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
+        public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;
+
         public virtual bool AddAddress(IPAddress ip, IPAddressOptions options = default)
         {
             ip.RemoveScopeId();
@@ -91,7 +72,6 @@ namespace MadWizard.Desomnia.Network.Neighborhood
                 return true;
             }
         }
-
         public bool ShouldAddressExpire(IPAddress ip, out DateTime expires)
         {
             expires = DateTime.MaxValue;
@@ -105,7 +85,6 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
-
         public bool HasAddress(PhysicalAddress? mac = null, IPAddress? ip = null, bool both = false)
         {
             if (mac != null || ip != null)
@@ -118,7 +97,6 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
-
         public virtual bool RemoveAddress(IPAddress ip, bool expired = false)
         {
             if (_addresses.Remove(ip, out _))
@@ -132,7 +110,28 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         }
         #endregion
 
-        #region Service management
+        #region Services
+        readonly ConcurrentDictionary<NetworkService, ServiceOptions> _services = [];
+
+        public virtual ServiceOptions this[NetworkService service]
+        {
+            get
+            {
+                if (_services.TryGetValue(service, out var options))
+                {
+                    return options;
+                }
+
+                throw new KeyNotFoundException("NetworkService = " + service.ToString());
+            }
+        }
+
+        public virtual IEnumerable<NetworkService> Services => _services.Keys;
+        public IEnumerable<TransportNetworkService> TransportServices => Services.OfType<TransportNetworkService>();
+
+        public event EventHandler<ServiceAddedEventArgs>? ServiceAdded;
+        public event EventHandler<ServiceRemovedEventArgs>? ServiceRemoved;
+
         public virtual void AddService(NetworkService service, ServiceOptions options = default)
         {
             if (service is TransportNetworkService tran)
@@ -146,7 +145,6 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             ServiceAdded?.Invoke(this, new(service, options.Expires));
         }
-
         public virtual bool RemoveService(NetworkService service, bool expired = false)
         {
             if (_services.Remove(service, out _))

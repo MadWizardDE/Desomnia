@@ -177,12 +177,12 @@ namespace MadWizard.Desomnia.Network
         #region NetworkMonitor events
         private void NetworkMonitor_Started(object? sender, NetworkMonitor monitor)
         {
-            Logger.LogDebug("Monitoring of '" + monitor.Name + "' has started");
+            Logger.LogDebug("Monitoring of '" + monitor.Name + "' has been started");
         }
 
         private void NetworkMonitor_Stopped(object? sender, NetworkMonitor monitor)
         {
-            Logger.LogDebug("Monitoring of '" + monitor.Name + "' has stopped");
+            Logger.LogDebug("Monitoring of '" + monitor.Name + "' has been stopped");
         }
         #endregion
 
