@@ -9,7 +9,9 @@ namespace Microsoft.Extensions.Configuration.Xml
     {
         internal readonly List<string> EnumAttributes = [];
         internal readonly Dictionary<string, AttributeMapping> BooleanAttributes = [];
-        internal readonly List<string> NamelessCollectionElements = [];
+        internal readonly Dictionary<string, CollectionNameBuilder> NamelessCollectionElements = [];
+
+        public delegate string CollectionNameBuilder(XElement element, uint nr);
 
         public ExtendedXmlConfigurationSource(string path, bool optional = false, bool reloadOnChange = false)
         {
@@ -35,9 +37,10 @@ namespace Microsoft.Extensions.Configuration.Xml
             return this;
         }
 
-        public ExtendedXmlConfigurationSource AddNamelessCollectionElement(string name)
+        public ExtendedXmlConfigurationSource AddNamelessCollectionElement(string name, CollectionNameBuilder? builder = null)
         {
-            NamelessCollectionElements.Add(name);
+            builder ??= (element, nr) => $"{element.Name.LocalName}#{nr}";
+            NamelessCollectionElements.Add(name, builder);
             return this;
         }
 
@@ -145,16 +148,16 @@ namespace Microsoft.Extensions.Configuration.Xml
             {
                 var elementName = child.Name.LocalName;
 
-                if (source.NamelessCollectionElements.Contains(elementName))
+                if (source.NamelessCollectionElements.ContainsKey(elementName))
                 {
                     if (child.Attribute(NAME_ATTRIBUTE_NAME) is null)
                     {
                         if (!(counters ??= []).ContainsKey(elementName))
                             counters[elementName] = 0;
 
-                        counters[elementName]++;
+                        var name = source.NamelessCollectionElements[elementName](element, ++counters[elementName]);
 
-                        child.Add(new XAttribute(NAME_ATTRIBUTE_NAME, $"{elementName}#{counters[elementName]}"));
+                        child.Add(new XAttribute(NAME_ATTRIBUTE_NAME, name));
                     }
                 }
             }

@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Network
         protected override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
         {
             source  .AddBooleanAttribute("must", new() { ["type"] = "Must" })
-                    .AddNamelessCollectionElement("NetworkMonitor")
+                    .AddNamelessCollectionElement("NetworkMonitor", (e, nr) => NetworkMonitorConfig.NAMLESS_PREFIX + nr)
                     .AddNamelessCollectionElement("SharedSecret")
                     .AddNamelessCollectionElement("ServiceFilterRule")
                     .AddNamelessCollectionElement("HostFilterRule")
@@ -32,6 +32,7 @@ namespace MadWizard.Desomnia.Network
                     .AddNamelessCollectionElement("RequestFilterRule")
                     .AddEnumAttribute("autoDetect")
                     .AddEnumAttribute("advertise")
+                    .AddEnumAttribute("handoff")
                     .AddEnumAttribute("protocol")
                     .AddEnumAttribute("wakeType");
         }

@@ -18,10 +18,12 @@ namespace MadWizard.Desomnia.Network.Configuration
     {
         const long DEFAULT_TIMEOUT_MS = 500;
 
+        internal const string NAMLESS_PREFIX = "NetworkMonitor#";
+
         // Network-Identification
         public required string  Name            { get; init; }
 
-        public string?          Label           { get => !Name.StartsWith("NetworkMonitor#") ? Name : null; }
+        public string?          Label           { get => !Name.StartsWith(NAMLESS_PREFIX) ? Name : null; }
 
         public string?          Interface       { get; set; }
         public IPNetwork?       Network         { get; set; }
