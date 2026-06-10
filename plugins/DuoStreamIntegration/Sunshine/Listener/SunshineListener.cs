@@ -86,15 +86,19 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Listener
                         break;
                     }
 
-                Logger.LogTrace("Stopped to listen for incoming connections.");
+                Logger.LogTrace("Stopped to listen for incoming connections on port {port}.", service.HTTP.Port);
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
             {
                 Logger.LogWarning("Could not listen for incoming connections on port {port}: Address already in use.", service.HTTP.Port);
             }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AccessDenied)
+            {
+                Logger.LogError("Could not listen for incoming connections on port {port}: Access denied.", service.HTTP.Port);
+            }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Unexpected error");
+                Logger.LogError(ex, "Could not listen for incoming connections on port {port}: Unknown error.", service.HTTP.Port);
             }
         }
 
@@ -132,11 +136,11 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Listener
                 {
                     Firewall.Rules.Remove(Rule);
 
-                    Logger.LogDebug("Removed automatically created Windows Firewall rule '{name}'.", name);
+                    Logger.LogDebug("Removed Windows Firewall rule '{name}'.", name);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Could not remove automatically created Windows Firewall rule '{name}'.", name);
+                    Logger.LogError(ex, "Could not remove Windows Firewall rule '{name}'.", name);
                 }
                 finally
                 {
