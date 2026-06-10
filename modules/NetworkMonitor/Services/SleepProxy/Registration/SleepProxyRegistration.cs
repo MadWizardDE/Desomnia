@@ -31,7 +31,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         public string                                   Name        { get; init; }
         public string                                   Hostname    { get; init; }
         public Dictionary<IPAddress, IPAddressOptions>  IPAddresses { get; init; } = [];
-        public List<ProxyServiceInfo>              Services    { get; init; } = [];
+        public List<ProxyServiceInfo>                   Services    { get; init; } = [];
 
         public SleepProxyRegistration(NetworkHost host)
         {
@@ -43,6 +43,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             if (host is VirtualNetworkHost virtualHost)
             {
                 TargetAddress = virtualHost.PhysicalHost.PhysicalAddress;
+            }
+
+            foreach (var ip in host.IPAddresses)
+            {
+                IPAddresses[ip] = host[ip];
             }
         }
 

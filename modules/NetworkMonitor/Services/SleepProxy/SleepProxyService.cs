@@ -7,6 +7,6 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     {
         public override string ServiceName => "sleep-proxy";
 
-        public SleepProxyMetrics Metrics { get; set; }
+        public required SleepProxyMetrics Metrics { get; set; }
     }
 }

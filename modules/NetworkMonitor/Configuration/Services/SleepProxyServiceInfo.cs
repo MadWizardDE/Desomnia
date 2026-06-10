@@ -18,7 +18,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         public override SleepProxyService Service => new(Port)
         {
             Name = Name,
-            ServiceName = ServiceName!
+            ServiceName = ServiceName!,
+
+            Metrics = Metrics
         };
     }
 }
