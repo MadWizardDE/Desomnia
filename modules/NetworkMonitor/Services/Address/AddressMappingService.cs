@@ -3,6 +3,7 @@ using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Watch;
+using MadWizard.Desomnia.Ressource.Events;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net;
@@ -58,35 +59,71 @@ namespace MadWizard.Desomnia.Network.Address
             {
                 Logger.LogDebug("Installing static mappings...");
 
+                Monitor.TrackingStarted += Monitor_TrackingStarted;
+                Monitor.TrackingStopped += Monitor_TrackingStopped;
+
                 foreach (var host in EligibleHosts)
                 {
-                    host.AddressAdded += Host_AddressAdded;
-                    host.PhysicalAddressChanged += Host_PhysicalAddressChanged;
-                    host.AddressRemoved += Host_AddressRemoved;
+                    InstallStaticMapping(host);
+                }
+            }
+        }
 
-                    foreach (var ip in host.IPAddresses)
+        private void Monitor_TrackingStarted(object? sender, InspectableEventArgs<NetworkHostWatch> args)
+        {
+            if (args.Inspectable is not LocalHostWatch watch)
+            {
+                InstallStaticMapping(args.Inspectable.Host);
+            }
+        }
+
+        void InstallStaticMapping(NetworkHost host)
+        {
+            host.AddressAdded += Host_AddressAdded;
+            host.PhysicalAddressChanged += Host_PhysicalAddressChanged;
+            host.AddressRemoved += Host_AddressRemoved;
+
+            foreach (var ip in host.IPAddresses)
+            {
+                if (host.PhysicalAddress is PhysicalAddress mac)
+                    if (Network.LocalRange.Contains(ip))
+                        addresses.Update(ip, mac);
+
+                // install static hosts mappings, for static IP addresses
+                if (host[ip].HasFlags(IPAddressFlags.Static) && !host.ShouldAddressExpire(ip, out var expires))
+                {
+                    if (!host.HostName.Any(char.IsWhiteSpace))
                     {
-                        if (host.PhysicalAddress is PhysicalAddress mac)
-                            if (Network.LocalRange.Contains(ip))
-                                addresses.Update(ip, mac);
-
-                        // install static hosts mappings, for static IP addresses
-                        if (host[ip].HasFlags(IPAddressFlags.Static) && !host.ShouldAddressExpire(ip, out var expires))
-                        {
-                            if (!host.HostName.Any(char.IsWhiteSpace))
-                            {
-                                hosts?.Insert(host.HostName, ip);
-                            }
-                        }
+                        hosts?.Insert(host.HostName, ip);
                     }
                 }
             }
         }
 
-        void INetworkService.ProcessPacket(EthernetPacket packet)
+        void UninstallStaticMapping(NetworkHost host)
         {
-            // LATER: maybe update static mappings based on received packets?
+            host.AddressAdded -= Host_AddressAdded;
+            host.PhysicalAddressChanged -= Host_PhysicalAddressChanged;
+            host.AddressRemoved -= Host_AddressRemoved;
+
+            foreach (var ip in host.IPAddresses)
+            {
+                if (host.PhysicalAddress is not null)
+                    if (Network.LocalRange.Contains(ip))
+                        addresses.Delete(ip);
+            }
+
+            hosts?.Delete(host.HostName);
         }
+
+        private void Monitor_TrackingStopped(object? sender, InspectableEventArgs<NetworkHostWatch> args)
+        {
+            if (args.Inspectable is not LocalHostWatch watch)
+            {
+                UninstallStaticMapping(args.Inspectable.Host);
+            }
+        }
+
 
         void INetworkService.Shutdown()
         {
@@ -96,18 +133,7 @@ namespace MadWizard.Desomnia.Network.Address
 
                 foreach (var host in EligibleHosts)
                 {
-                    host.AddressAdded -= Host_AddressAdded;
-                    host.PhysicalAddressChanged -= Host_PhysicalAddressChanged;
-                    host.AddressRemoved -= Host_AddressRemoved;
-
-                    foreach (var ip in host.IPAddresses)
-                    {
-                        if (host.PhysicalAddress is not null)
-                            if (Network.LocalRange.Contains(ip))
-                                addresses.Delete(ip);
-                    }
-
-                    hosts?.Delete(host.HostName);
+                    UninstallStaticMapping(host);
                 }
             }
         }
