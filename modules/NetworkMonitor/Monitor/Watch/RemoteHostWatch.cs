@@ -49,7 +49,7 @@ namespace MadWizard.Desomnia.Network.Watch
             Seen += RemoteHostWatch_Seen;
             Unseen += RemoteHostWatch_Unseen;
 
-            UnMagicPacket += async (@event) => await RequestHandoff();
+            UnMagicPacket += async (@event) => await ValidateHandoff();
 
             Suspended += async (@event) => HandleOffline(true);
             Stopped += async (@event) => HandleOffline(false);
@@ -67,7 +67,7 @@ namespace MadWizard.Desomnia.Network.Watch
             return false;
         }
 
-        internal async Task<bool> RequestHandoff()
+        internal async Task<bool> ValidateHandoff()
         {
             _pingTimer?.Stop();
 

@@ -92,15 +92,20 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: SleepProxyOptions
-        internal TimeSpan           SleepProxyMinLease  { get; set; } = TimeSpan.FromMinutes(30);
-        internal TimeSpan           SleepProxyMaxLease  { get; set; } = TimeSpan.FromDays(365);
+        internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
+        internal TimeSpan?          SleepProxyLeaseDefault  { get; set; } = null;
+        internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
+        internal bool               SleepProxyLeaseWake     { get; set; } = false;
+
         internal SleepProxyMetrics  SleepProxyMetrics   { get; set; } = SleepProxyMetrics.Best;
         internal ushort             SleepProxyPort      { get; set; } = MulticastDNSService.MulticastPort;
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {
-            MinLeaseDuration = SleepProxyMinLease,
-            MaxLeaseDuration = SleepProxyMaxLease
+            MinLeaseDuration = SleepProxyLeaseMin,
+            DefaultLeaseDuration = SleepProxyLeaseDefault,
+            MaxLeaseDuration = SleepProxyLeaseMax,
+            WakeOnLeaseEnd = SleepProxyLeaseWake,
         };
         #endregion
 

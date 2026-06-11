@@ -42,11 +42,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                 Logger.LogInformation("Received a sleep-proxy registration for {MAC}.", registration.PrimaryAddress);
 
-                var lease = Registrar.Register(registration);
+                if (Registrar.Register(registration) is SleepProxyLease lease)
+                {
+                    update.GrantLease(lease.Duration);
 
-                update.GrantLease(lease.Duration);
-
-                RespondTo(update);
+                    RespondTo(update);
+                }
             }
             catch (Exception ex)
             {

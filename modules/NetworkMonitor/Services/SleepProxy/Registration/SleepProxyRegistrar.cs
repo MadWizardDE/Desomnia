@@ -1,8 +1,10 @@
 ﻿using Autofac;
 using Autofac.Core;
+using Autofac.Features.OwnedInstances;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context;
+using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
@@ -16,63 +18,107 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         public required NetworkContext Context { private get; set; }
 
-        readonly ConcurrentDictionary<PhysicalAddress, SleepProxyLease> _activeLeases = [];
+        public required ReachabilityService Reachability { private get; set; }
 
-        public SleepProxyLease Register(SleepProxyRegistration reg)
+        public required Func<TimeSpan, byte, Owned<SleepProxyLease>> CreateLease { private get; init; }
+
+        readonly ConcurrentDictionary<PhysicalAddress, Owned<SleepProxyLease>> _activeLeases = [];
+
+        public SleepProxyLease? Register(SleepProxyRegistration reg)
         {
-            if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var lease))
+            var duration = options.DetermineLeaseDuration(reg.RequestedLease);
+
+            SleepProxyLease lease;
+            if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var owned))
             {
-                lease = new SleepProxyLease
-                {
-                    Sequence = reg.Sequence,
-                    Duration = options.DetermineLeaseDuration(reg.RequestedLease)
-                };
+                lease = (owned = CreateLease(duration, reg.Sequence)).Value;
             }
-            else if (lease.Sequence >= reg.Sequence)
+            else if ((lease = owned.Value).Sequence < reg.Sequence)
             {
+                // TODO check registration?
+
+                lease.GrantedUntil = DateTime.Now + duration;
+
                 return lease;
             }
             else
             {
-                // TODO update lease time?
+                return null; // we already processed this registration
             }
 
-            if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
+            try
             {
-                ctxHost = CreateHost(reg);
-
-                lease.AddInstanceForDisposal(ctxHost);
-            }
-
-            if (ctxHost.Watch is not RemoteHostWatch remote)
-                throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
-
-            if (ctxHost.Auto.HasFlag(AutoDiscoveryType.Service))
-            {
-                foreach (var serviceInfo in reg.Services)
+                if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
                 {
-                    if (ctxHost.FindServiceContextBy(serviceInfo.IPPort) is NetworkServiceContext ctxService)
-                        throw new NotSupportedException($"Already watching service at {serviceInfo.IPPort} for {ctxHost.Host.Name}.");
+                    ctxHost = CreateHost(reg);
 
-                    ctxService = ctxHost.CreateWatchedService(serviceInfo);
-
-                    lease.AddInstanceForDisposal(ctxService);
+                    lease.AddInstanceForDisposal(ctxHost);
                 }
-            }
-            else if (reg.Services.Count > 0)
-            {
-                throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
-            }
 
-            foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
-            {
-                if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
+                if (ctxHost.Watch is not RemoteHostWatch remote)
+                    throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
+
+                if (ctxHost.Auto.HasFlag(AutoDiscoveryType.Service))
                 {
-                    Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
+                    foreach (var serviceInfo in reg.Services)
+                    {
+                        if (ctxHost.FindServiceContextBy(serviceInfo.IPPort) is NetworkServiceContext ctxService)
+                            throw new NotSupportedException($"Already watching service at {serviceInfo.IPPort} for {ctxHost.Host.Name}.");
+
+                        ctxService = ctxHost.CreateWatchedService(serviceInfo);
+
+                        lease.AddInstanceForDisposal(ctxService);
+                    }
                 }
+                else if (reg.Services.Count > 0)
+                {
+                    throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
+                }
+
+                foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
+                {
+                    if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
+                    {
+                        Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
+                    }
+                }
+
+                lease.Ended += async (sender, args) =>
+                {
+                    if (_activeLeases.Remove(remote.Host.PhysicalAddress!, out var owned))
+                    {
+                        using var scope = Logger.BeginHostScope(remote.Host);
+
+                        if (options.WakeOnLeaseEnd && !await Reachability.Test(remote))
+                        {
+                            Logger.LogWarning("Lease for '{Host}' ended, but it's not reachable; trying to wake host...", remote.Host.Name);
+
+                            try
+                            {
+                                await remote.WakeUp();
+                            }
+                            catch (HostTimeoutException ex)
+                            {
+                                Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
+                                    remote.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
+                            }
+                        }
+
+                        using (await Context.Network.Mutex.LockAsync())
+                        {
+                            owned.Dispose();
+                        }
+                    }
+                };
+
+                lease.Validate(remote);
+            }
+            catch (Exception)
+            {
+                owned.Dispose(); throw;
             }
 
-            _activeLeases[reg.PrimaryAddress] = lease;
+            _activeLeases[reg.PrimaryAddress] = owned;
 
             return lease;
         }

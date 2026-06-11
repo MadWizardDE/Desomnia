@@ -193,6 +193,10 @@ namespace MadWizard.Desomnia.Network.Context
 
                         RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
 
+                        builder.RegisterType<SleepProxyLease>()
+                            .InstancePerDependency()
+                            .AsSelf();
+
                         builder.RegisterType<SleepProxyRegistrar>()
                             .WithParameter(TypedParameter.From(config.AutoDetect))
                             .WithParameter(TypedParameter.From(config.MakeSleepProxyOptions()))

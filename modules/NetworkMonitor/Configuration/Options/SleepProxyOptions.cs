@@ -2,8 +2,11 @@
 {
     public readonly struct SleepProxyOptions
     {
-        public TimeSpan MinLeaseDuration { get; init; }
-        public TimeSpan MaxLeaseDuration { get; init; }
+        public TimeSpan     MinLeaseDuration        { get; init; }
+        public TimeSpan?    DefaultLeaseDuration    { get; init; }
+        public TimeSpan     MaxLeaseDuration        { get; init; }
+
+        public bool         WakeOnLeaseEnd          { get; init; }
 
         public TimeSpan DetermineLeaseDuration(TimeSpan? requestedDuration, TimeSpan? defaultDuration = null)
         {
@@ -14,7 +17,7 @@
             else if (requestedDuration is TimeSpan duration)
                 return duration;
 
-            return defaultDuration ?? MaxLeaseDuration;
+            return defaultDuration ?? DefaultLeaseDuration ?? MaxLeaseDuration;
         }
     }
 }
