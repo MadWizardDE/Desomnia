@@ -27,6 +27,7 @@
     {
         None = 0,
 
-        Static = 1 << 0,
+        Static      = 1 << 0,
+        Ephemeral   = 1 << 1
     }
 }

@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             // read IP addresses
             foreach (var adr in message.AuthorityRecords.OfType<AddressRecord>())
-                reg.IPAddresses[adr.Address] = new(IPAddressFlags.Static)
+                reg.IPAddresses[adr.Address] = new(IPAddressFlags.Static | IPAddressFlags.Ephemeral)
                 {
                     TTL = adr.TTL,
                 };
