@@ -170,6 +170,8 @@ namespace MadWizard.Desomnia.Network.Context
                     args.Instance.ForceUnicast = config.AdvertiseUnicast;
                 });
 
+                RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
+
                 if (config.WatchMode == WatchMode.Promiscuous)
                 {
                     builder.RegisterType<PromiscuousModeMutex>()
@@ -177,7 +179,6 @@ namespace MadWizard.Desomnia.Network.Context
                         .AsImplementedInterfaces()
                         .InstancePerNetwork()
                         .AsSelf();
-
 
                     builder.RegisterType<HostnameResolver>()
                         .AsImplementedInterfaces()
@@ -189,6 +190,8 @@ namespace MadWizard.Desomnia.Network.Context
                         {
                             Metrics = Config.SleepProxyMetrics
                         };
+
+                        RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
 
                         builder.RegisterType<SleepProxyRegistrar>()
                             .WithParameter(TypedParameter.From(config.MakeSleepProxyOptions()))
@@ -205,8 +208,6 @@ namespace MadWizard.Desomnia.Network.Context
                             .AsImplementedInterfaces()
                             .SingleInstance();
                     }
-
-                    RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
                 }
 
                 if (config.AllowWakeOnLAN is WakeOnLANMode allow)
