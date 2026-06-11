@@ -26,7 +26,36 @@ namespace MadWizard.Desomnia.Network.Watch
         {
             (VM = vm).StateChanged += VM_StateChanged;
 
+            Started += async (@event) => HandleStarted();
             Suspended += async (@event) => HandleSuspended();
+        }
+
+        protected internal override async Task ReclaimWatch()
+        {
+            if (!IsOnline && Host.IPAddresses.Where(AdvertiseOptions.ShouldAdvertiseOnLocalHostResume) is var ips && ips.Any())
+            {
+                Logger.LogDebug($"Resuming operation, taking ownership of watched IP addresses...");
+
+                foreach (var ip in ips)
+                {
+                    try
+                    {
+                        if (await RequestIPUnicastTrafficTo(ip) is PhysicalAddress mac)
+                        {
+                            AddressMapping.Advertise(new(ip, mac));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Could not reclaim IP for '{Host}'.", Host.Name);
+                    }
+                }
+            }
+
+            if (AdvertiseOptions.Type != AdvertiseType.Never)
+            {
+                await base.ReclaimWatch();
+            }
         }
 
         protected override Task TriggerEventAsync(Event @event)
@@ -64,13 +93,21 @@ namespace MadWizard.Desomnia.Network.Watch
             }
         }
 
+        private async void HandleStarted()
+        {
+            if (VM.State == VirtualMachineState.Running)
+            {
+                await ReclaimWatch();
+            }
+        }
+
         private async void HandleSuspended()
         {
             if (AdvertiseOptions.Type == AdvertiseType.Never)
             {
                 try
                 {
-                    await MaybeHandoffWatch();
+                    await HandoffWatch();
                 }
                 catch (Exception ex)
                 {

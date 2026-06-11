@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
+﻿using MadWizard.Desomnia.Network.Address;
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Services;
@@ -16,11 +17,14 @@ namespace MadWizard.Desomnia.Network.Watch
 {
     public class LocalHostWatch : HostDemandWatch
     {
+        private bool _handoffDone = false;
         private byte _handoffSleepProxyCount = 0;
 
         public override bool IsOnline => true; // the local proxy is always available
 
         public required NetworkSegment Network { private get; init; }
+
+        public required AddressMappingService AddressMapping { protected get; init; }
 
         protected override bool ShouldStartRequest(EthernetPacket packet)
         {
@@ -32,38 +36,34 @@ namespace MadWizard.Desomnia.Network.Watch
             return false;
         }
 
-        internal protected virtual async Task MaybeHandoffWatch()
+        internal protected virtual async Task HandoffWatch()
         {
-            if (HandoffOptions.Type != HandoffType.None)
+            if (HandoffOptions.Type != HandoffType.None && _handoffDone == false)
             {
-                try
+                if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
                 {
-                    if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
+                    if (SelectSleepProxy(out var proxy, out var service))
                     {
-                        if (SelectSleepProxy(out var proxy, out var service))
-                        {
-                            var reg = CreateSleepProxyRegistration(_handoffSleepProxyCount);
+                        var reg = CreateSleepProxyRegistration(_handoffSleepProxyCount);
 
-                            await RegisterWithSleepProxy(proxy, service, reg);
+                        await RegisterWithSleepProxy(proxy, service, reg);
 
-                            _handoffSleepProxyCount++;
-                        }
-                    }
-
-                    if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
-                    {
-                        SendUnMagicPacket(Host);
+                        _handoffSleepProxyCount++;
                     }
                 }
-                catch (Exception ex)
+
+                if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
                 {
-                    if (!HandoffOptions.IsRequired)
-                    {
-                        Logger.LogError(ex, "Could not handoff watch for '{Host}'.", Host.Name);
-                    }
-                    else throw;
+                    SendUnMagicPacket(Host);
                 }
+
+                _handoffDone = true;
             }
+        }
+
+        internal protected virtual async Task ReclaimWatch()
+        {
+            _handoffDone = false;
         }
 
         #region SleepProxy
