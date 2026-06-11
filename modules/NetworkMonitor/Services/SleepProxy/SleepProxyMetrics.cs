@@ -3,8 +3,6 @@ using System.ComponentModel;
 
 namespace MadWizard.Desomnia.Network.SleepProxy
 {
-
-
     /// <summary>
     /// The four-part ranking metric a Sleep Proxy advertises at the start of its DNS-SD instance label
     /// ("AA-BB-CC-DD", from Apple's mDNSResponder). Clients prefer the proxy with the <em>lowest</em>
