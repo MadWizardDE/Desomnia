@@ -3,6 +3,7 @@ using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context;
+using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using System.Net.NetworkInformation;
 
@@ -30,6 +31,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 lease.AddInstanceForDisposal(ctxHost);
             }
 
+            if (ctxHost.Watch is not RemoteHostWatch remote)
+                throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
+
             foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
             {
                 ctxHost.Host.AddAddress(adr.Key, adr.Value); // TODO was passiert mit den Addressen, wenn der Host aufwacht?
@@ -56,7 +60,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 Logger.LogWarning("Host {Host} is not configured to discover services.", ctxHost.Host.Name);
             }
 
-            _activeLeases.Add(lease);
+            //_activeLeases.Add(lease);
 
             return lease;
         }

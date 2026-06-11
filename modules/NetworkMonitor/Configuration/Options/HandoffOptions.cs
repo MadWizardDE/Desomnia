@@ -1,4 +1,7 @@
-﻿namespace MadWizard.Desomnia.Network.Configuration.Options
+﻿using MadWizard.Desomnia.Network.Neighborhood.Options;
+using System.Net.Sockets;
+
+namespace MadWizard.Desomnia.Network.Configuration.Options
 {
     public readonly struct HandoffOptions
     {
@@ -10,6 +13,16 @@
         public readonly byte[]?     Password        { get; init; } // TODO implement in config
 
         public bool IsRequired => Type.HasFlag(HandoffType.Required);
+
+        public static implicit operator IPAddressSelectionOptions(HandoffOptions options)
+        {
+            if (options.Type.HasFlag(HandoffType.IPv4) && !options.Type.HasFlag(HandoffType.IPv6))
+                return new(AddressFamily.InterNetwork);
+            if (options.Type.HasFlag(HandoffType.IPv6) && !options.Type.HasFlag(HandoffType.IPv4))
+                return new(AddressFamily.InterNetworkV6);
+
+            return new();
+        }
     }
 
     [Flags]
@@ -21,5 +34,10 @@
         UnMagicPacket   = 1 << 2,
 
         Required        = 1 << 10,
+
+        // IP protocol preference
+
+        IPv4            = 1 << 15,
+        IPv6            = 1 << 16,
     }
 }

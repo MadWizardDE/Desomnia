@@ -65,6 +65,30 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             RequestedLease = lease?.Duration;
         }
+
+        internal IEnumerable<EdnsOption> Options
+        {
+            get
+            {
+                yield return new EdnsOwnerOption
+                {
+                    Version = Version,
+                    Sequence = Sequence,
+                    PrimaryMac = PrimaryAddress,
+                    WakeupMac = TargetAddress,
+                    Password = Password,
+                };
+
+                if (RequestedLease is TimeSpan lease)
+                {
+                    yield return new EdnsLeaseOption { Duration = lease };
+                }
+            }
+        }
+
+        public static explicit operator SleepProxyRegistration(Message message) => SleepProxyRegistrationFormat.ParseUpdateMessage(message);
+        public static explicit operator Message(SleepProxyRegistration reg)     => SleepProxyRegistrationFormat.BuildUpdateMessage(reg);
+
     }
 
     public class ProxyServiceInfo : WatchedServiceInfo

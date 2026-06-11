@@ -160,6 +160,16 @@ namespace MadWizard.Desomnia.Network.Context
                         .InstancePerNetwork();
                 }
 
+                var mdns = builder.RegisterType<MulticastDNSService>()
+                    .AsImplementedInterfaces()
+                    .SingleInstance()
+                    .AsSelf();
+
+                mdns.OnActivated(args =>
+                {
+                    args.Instance.ForceUnicast = config.AdvertiseUnicast;
+                });
+
                 if (config.WatchMode == WatchMode.Promiscuous)
                 {
                     builder.RegisterType<PromiscuousModeMutex>()
@@ -168,15 +178,6 @@ namespace MadWizard.Desomnia.Network.Context
                         .InstancePerNetwork()
                         .AsSelf();
 
-                    var mdns = builder.RegisterType<MulticastDNSService>()
-                        .AsImplementedInterfaces()
-                        .SingleInstance()
-                        .AsSelf();
-
-                    mdns.OnActivated(args =>
-                    {
-                         args.Instance.ForceUnicast = config.AdvertiseUnicast;
-                    });
 
                     builder.RegisterType<HostnameResolver>()
                         .AsImplementedInterfaces()

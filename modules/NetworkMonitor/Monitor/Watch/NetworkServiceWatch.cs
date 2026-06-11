@@ -11,7 +11,6 @@ namespace MadWizard.Desomnia.Network.Watch
         public NetworkService Service => service;
 
         public AdvertiseOptions     AdvertiseOptions    { get; init; }
-        public HandoffOptions       HandoffOptions      { get; init; }
         public KnockOptions?        KnockOptions        { get; init; }
 
         public bool CanTriggerDemand(EthernetPacket trigger)

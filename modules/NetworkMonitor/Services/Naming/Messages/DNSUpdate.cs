@@ -11,14 +11,27 @@ namespace MadWizard.Desomnia.Network.Naming
             Response = new Message { Id = message.Id, QR = true, Opcode = MessageOperation.Update };
         }
 
-        public EdnsOwnerOption? Owner => Options.OfType<EdnsOwnerOption>().FirstOrDefault();
-        public EdnsLeaseOption? Lease => Options.OfType<EdnsLeaseOption>().FirstOrDefault();
-
         internal void GrantLease(TimeSpan duration)
         {
             var opt = new OPTRecord();
             opt.Options.Add(new EdnsLeaseOption { Duration = duration });
             Response.AdditionalRecords.Add(opt);
+        }
+
+        internal void AnswerWithError(Exception cause)
+        {
+            Response.AdditionalRecords.Clear();
+
+            switch (cause)
+            {
+                case FormatException:
+                    Response.Status = MessageStatus.FormatError;
+                    break;
+
+                default:
+                    Response.Status = MessageStatus.ServerFailure;
+                    break;
+            }
         }
     }
 }

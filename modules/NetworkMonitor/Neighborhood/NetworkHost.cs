@@ -41,6 +41,8 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public IEnumerable<IPAddress> IPv4Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetwork);
         public IEnumerable<IPAddress> IPv6Addresses => IPAddresses.Where(ip => ip.AddressFamily == AddressFamily.InterNetworkV6);
 
+        public IEnumerable<IPAddress> SelectIPAddressesBy(IPAddressSelectionOptions options = default) => options.Select(IPAddresses);
+
         public event EventHandler<AddressAddedEventArgs>? AddressAdded;
         public event EventHandler<AddressRemovedEventArgs>? AddressRemoved;
         public event EventHandler<PhysicalAddressEventArgs>? PhysicalAddressChanged;

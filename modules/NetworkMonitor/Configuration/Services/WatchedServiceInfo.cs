@@ -78,25 +78,6 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         }
         #endregion
 
-        #region                 HandoffOptions
-        internal HandoffType?   Handoff             { get; set; }
-        internal TimeSpan?      HandoffTimeout      { get; set; }
-
-        public virtual HandoffOptions MakeHandoffOptions()
-        {
-            if (Handoff != null)
-            {
-                return new() // wird von network -> host -> service übertragen
-                {
-                    Type = Handoff ?? throw new NullReferenceException("Handoff"),
-                    Timeout = HandoffTimeout ?? throw new NullReferenceException("HandoffTimeout"),
-                };
-            }
-
-            return default;
-        }
-        #endregion
-
         // Events
         public NamedAction? OnDemand { get; set; }
         public DelayedAction? OnIdle { get; set; }

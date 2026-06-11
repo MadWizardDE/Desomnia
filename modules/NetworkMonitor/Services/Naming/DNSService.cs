@@ -13,7 +13,7 @@ namespace MadWizard.Desomnia.Network.Naming
 
         public required NetworkDevice Device { private get; init; }
 
-        async void INetworkService.ProcessPacket(EthernetPacket packet)
+        void INetworkService.ProcessPacket(EthernetPacket packet)
         {
             if (!TryReadMessage(packet, out Message? message))
                 return;

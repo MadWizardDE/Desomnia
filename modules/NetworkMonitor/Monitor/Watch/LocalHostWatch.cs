@@ -1,16 +1,23 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
+using MadWizard.Desomnia.Network.Neighborhood.Services;
 using MadWizard.Desomnia.Network.SleepProxy;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
+using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Watch
 {
     public class LocalHostWatch : HostDemandWatch
     {
+        private byte _handoffSleepProxyCount = 0;
+
         public override bool IsOnline => true; // the local proxy is always available
 
         public required NetworkSegment Network { private get; init; }
@@ -35,9 +42,11 @@ namespace MadWizard.Desomnia.Network.Watch
                     {
                         if (SelectSleepProxy(out var proxy, out var service))
                         {
-                            var registration = CreateSleepProxyRegistration();
+                            var reg = CreateSleepProxyRegistration(_handoffSleepProxyCount);
 
-                            RegisterWithSleepProxy(proxy, service, registration);
+                            await RegisterWithSleepProxy(proxy, service, reg);
+
+                            _handoffSleepProxyCount++;
                         }
                     }
 
@@ -83,24 +92,112 @@ namespace MadWizard.Desomnia.Network.Watch
             return false;
         }
 
-        private SleepProxyRegistration CreateSleepProxyRegistration()
+        private SleepProxyRegistration CreateSleepProxyRegistration(byte sequence = 1)
         {
             var reg = new SleepProxyRegistration(Host)
             {
-                Sequence = 1, // TODO analyze and implement
+                Sequence = sequence,
 
                 RequestedLease = HandoffOptions.LeaseDuration,
                 Password = HandoffOptions.Password,
             };
 
-            // TODO: add IPs and services
+            foreach (var watch in this)
+            {
+                if (watch.Service is not TransportNetworkService service)
+                    continue;
+
+                reg.Services.Add(new ProxyServiceInfo
+                {
+                    Name        = service.Name,
+                    ServiceName = service.ServiceName,
+
+                    Protocol    = service.Port.Protocol,
+                    Port        = service.Port,
+
+                    AdvertiseHostTTL    = watch.AdvertiseOptions.HostTTL,
+                    AdvertiseServiceTTL = watch.AdvertiseOptions.ServiceTTL,
+                });
+            }
 
             return reg;
         }
 
-        private void RegisterWithSleepProxy(NetworkHost host, SleepProxyService service, SleepProxyRegistration reg)
+        private async Task RegisterWithSleepProxy(NetworkHost proxy, SleepProxyService service, SleepProxyRegistration reg)
         {
+            if (!proxy.IPAddresses.Any())
+                throw new NotSupportedException($"Sleep proxy '{proxy.Name}' has no IP address.");
 
+            Message dnsRequest = (Message)reg;
+
+            try
+            {
+                using var cancel = new CancellationTokenSource(HandoffOptions.Timeout);
+
+                byte[] payload = dnsRequest.ToByteArray();
+
+                // Send the identical registration to every known address of the proxy and race them: a single
+                // address can fail fast (e.g. no route to an IPv6), so we take the first *successful* response.
+                var attempts = proxy.SelectIPAddressesBy(HandoffOptions).Select(async ip =>
+                {
+                    var endpoint = new IPEndPoint(ip, service.Port);
+
+                    using var client = new UdpClient(ip.AddressFamily);
+
+                    Logger.LogTrace("Try to register '{Host}' with sleep proxy '{Proxy}' at {Endpoint}.", Host.Name, proxy.Name, endpoint);
+
+                    await client.SendAsync(payload, endpoint, cancel.Token);
+
+                    return await client.ReceiveAsync(cancel.Token);
+                });
+
+                var response = await FirstSuccessful(attempts);
+
+                cancel.Cancel(); // a winner is in: stop and dispose the still-pending attempts
+
+                Logger.LogTrace("Received response from sleep proxy '{Proxy}' at {Endpoint}.", proxy.Name, response.RemoteEndPoint);
+
+                var dnsResponse = (Message)new Message().Read(response.Buffer);
+
+                if (dnsResponse.Id != dnsRequest.Id)
+                    throw new FormatException($"Sleep proxy '{proxy.Name}' replied with a mismatched message id.");
+                if (dnsResponse.Status != MessageStatus.NoError)
+                    throw new InvalidOperationException($"Sleep proxy '{proxy.Name}' rejected the registration: {dnsResponse.Status}.");
+
+                TimeSpan? lease = dnsResponse.Options.OfType<EdnsLeaseOption>().FirstOrDefault()?.Duration;
+
+                Logger.LogInformation("Registered '{Host}' with sleep proxy '{Proxy}'; granted lease = {Lease}.", Host.Name, proxy.Name, lease);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new TimeoutException($"Sleep proxy '{proxy.Name}' did not respond within {HandoffOptions.Timeout}.");
+            }
+        }
+
+        /// <summary>
+        /// Awaits the first task to complete <em>successfully</em>, skipping attempts that fail fast (e.g. a UDP
+        /// send to an unreachable address). Throws the first failure only once every attempt has failed.
+        /// </summary>
+        private static async Task<UdpReceiveResult> FirstSuccessful(IEnumerable<Task<UdpReceiveResult>> attempts)
+        {
+            var pending = attempts.ToList();
+
+            List<Exception> failures = [];
+
+            while (pending.Count > 0)
+            {
+                var completed = await Task.WhenAny(pending);
+
+                pending.Remove(completed);
+
+                if (completed.IsCompletedSuccessfully)
+                    return completed.Result;
+
+                if (completed.Exception?.InnerException is Exception failure) // also observes the fault
+                    failures.Add(failure);
+            }
+
+            throw failures.FirstOrDefault() ?? new OperationCanceledException();
         }
         #endregion
 

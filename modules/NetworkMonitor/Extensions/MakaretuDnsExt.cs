@@ -18,6 +18,11 @@ namespace Makaretu.Dns
         /// <summary>The top bit of the CLASS field (QU on questions, cache-flush on records).</summary>
         private const ushort MulticastFlag = 0x8000;
 
+        extension(Message message)
+        {
+            public IEnumerable<EdnsOption> Options => message.AdditionalRecords.OfType<OPTRecord>().SelectMany(opt => opt.Options);
+        }
+
         extension(Question question)
         {
             /// <summary>
@@ -44,10 +49,11 @@ namespace Makaretu.Dns
         extension(PTRRecord ptr)
         {
             public string ServiceName => ptr.Name.Labels[0].Replace("_", "");
-            public string InstanceName => ptr.DomainName.Labels[0];
-            public string ProtocolName => ptr.DomainName.Labels[1].Replace("_", "");
+            public string ProtocolName => ptr.Name.Labels[1].Replace("_", "");
 
             public IPProtocol Protocol => ToProtocol(ptr.ProtocolName);
+
+            public string InstanceName => ptr.DomainName.Labels[0];
         }
 
         extension(SRVRecord srv)
