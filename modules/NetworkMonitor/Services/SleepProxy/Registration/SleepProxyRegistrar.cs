@@ -39,9 +39,6 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
             {
-                if (!auto.HasFlag(AutoDiscoveryType.Host))
-                    throw new NotSupportedException("Registration of unknown hosts is not configured.");
-
                 ctxHost = CreateHost(reg);
 
                 lease.AddInstanceForDisposal(ctxHost);
@@ -69,7 +66,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
             {
-                ctxHost.Host.AddAddress(adr.Key, adr.Value); // TODO was passiert mit den Addressen, wenn der Host aufwacht?
+                if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
+                {
+                    Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
+                }
             }
 
             _activeLeases[reg.PrimaryAddress] = lease;
@@ -95,6 +95,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
             else
             {
+                if (!auto.HasFlag(AutoDiscoveryType.Host))
+                    throw new NotSupportedException("Registration of unknown hosts is not configured.");
+
                 hostInfo = new RemotePhysicalHostInfo() { Name = reg.Name };
             }
 
