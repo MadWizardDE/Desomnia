@@ -91,13 +91,16 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
     }
 
-    public class ProxyServiceInfo : WatchedServiceInfo
+    public class ProxyServiceInfo : WatchedServiceInfo, IIEnumerable<KeyValuePair<string, string>>
     {
         // TODO wie mappen wir das?
         public ushort Priority  { get; set; }
         public ushort Weight    { get; set; }
 
-        public List<string> TextRecords { get; init; } = [];
+        private static string DeriveName(string serviceName)
+        {
+            return serviceName; // TODO dedizierte Namensableitung?
+        }
 
         internal static ProxyServiceInfo ParsePTR(PTRRecord ptr)
         {
@@ -114,9 +117,22 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             };
         }
 
-        private static string DeriveName(string serviceName)
+        internal void ParseTXT(TXTRecord txt)
         {
-            return serviceName; // TODO dedizierte Namensableitung?
+            foreach (var pair in txt.KeyValuePairs)
+            {
+                switch (pair.Key.ToLower())
+                {
+                    case "name":
+                        Name = pair.Value;
+                        break;
+                }
+            }
+        }
+
+        public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+        {
+            yield return new("name", Name);
         }
     }
 }

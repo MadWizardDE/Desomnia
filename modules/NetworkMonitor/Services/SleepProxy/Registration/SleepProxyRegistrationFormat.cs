@@ -97,7 +97,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                             break;
 
                         case TXTRecord txt when services[txt.ServiceName] is var service:
-                            service.TextRecords.AddRange(txt.Strings);
+                            service.ParseTXT(txt);
                             break;
                     }
                 }
@@ -159,7 +159,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 message.AuthorityRecords.Add(new TXTRecord
                 {
                     Name = instance,
-                    Strings = info.TextRecords.Count > 0 ? info.TextRecords : [string.Empty],
+                    Strings = [.. info.Select(entry => $"{entry.Key}={entry.Value}")],
                     TTL = info.AdvertiseHostTTL ?? HostRecordTTL,
                 });
             }

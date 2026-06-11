@@ -76,6 +76,22 @@ namespace Makaretu.Dns
         {
             public string ServiceName => txt.Name.Labels[1].Replace("_", "");
             public string InstanceName => txt.Name.Labels[0];
+
+            public IEnumerable<KeyValuePair<string, string>> KeyValuePairs
+            {
+                get
+                {
+                    foreach (var str in txt.Strings)
+                    {
+                        if (str.Contains('='))
+                        {
+                            var split = str.Split('=');
+
+                            yield return new(split[0].Trim(), split[1].Trim());
+                        }
+                    }
+                }
+            }
         }
     }
 }
