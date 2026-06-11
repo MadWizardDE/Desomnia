@@ -77,9 +77,24 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 throw new FormatException("Could not determine host name");
         }
 
+        internal static ProxyServiceInfo ParsePTR(PTRRecord ptr)
+        {
+            string serviceName = ptr.ServiceName;
+
+            return new()
+            {
+                Name = serviceName, // TODO: Derive better service name?
+                ServiceName = serviceName,
+
+                Protocol = ptr.Protocol,
+
+                AdvertiseServiceTTL = ptr.TTL
+            };
+        }
+
         static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
         {
-            var services = records.OfType<PTRRecord>().Select(ProxyServiceInfo.ParsePTR).ToDictionary(info => info.ServiceName!);
+            var services = records.OfType<PTRRecord>().Select(ParsePTR).ToDictionary(info => info.ServiceName!);
 
             try
             {
@@ -97,7 +112,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                             break;
 
                         case TXTRecord txt when services[txt.ServiceName] is var service:
-                            service.ParseTXT(txt);
+                            foreach (var pair in txt.KeyValuePairs)
+                            {
+                                switch (pair.Key.ToLower())
+                                {
+                                    case "name":
+                                        service.Name = pair.Value;
+                                        break;
+                                }
+                            }
                             break;
                     }
                 }
@@ -159,7 +182,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 message.AuthorityRecords.Add(new TXTRecord
                 {
                     Name = instance,
-                    Strings = [.. info.Select(entry => $"{entry.Key}={entry.Value}")],
+                    Strings = [.. ExtractServiceProperties(info).Select(entry => $"{entry.Key}={entry.Value}")],
                     TTL = info.AdvertiseHostTTL ?? HostRecordTTL,
                 });
             }
@@ -171,6 +194,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             });
 
             return message;
+        }
+
+        public static IEnumerable<KeyValuePair<string, string>> ExtractServiceProperties(ProxyServiceInfo service)
+        {
+            yield return new("name", service.Name);
         }
         #endregion
     }
