@@ -6,6 +6,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
     {
         readonly IList<IDisposable> _disposables = [];
 
+        public required byte Sequence { get; init; }
+
         public required TimeSpan Duration { get; init; }
 
         public void AddInstanceForDisposal(IDisposable disposable) => _disposables.Add(disposable);

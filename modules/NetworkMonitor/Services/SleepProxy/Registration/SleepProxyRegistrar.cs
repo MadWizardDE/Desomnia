@@ -5,27 +5,43 @@ using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
-    internal class SleepProxyRegistrar(SleepProxyOptions options)
+    internal class SleepProxyRegistrar(AutoDiscoveryType auto, SleepProxyOptions options)
     {
         public required ILogger<SleepProxyRegistrar> Logger { private get; init; }
 
         public required NetworkContext Context { private get; set; }
 
-        readonly HashSet<SleepProxyLease> _activeLeases = [];
+        readonly ConcurrentDictionary<PhysicalAddress, SleepProxyLease> _activeLeases = [];
 
         public SleepProxyLease Register(SleepProxyRegistration reg)
         {
-            var lease = new SleepProxyLease
+            if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var lease))
             {
-                Duration = options.DetermineLeaseDuration(reg.RequestedLease)
-            };
+                lease = new SleepProxyLease
+                {
+                    Sequence = reg.Sequence,
+                    Duration = options.DetermineLeaseDuration(reg.RequestedLease)
+                };
+            }
+            else if (lease.Sequence >= reg.Sequence)
+            {
+                return lease;
+            }
+            else
+            {
+                // TODO update lease time?
+            }
 
             if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
             {
+                if (!auto.HasFlag(AutoDiscoveryType.Host))
+                    throw new NotSupportedException("Registration of unknown hosts is not configured.");
+
                 ctxHost = CreateHost(reg);
 
                 lease.AddInstanceForDisposal(ctxHost);
@@ -34,21 +50,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             if (ctxHost.Watch is not RemoteHostWatch remote)
                 throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
 
-            foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
-            {
-                ctxHost.Host.AddAddress(adr.Key, adr.Value); // TODO was passiert mit den Addressen, wenn der Host aufwacht?
-            }
-
             if (ctxHost.Auto.HasFlag(AutoDiscoveryType.Service))
             {
                 foreach (var serviceInfo in reg.Services)
                 {
                     if (ctxHost.FindServiceContextBy(serviceInfo.IPPort) is NetworkServiceContext ctxService)
-                    {
-                        Logger.LogWarning("Already watching service at {Port} for {Host}", serviceInfo.IPPort, ctxHost.Host.Name);
-
-                        continue;
-                    }
+                        throw new NotSupportedException($"Already watching service at {serviceInfo.IPPort} for {ctxHost.Host.Name}.");
 
                     ctxService = ctxHost.CreateWatchedService(serviceInfo);
 
@@ -57,10 +64,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
             else if (reg.Services.Count > 0)
             {
-                Logger.LogWarning("Host {Host} is not configured to discover services.", ctxHost.Host.Name);
+                throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
             }
 
-            //_activeLeases.Add(lease);
+            foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
+            {
+                ctxHost.Host.AddAddress(adr.Key, adr.Value); // TODO was passiert mit den Addressen, wenn der Host aufwacht?
+            }
+
+            _activeLeases[reg.PrimaryAddress] = lease;
 
             return lease;
         }

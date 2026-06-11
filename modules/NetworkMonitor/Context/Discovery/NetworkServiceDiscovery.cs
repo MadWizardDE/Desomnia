@@ -30,10 +30,20 @@ namespace MadWizard.Desomnia.Network.Context
                      * we have to wake it once.
                      */
                     case RemoteHostWatch remote when !(await reachability.Test(remote)):
-                        Logger.LogWarning("Remote host '{Host}' is not reachable." +
+                        Logger.LogInformation("Remote host '{Host}' is not reachable. " +
                             "Waking up now, in order to detect services.", ctx.Host.Name);
 
-                        await remote.WakeUp(); break;
+                        try
+                        {
+                            await remote.WakeUp();
+                        }
+                        catch (HostTimeoutException ex)
+                        {
+                            Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
+                                ctx.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
+                        } 
+                        
+                        break;
                 }
             }
         }

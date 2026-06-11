@@ -132,9 +132,10 @@ namespace MadWizard.Desomnia.Network
                 await context.DiscoverDynamicFilterHosts();
 
                 await context.DiscoverAddresses();
-                await context.DiscoverServices();
 
                 context.Monitor.StartMonitoring();
+
+                await context.DiscoverServices();
 
                 MonitoringStarted?.Invoke(this, context.Monitor);
 
