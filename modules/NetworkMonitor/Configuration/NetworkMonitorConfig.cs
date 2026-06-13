@@ -42,10 +42,10 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         // Options
         #region Network :: AutoDiscoveryOptions
-        public AutoDiscoveryType    AutoDetect          { get; set; } = AutoDiscoveryType.Nothing;
-        internal TimeSpan           AutoTimeout         { get; set; } = TimeSpan.FromSeconds(2);
-        internal TimeSpan?          AutoRefresh         { get; set; }
-        internal bool               AutoParallel        { get; set; } = true;
+        public AutoDiscoveryType    AutoDetect              { get; set; } = AutoDiscoveryType.Nothing;
+        internal TimeSpan           AutoTimeout             { get; set; } = TimeSpan.FromSeconds(2);
+        internal TimeSpan?          AutoRefresh             { get; set; }
+        internal bool               AutoParallel            { get; set; } = true;
 
         public DiscoveryOptions MakeAutoDiscoveryOptions() => new()
         {
@@ -74,76 +74,76 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: AdvertisedOptions 
-        internal AdvertiseType      Advertise           { get; set; } = AdvertiseType.Lazy;
-        internal bool               AdvertiseHosts      { get; set; } = true;
-        internal bool               AdvertiseServices   { get; set; } = false;
-        internal bool               AdvertiseIfStopped  { get; set; } = true;
-        internal bool               AdvertiseUnicast    { get; set; } = false;
+        internal AdvertiseType      Advertise               { get; set; } = AdvertiseType.Lazy;
+        internal bool               AdvertiseHosts          { get; set; } = true;
+        internal bool               AdvertiseServices       { get; set; } = false;
+        internal bool               AdvertiseIfStopped      { get; set; } = true;
+        internal bool               AdvertiseUnicast        { get; set; } = false;
 
-        internal TimeSpan           AdvertiseTimeout    { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+        internal TimeSpan           AdvertiseTimeout        { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
 
-        internal TimeSpan?          AdvertiseHostTTL    { get; set; }
-        internal TimeSpan?          AdvertiseServiceTTL { get; set; }
+        internal TimeSpan?          AdvertiseHostTTL        { get; set; }
+        internal TimeSpan?          AdvertiseServiceTTL     { get; set; }
         #endregion
 
         #region Network :: HandoffOptions
-        internal HandoffType        Handoff             { get; set; } = HandoffType.None;
-        internal TimeSpan           HandoffTimeout      { get; set; } = TimeSpan.FromSeconds(5);
+        internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
+        internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
         #endregion
 
         #region Network :: SleepProxyOptions
+        internal TimeSpan?          SleepProxyLease         { get; set; } = null; // default, if not specified by client
         internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
-        internal TimeSpan?          SleepProxyLeaseDefault  { get; set; } = null;
         internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
-        internal bool               SleepProxyLeaseWake     { get; set; } = false;
+        internal bool               SleepProxyLeaseEndWake  { get; set; } = false; // shall we wake host, when lease ends?
 
-        internal SleepProxyMetrics  SleepProxyMetrics   { get; set; } = SleepProxyMetrics.Best;
-        internal ushort             SleepProxyPort      { get; set; } = MulticastDNSService.MulticastPort;
+        internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
+        internal ushort             SleepProxyPort          { get; set; } = MulticastDNSService.MulticastPort;
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {
             MinLeaseDuration = SleepProxyLeaseMin,
-            DefaultLeaseDuration = SleepProxyLeaseDefault,
+            DefaultLeaseDuration = SleepProxyLease,
             MaxLeaseDuration = SleepProxyLeaseMax,
-            WakeOnLeaseEnd = SleepProxyLeaseWake,
+            WakeOnLeaseEnd = SleepProxyLeaseEndWake,
         };
         #endregion
 
         #region Network :: KnockOptions
-        internal string             KnockMethod         { get; set; } = "plain";
+        internal string             KnockMethod             { get; set; } = "plain";
 
-        internal ushort             KnockPort           { get; set; } = 62201;
-        internal IPProtocol         KnockProtocol       { get; set; } = IPProtocol.UDP;
+        internal ushort             KnockPort               { get; set; } = 62201;
+        internal IPProtocol         KnockProtocol           { get; set; } = IPProtocol.UDP;
 
-        internal TimeSpan           KnockDelay          { get; set; } = TimeSpan.FromSeconds(0.5);
-        internal TimeSpan?          KnockRepeat         { get; set; }
-        internal TimeSpan           KnockTimeout        { get; set; } = TimeSpan.FromSeconds(10);
+        internal TimeSpan           KnockDelay              { get; set; } = TimeSpan.FromSeconds(0.5);
+        internal TimeSpan?          KnockRepeat             { get; set; }
+        internal TimeSpan           KnockTimeout            { get; set; } = TimeSpan.FromSeconds(10);
         // Network ::               KnockSecret
-        internal string?            KnockSecret         { get; set; }
-        internal string?            KnockSecretAuth     { get; set; }
-        internal DigestType         KnockSecretAuthType { get; set; } = default;
-        internal string             KnockSecretEncoding { get; set; } = "UTF-8";
+        internal string?            KnockSecret             { get; set; }
+        internal string?            KnockSecretAuth         { get; set; }
+        internal DigestType         KnockSecretAuthType     { get; set; } = default;
+        internal string             KnockSecretEncoding     { get; set; } = "UTF-8";
         #endregion
 
         #region Network :: PingOptions
-        internal TimeSpan           PingTimeout         { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
-        internal TimeSpan?          PingFrequency       { get; set; }
+        internal TimeSpan           PingTimeout             { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+        internal TimeSpan?          PingFrequency           { get; set; }
         #endregion
 
         #region Network :: WakeOptions
-        internal WakeType           WakeType            { get; set; } = WakeType.Auto;
-        internal ushort             WakePort            { get; set; } = 9;
-        internal string?            WakePassword        { get; set; }
-        internal Encoding           WakeEncoding        { get; set; } = Encoding.ASCII; // TODO: is this a good default, can it be set?
-        internal TimeSpan           WakeTimeout         { get; set; } = TimeSpan.FromSeconds(10);
-        internal TimeSpan?          WakeRepeat          { get; set; }
-        internal bool               WakePing            { get; set; } = false;
+        internal WakeType           WakeType                { get; set; } = WakeType.Auto;
+        internal ushort             WakePort                { get; set; } = 9;
+        internal string?            WakePassword            { get; set; }
+        internal Encoding           WakeEncoding            { get; set; } = Encoding.ASCII; // TODO: is this a good default, can it be set?
+        internal TimeSpan           WakeTimeout             { get; set; } = TimeSpan.FromSeconds(10);
+        internal TimeSpan?          WakeRepeat              { get; set; }
+        internal bool               WakePing                { get; set; } = false;
         #endregion
 
         #region Network :: WatchOptions
-        internal WatchMode          WatchMode           { get; set; } = WatchMode.Normal;
-        internal TimeSpan?          WatchTimeout        { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why do we need this?
-        internal ushort?            WatchUDPPort        { get; set; } = null;
+        internal WatchMode          WatchMode               { get; set; } = WatchMode.Normal;
+        internal TimeSpan?          WatchTimeout            { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why do we need this?
+        internal ushort?            WatchUDPPort            { get; set; } = null;
 
         public WatchOptions MakeWatchOptions() => new()
         {
