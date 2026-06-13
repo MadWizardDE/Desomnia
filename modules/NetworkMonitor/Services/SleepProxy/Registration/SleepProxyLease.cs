@@ -1,18 +1,18 @@
-﻿using Autofac.Core;
+﻿using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
-
+using System.Net;
 using Timer = System.Timers.Timer;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
-    internal class SleepProxyLease : IDisposable, IDisposer
+    internal class SleepProxyLease : IDisposable
     {
         public required ILogger<SleepProxyLease> Logger { private get; init; }
 
         private Timer? _timer;
 
-        readonly IList<IDisposable> _disposables = [];
+        readonly Stack<IDisposable> _disposables = [];
 
         public required byte Sequence { get; init; }
 
@@ -46,8 +46,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             GrantedUntil = DateTime.Now + duration;
         }
 
-        public void AddInstanceForDisposal(IDisposable disposable) => _disposables.Add(disposable);
-        public void AddInstanceForAsyncDisposal(IAsyncDisposable disposable) => throw new NotImplementedException();
+        public void AddInstanceForDisposal(IDisposable instance)
+        {
+            _disposables.Push(instance);
+        }
 
         public async void Validate(RemoteHostWatch watch)
         {
@@ -81,17 +83,32 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
         }
 
-        public ValueTask DisposeAsync() => throw new NotImplementedException();
-
         public void Dispose()
         {
             _timer?.Dispose();
             _timer = null;
 
-            foreach (var context in _disposables.Reverse())
+            while (_disposables.Count > 0)
             {
-                context.Dispose();
+                var item = _disposables.Pop();
+
+                try
+                {
+                    item.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // we can safely ignore this here
+                }
             }
+        }
+    }
+
+    class SleepProxyAddressLease(NetworkHost host, IPAddress ip) : IDisposable
+    {
+        void IDisposable.Dispose()
+        {
+            host.RemoveAddress(ip);
         }
     }
 }

@@ -149,9 +149,6 @@ namespace Microsoft.Extensions.Logging
                     tokens.Add($"expires={expires -DateTime.Now}");
                 else if (host[ip].HasFlags(IPAddressFlags.Static))
                     tokens.Add("static");
-                else if (host[ip].HasFlags(IPAddressFlags.Ephemeral))
-                    tokens.Add("ephemeral");
-
 
                 logger.LogDebug("Add {Family} address '{IPAddress}' to host '{HostName}' [{Flags}]",
                     ip.ToFamilyName(), ip, host.Name, string.Join(", ", tokens));

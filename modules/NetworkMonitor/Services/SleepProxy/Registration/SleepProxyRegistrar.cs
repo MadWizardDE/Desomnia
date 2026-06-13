@@ -79,6 +79,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 {
                     if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
                     {
+                        lease.AddInstanceForDisposal(new SleepProxyAddressLease(ctxHost.Host, adr.Key));
+
                         Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
                     }
                 }
