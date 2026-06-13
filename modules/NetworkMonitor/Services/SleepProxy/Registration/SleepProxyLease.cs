@@ -2,7 +2,6 @@
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using System.Net;
-using Timer = System.Timers.Timer;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
@@ -10,7 +9,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
     {
         public required ILogger<SleepProxyLease> Logger { private get; init; }
 
-        private Timer? _timer;
+        private ScheduledTimer? _timer;
 
         readonly Stack<IDisposable> _disposables = [];
 
@@ -27,9 +26,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                 _timer?.Dispose();
 
-                _timer = new Timer(Duration)
+                _timer = new ScheduledTimer(field)
                 {
-                    AutoReset = false,
                     Enabled = true
                 };
 
