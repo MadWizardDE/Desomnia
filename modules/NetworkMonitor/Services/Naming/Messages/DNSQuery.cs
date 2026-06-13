@@ -14,6 +14,8 @@ namespace MadWizard.Desomnia.Network.Naming
         public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
         public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
 
+        public IPEndPoint       SourceEndpoint          => field ??= new UDPEndPoint(SourceIPAddress, SourcePort);
+
         public IEnumerable<Question> Questions => message.Questions;
 
         internal TimeSpan Delay { get; private set; } = TimeSpan.Zero;

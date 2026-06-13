@@ -69,11 +69,18 @@ namespace MadWizard.Desomnia.Network.Watch
 
         internal async Task<bool> ValidateHandoff()
         {
+            Logger.LogDebug("Try to validate handoff from '{Host}'...", Host.Name);
+
             _pingTimer?.Stop();
 
             await Task.Delay(HandoffOptions.Timeout);
 
             await DetermineIfHostCanBeSeen(true);
+
+            if (!IsSuspended)
+            {
+                Logger.LogError("Could not validate handoff from {Host}; host is still alive after {Timeout}", Host.Name, HandoffOptions.Timeout);
+            }
 
             return IsSuspended;
         }

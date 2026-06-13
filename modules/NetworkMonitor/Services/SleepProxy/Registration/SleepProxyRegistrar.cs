@@ -91,29 +91,23 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     {
                         using var scope = Logger.BeginHostScope(remote.Host);
 
-                        if (options.WakeOnLeaseEnd && !await Reachability.Test(remote))
+                        if (args.HasExpired)
                         {
-                            Logger.LogWarning("Lease for '{Host}' ended, but it's not reachable; trying to wake host...", remote.Host.Name);
-
-                            try
-                            {
-                                await remote.WakeUp();
-                            }
-                            catch (HostTimeoutException ex)
-                            {
-                                Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
-                                    remote.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
-                            }
+                            await TryToEndLeaseGracefully(remote);
                         }
+
+                        Logger.LogDebug("Lease for '{Host}' is going to end; cleaning up...", remote.Host.Name);
 
                         using (await Context.Network.Mutex.LockAsync())
                         {
                             owned.Dispose();
                         }
+
+                        Logger.LogDebug("Lease for '{Host}' has ended", remote.Host.Name);
                     }
                 };
 
-                lease.Validate(remote);
+                ValidateLease(remote, lease);
             }
             catch (Exception)
             {
@@ -158,5 +152,52 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             return Context.CreateDynamicHost([ new TypedParameter(hostInfo.GetType(), hostInfo), .. parameters ]);
         }
+
+        #region Lease start/end validation
+        private async void ValidateLease(RemoteHostWatch watch, SleepProxyLease lease)
+        {
+            using var scope = Logger.BeginHostScope(watch.Host);
+
+            async Task stop(Event @event) => lease.Stop();
+
+            try
+            {
+                if (await watch.ValidateHandoff())
+                {
+                    lease.Ended += (sender, args) => watch.Started -= stop;
+
+                    Logger.LogDebug("Handoff from {Host} successfull; lease granted until: {GrantedUntil}", watch.Host.Name, lease.GrantedUntil);
+
+                    watch.Started += stop;
+                    
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name);
+            }
+
+            lease.Stop();
+        }
+
+        private async Task TryToEndLeaseGracefully(RemoteHostWatch watch)
+        {
+            if (options.WakeOnLeaseEnd && !await Reachability.Test(watch))
+            {
+                Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake host...", watch.Host.Name);
+
+                try
+                {
+                    await watch.WakeUp();
+                }
+                catch (HostTimeoutException ex)
+                {
+                    Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
+                        watch.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
+                }
+            }
+        }
+        #endregion
     }
 }

@@ -1,14 +1,10 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Watch;
-using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
     internal class SleepProxyLease : IDisposable
     {
-        public required ILogger<SleepProxyLease> Logger { private get; init; }
-
         private ScheduledTimer? _timer;
 
         readonly Stack<IDisposable> _disposables = [];
@@ -31,13 +27,13 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     Enabled = true
                 };
 
-                _timer.Elapsed += (sender, args) => TriggerLeaseEnded();
+                _timer.Elapsed += (sender, args) => Stop(true);
             }
         }
 
         public TimeSpan Duration => GrantedUntil - DateTime.Now;
 
-        public event EventHandler? Ended;
+        public event EventHandler<SleepProxyLeaseEndEventArgs>? Ended;
 
         public SleepProxyLease(TimeSpan duration)
         {
@@ -49,35 +45,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             _disposables.Push(instance);
         }
 
-        public async void Validate(RemoteHostWatch watch)
-        {
-            try
-            {
-                if (await watch.ValidateHandoff())
-                {
-                    this.Ended += (sender, args) => watch.Started -= OnRemoteHostStarted;
-
-                    watch.Started += OnRemoteHostStarted; return;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Could not validate lease.");
-            }
-
-            TriggerLeaseEnded();
-        }
-
-        private async Task OnRemoteHostStarted(Event data) => TriggerLeaseEnded();
-
-        private void TriggerLeaseEnded()
+        internal void Stop(bool expired = false)
         {
             if (_timer != null)
             {
                 _timer?.Stop();
                 _timer = null;
 
-                Ended?.Invoke(this, EventArgs.Empty);
+                Ended?.Invoke(this, new(expired));
             }
         }
 
@@ -108,5 +83,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         {
             host.RemoveAddress(ip);
         }
+    }
+
+    class SleepProxyLeaseEndEventArgs(bool expired = false) : EventArgs
+    {
+        public bool HasExpired => expired;
     }
 }

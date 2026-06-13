@@ -36,11 +36,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// </summary>
         protected override void ProcessUpdate(DNSUpdate update)
         {
+            Logger.LogDebug("Received a dynamic DNS update from {Endpoint}.", update.SourceEndpoint);
+
             try
             {
                 var registration = ((SleepProxyRegistration)update.Request);
 
-                Logger.LogInformation("Received a sleep-proxy registration for {MAC}.", registration.PrimaryAddress);
+                Logger.LogDebug("Attempt to register '{Name}' at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
+                    registration.Name, registration.PrimaryAddress, registration.Services.Count, registration.IPAddresses.Count);
 
                 if (Registrar.Register(registration) is SleepProxyLease lease)
                 {
