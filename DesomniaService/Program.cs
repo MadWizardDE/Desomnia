@@ -14,6 +14,7 @@ using System.Reflection;
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
+LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkRealmLayoutRenderer>()); // FIXME
 
 if (Process.GetCurrentProcess().IsWindowsService() is bool isRunningAsService && isRunningAsService)
 {

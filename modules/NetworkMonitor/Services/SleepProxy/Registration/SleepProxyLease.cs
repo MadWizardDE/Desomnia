@@ -1,5 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood;
+using Microsoft.Extensions.Logging;
 using System.Net;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
@@ -77,11 +79,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         }
     }
 
-    class SleepProxyAddressLease(NetworkHost host, IPAddress ip) : IDisposable
+    class SleepProxyAddressLease(ILogger logger, NetworkHost host, IPAddress ip) : IDisposable
     {
         void IDisposable.Dispose()
         {
-            host.RemoveAddress(ip);
+            if (host.RemoveAddress(ip))
+            {
+                logger.LogHostAddressRemoved(host, ip);
+            }
         }
     }
 

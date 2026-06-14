@@ -144,7 +144,7 @@ namespace MadWizard.Desomnia.Network.Address
         {
             if (sender is NetworkHost host && host.PhysicalAddress is PhysicalAddress mac)
             {
-                Logger.LogDebug($"Updating static address mappings for host '{host.Name}'...");
+                Logger.LogTrace($"Updating static address mappings for host '{host.Name}'...");
 
                 if (Network.LocalRange.Contains(args.IPAddress))
                     addresses.Update(args.IPAddress, mac);
@@ -155,7 +155,7 @@ namespace MadWizard.Desomnia.Network.Address
         {
             if (sender is NetworkHost host)
             {
-                Logger.LogDebug($"Updating static address mappings for host '{host.Name}'...");
+                Logger.LogTrace($"Updating static address mappings for host '{host.Name}'...");
 
                 foreach (var ip in host.IPAddresses)
                 {
@@ -171,7 +171,7 @@ namespace MadWizard.Desomnia.Network.Address
         {
             if (sender is NetworkHost host && host.PhysicalAddress is not null)
             {
-                Logger.LogDebug($"Updating static address mappings for host '{host.Name}'...");
+                Logger.LogTrace($"Updating static address mappings for host '{host.Name}'...");
 
                 if (Network.LocalRange.Contains(args.IPAddress))
                     addresses.Delete(args.IPAddress);

@@ -12,7 +12,7 @@ namespace MadWizard.Desomnia.Network.Naming
         void Resolve(DNSQuery query);
     }
 
-    internal class MulticastDNSService() : DNSService(MulticastPort)
+    internal class MulticastDNSService() : DNSService(MulticastPort, "mdns")
     {
         /// <summary>The well-known multicast DNS port (RFC 6762).</summary>
         internal static readonly ushort     MulticastPort       = 5353;
