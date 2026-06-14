@@ -11,7 +11,7 @@ namespace MadWizard.Desomnia.Network.Naming
             Response = new Message { Id = message.Id, QR = true, Opcode = MessageOperation.Update };
         }
 
-        internal void GrantLease(TimeSpan duration)
+        internal void AnswerWithLease(TimeSpan duration)
         {
             var opt = new OPTRecord();
             opt.Options.Add(new EdnsLeaseOption { Duration = duration });

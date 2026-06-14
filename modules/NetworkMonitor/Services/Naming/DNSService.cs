@@ -9,7 +9,7 @@ namespace MadWizard.Desomnia.Network.Naming
 {
     internal abstract class DNSService(ushort port) : INetworkService
     {
-        public required ILogger<DNSService> MessageLogger { private get; init; }
+        public required ILogger<DNSService> WireLogger { private get; init; }
 
         public required NetworkDevice Device { private get; init; }
 
@@ -18,24 +18,31 @@ namespace MadWizard.Desomnia.Network.Naming
             if (!TryReadMessage(packet, out Message? message))
                 return;
 
-            if (message.IsQuery)
+            try
             {
-                switch (message.Opcode)
+                if (message.IsQuery)
                 {
-                    case MessageOperation.Query:
-                        DNSQuery query = new(packet, message);
-                        ProcessQuery(query);
-                        break;
+                    switch (message.Opcode)
+                    {
+                        case MessageOperation.Query:
+                            DNSQuery query = new(packet, message);
+                            ProcessQuery(query);
+                            break;
 
-                    case MessageOperation.Update:
-                        DNSUpdate update = new(packet, message);
-                        ProcessUpdate(update);
-                        break;
+                        case MessageOperation.Update:
+                            DNSUpdate update = new(packet, message);
+                            ProcessUpdate(update);
+                            break;
+                    }
+                }
+                else
+                {
+                    ProcessResponse(message);
                 }
             }
-            else
+            catch (Exception ex)
             {
-                ProcessResponse(message);
+                WireLogger.LogTrace(ex, "Failed to process a DNS message on port {Port} [{ID}]", port, message.Id);
             }
         }
 
@@ -59,9 +66,9 @@ namespace MadWizard.Desomnia.Network.Naming
 
                     return true;
                 }
-                catch (Exception e)
+                catch (Exception ex)
                 {
-                    MessageLogger.LogTrace(e, "Failed to parse a packet on port {Port} as a DNS message.", port);
+                    WireLogger.LogTrace(ex, "Failed to parse a packet on port {Port} as a DNS message.", port);
 
                     return false;
                 }
@@ -77,21 +84,28 @@ namespace MadWizard.Desomnia.Network.Naming
         /// </summary>
         protected void RespondTo(DNSQuery query)
         {
-            IPPacket ip = query.SourceIPAddress.AddressFamily == AddressFamily.InterNetwork
-                ? new IPv4Packet(Device.IPv4Address, query.SourceIPAddress) { TimeToLive = 255 }
-                : new IPv6Packet(Device.IPv6LinkLocalAddress, query.SourceIPAddress) { HopLimit = 255 };
-
-            ip.PayloadPacket = new UdpPacket(port, query.SourcePort)
+            try
             {
-                PayloadData = query.Response.ToByteArray()
-            };
+                IPPacket ip = query.SourceIPAddress.AddressFamily == AddressFamily.InterNetwork
+                    ? new IPv4Packet(Device.IPv4Address, query.SourceIPAddress) { TimeToLive = 255 }
+                    : new IPv6Packet(Device.IPv6LinkLocalAddress, query.SourceIPAddress) { HopLimit = 255 };
 
-            EthernetPacket packet = new(Device.PhysicalAddress, query.SourcePhysicalAddress, EthernetType.None) // EtherType = auto
+                ip.PayloadPacket = new UdpPacket(port, query.SourcePort)
+                {
+                    PayloadData = query.Response.ToByteArray()
+                };
+
+                EthernetPacket packet = new(Device.PhysicalAddress, query.SourcePhysicalAddress, EthernetType.None) // EtherType = auto
+                {
+                    PayloadPacket = ip
+                };
+
+                RespondWith(query, packet);
+            }
+            catch (Exception ex)
             {
-                PayloadPacket = ip
-            }; 
-
-            RespondWith(query, packet);
+                WireLogger.LogTrace(ex, "Failed to send a DNS response from port {Port} [{ID}]", port, query.Request.Id);
+            }
         }
 
         protected virtual void RespondWith(DNSQuery query, EthernetPacket packet)
