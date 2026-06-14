@@ -150,7 +150,7 @@ namespace Microsoft.Extensions.Logging
                 else if (host[ip].HasFlags(IPAddressFlags.Static))
                     tokens.Add("static");
 
-                logger.LogDebug("Add {Family} address '{IPAddress}' to host '{HostName}' [{Flags}]",
+                logger.LogDebug("Added {Family} address '{IPAddress}' to host '{HostName}' [{Flags}]",
                     ip.ToFamilyName(), ip, host.Name, string.Join(", ", tokens));
             }
         }
@@ -178,7 +178,7 @@ namespace Microsoft.Extensions.Logging
                 if (host[service].HasFlags(ServiceFlags.Static))
                     tokens.Add("static");
 
-                logger.LogDebug("Add service {Service} to host '{HostName}' {Flags}",
+                logger.LogDebug("Added service {Service} to host '{HostName}' {Flags}",
                     service, host.Name, tokens.Any() ? "[" + string.Join(", ", tokens) + "]" : "");
             }
         }
