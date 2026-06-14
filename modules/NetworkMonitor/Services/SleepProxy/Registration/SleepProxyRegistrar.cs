@@ -166,7 +166,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 {
                     lease.Ended += (sender, args) => watch.Started -= stop;
 
-                    Logger.LogDebug("Handoff from {Host} successfull; lease granted until: {GrantedUntil}", watch.Host.Name, lease.GrantedUntil);
+                    Logger.LogDebug("Handoff from {Host} successful; lease granted until: {GrantedUntil}", watch.Host.Name, lease.GrantedUntil);
 
                     watch.Started += stop;
                     
