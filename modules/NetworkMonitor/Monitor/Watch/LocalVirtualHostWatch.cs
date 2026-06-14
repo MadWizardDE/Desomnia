@@ -52,10 +52,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 }
             }
 
-            if (AdvertiseOptions.Type != AdvertiseType.Never)
-            {
-                await base.ReclaimWatch();
-            }
+            await base.ReclaimWatch();
         }
 
         protected override Task TriggerEventAsync(Event @event)
@@ -95,10 +92,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
         private async void HandleStarted()
         {
-            if (VM.State == VirtualMachineState.Running)
-            {
-                await ReclaimWatch();
-            }
+            await ReclaimWatch();
         }
 
         private async void HandleSuspended()
