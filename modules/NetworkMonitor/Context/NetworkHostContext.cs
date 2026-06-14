@@ -5,6 +5,7 @@ using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Context.Parameters;
+using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
@@ -73,6 +74,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = true }))
                     .WithProperty(TypedParameter.From(config.MinTraffic))
                     .SingleInstance()
                     .AsSelf();
@@ -103,6 +105,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = false })) // LATER: maybe later services too?
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
@@ -133,6 +136,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = Auto.HasFlag(AutoDiscoveryType.Service) }))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
@@ -164,6 +168,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = Auto.HasFlag(AutoDiscoveryType.Service) }))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();

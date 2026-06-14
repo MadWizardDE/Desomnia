@@ -29,7 +29,9 @@ namespace MadWizard.Desomnia.Network.Watch
         public required HandoffOptions          HandoffOptions      { get; init; }
         public required DemandOptions           DemandOptions       { get; init; }
 
-        public required Lazy<IPacketFilter> Filter    { private get; init; }
+        public required Lazy<IPacketFilter>     Filter              { private get; init; }
+
+        public required PacketFilterOptions     FilterOptions       { private get; init; }
 
         readonly ConcurrentDictionary<object, DemandRequest> _ongoingRequests = [];
 
@@ -156,7 +158,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public bool Verify(EthernetPacket packet)
         {
-            var options = new PacketFilterOptions();
+            var options = this.FilterOptions;
 
             if (this.OfType<ServiceFilterWatch>() is var serviceFilter && serviceFilter.Any())
             {
