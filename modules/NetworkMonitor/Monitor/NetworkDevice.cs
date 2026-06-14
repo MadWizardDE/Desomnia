@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -37,6 +38,7 @@ namespace MadWizard.Desomnia.Network
                     {
                         Logger.LogDebug("BPF rule = '{expr}'", value);
 
+                        Device.OnCaptureStopped -= Device_OnCaptureStopped;
                         Device.StopCapture();
                     }
 
@@ -45,6 +47,7 @@ namespace MadWizard.Desomnia.Network
                     if (runtime)
                     {
                         Device.StartCapture();
+                        Device.OnCaptureStopped += Device_OnCaptureStopped;
                     }
                 }
             }
@@ -96,6 +99,9 @@ namespace MadWizard.Desomnia.Network
 
         public event EventHandler<EthernetPacket>? EthernetCaptured;
 
+        internal BlockingCollection<RawCapture>? PacketQueue { get; private set; }
+        internal Thread? ProcessingThread { get; private set; }
+
         public NetworkDevice(ILogger<NetworkDevice> logger, NetworkInterface @interface, ILiveDevice device)
         {
             Logger = logger;
@@ -116,8 +122,18 @@ namespace MadWizard.Desomnia.Network
 
         public void StartCapture()
         {
+            PacketQueue = [];
+
+            ProcessingThread = new Thread(ProcessQueuedPackets)
+            {
+                Name = $"PacketProcessor:{Name}",
+                IsBackground = true
+            };
+            ProcessingThread.Start();
+
             Device.OnPacketArrival += Device_OnPacketArrival;
             Device.StartCapture();
+            Device.OnCaptureStopped += Device_OnCaptureStopped;
 
             List<string> features = [];
             if (IsMaxResponsiveness)
@@ -137,6 +153,12 @@ namespace MadWizard.Desomnia.Network
             }
         }
 
+        /// <summary>
+        /// Capture-thread callback. To respect libpcap's single-threaded handle requirement and to
+        /// keep draining the kernel buffer, this does the bare minimum on the capture thread: filter
+        /// out our own injected packets, copy the bytes out of the libpcap-owned buffer and hand them
+        /// to the queue. Parsing and dispatch happen later, serially, on the processing thread.
+        /// </summary>
         private void Device_OnPacketArrival(object sender, PacketCapture capture)
         {
             try
@@ -145,27 +167,65 @@ namespace MadWizard.Desomnia.Network
                 {
                     var raw = capture.GetPacket();
 
-                    if (Packet.ParsePacket(raw.LinkLayerType, raw.Data) is EthernetPacket ethernet)
+                    try
                     {
-                        if (Logger.IsEnabled(LogLevel.Trace)) 
+                        if (!PacketQueue?.TryAdd(raw) ?? false)
                         {
-                            //Logger.LogTrace($"RECEIVED PACKET\n{ethernet.ToTraceString()}");
+                            Logger.LogWarning("Could not enqueue a captured packet."); // should not happen, since queue is unbounded
                         }
-
-                        try
-                        {
-                            EthernetCaptured?.Invoke(this, ethernet);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.LogError(ex, "Error processing packet:\n{packet}", ethernet.ToTraceString());
-                        }
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // The queue was completed concurrently during shutdown; nothing to do.
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Error while filtering/parsing packet."); // low level error
+                Logger.LogError(ex, "Error while filtering/queuing packet."); // low level error
+            }
+        }
+
+        private void Device_OnCaptureStopped(object sender, CaptureStoppedEventStatus status)
+        {
+            Logger.Log(status == CaptureStoppedEventStatus.ErrorWhileCapturing ? LogLevel.Error : LogLevel.Warning, 
+                "Packet capturing stopped."); // let's see if this happens
+        }
+
+        /// <summary>
+        /// The single consumer: drains the user-space buffer and dispatches each packet in arrival
+        /// order via <see cref="EthernetCaptured"/>. Running off the capture thread means a slow
+        /// handler no longer stalls capture or overflows the kernel ring buffer.
+        /// </summary>
+        private void ProcessQueuedPackets()
+        {
+            try
+            {
+                foreach (var raw in PacketQueue!.GetConsumingEnumerable())
+                {
+                    try
+                    {
+                        if (Packet.ParsePacket(raw.LinkLayerType, raw.Data) is EthernetPacket ethernet)
+                        {
+                            try
+                            {
+                                EthernetCaptured?.Invoke(this, ethernet);
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogError(ex, "Error processing packet:\n{packet}", ethernet.ToTraceString());
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Error parsing packet.");
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException)
+            {
+                // Queue was disposed/completed while we were blocked in GetConsumingEnumerable; exit.
             }
         }
 
@@ -215,7 +275,10 @@ namespace MadWizard.Desomnia.Network
                         Logger.LogTrace($"SEND PACKET\n{packet.ToTraceString()}");
                     }
 
-                    Device.SendPacket(packet);
+                    lock (Device)
+                    {
+                        Device.SendPacket(packet);
+                    }
                 }
             }
             catch (DeviceNotReadyException ex)
@@ -235,10 +298,13 @@ namespace MadWizard.Desomnia.Network
             {
                 try
                 {
-                    Device.SendPacket(new EthernetPacket(PhysicalAddressExt.Empty, PhysicalAddressExt.Empty, EthernetType.WakeOnLan)
+                    lock (Device)
                     {
-                        PayloadPacket = new WakeOnLanPacket(PhysicalAddressExt.Empty)
-                    });
+                        Device.SendPacket(new EthernetPacket(PhysicalAddressExt.Empty, PhysicalAddressExt.Empty, EthernetType.WakeOnLan)
+                        {
+                            PayloadPacket = new WakeOnLanPacket(PhysicalAddressExt.Empty)
+                        });
+                    }
 
                     return true;
                 }
@@ -266,7 +332,10 @@ namespace MadWizard.Desomnia.Network
 
             var filter = Filter;
 
-            Device.Close();
+            lock (Device)
+            {
+                Device.Close();
+            }
 
             TryOpen(Device, ref IsMaxResponsiveness, ref IsNoCaptureLocal);
 
@@ -277,12 +346,21 @@ namespace MadWizard.Desomnia.Network
 
         public void StopCapture()
         {
-            if (Device.Started)
-            {
-                Device.StopCapture();
+            if (!Device.Started)
+                return;
 
-                Logger.LogInformation($"Stopped capturing network device \"{Name}\"");
-            }
+            Device.OnCaptureStopped -= Device_OnCaptureStopped;
+            Device.StopCapture();
+            Device.OnPacketArrival -= Device_OnPacketArrival;
+
+            PacketQueue?.CompleteAdding();
+            ProcessingThread?.Join(TimeSpan.FromSeconds(5));
+            PacketQueue?.Dispose();
+            PacketQueue = null;
+
+            ProcessingThread = null;
+
+            Logger.LogInformation($"Stopped capturing network device \"{Name}\"");
         }
 
         private bool TryOpen(ILiveDevice device, ref bool maxResponsiveness, ref bool noCaptureLocal)
@@ -339,7 +417,52 @@ namespace MadWizard.Desomnia.Network
                 StopCapture();
             }
 
-            Device.Close();
+            lock (Device)
+            {
+                Device.Close();
+            }
+        }
+    }
+
+    internal class ContentionPacketFilter(NetworkDevice device) : IDevicePacketFilter
+    {
+        // User-space buffer between the capture thread (producer) and a single processing thread
+        // (consumer). Decoupling them means a slow packet handler can no longer block capture or
+        // overflow the kernel ring buffer, while packets are still dispatched strictly in order.
+        const int QueueLimit = 4096;
+        const int DropWarningIntervalMs = 5000;
+
+        public required ILogger<ContentionPacketFilter> Logger { private get; init; }
+
+        private DateTime _lastWarning = DateTime.MinValue;
+
+        private int _droppedSinceWarning;
+
+        bool IDevicePacketFilter.FilterIncoming(PacketCapture packet)
+        {
+            if (device.PacketQueue?.Count > QueueLimit)
+            {
+                _droppedSinceWarning++;
+
+                var now = DateTime.UtcNow;
+                if (now - _lastWarning > TimeSpan.FromMilliseconds(DropWarningIntervalMs))
+                {
+                    Logger.LogWarning("Processing queue for \"{Name}\" is saturated; dropped {Count} packet(s) in user space because processing can't keep up.",
+                        device.Name, _droppedSinceWarning);
+
+                    _droppedSinceWarning = 0;
+                    _lastWarning = now;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        bool IDevicePacketFilter.FilterOutgoing(Packet packet)
+        {
+            return false;
         }
     }
 
