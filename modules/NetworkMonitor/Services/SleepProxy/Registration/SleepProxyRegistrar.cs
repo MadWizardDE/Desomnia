@@ -175,7 +175,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name);
+                Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name); 
             }
 
             lease.Stop();

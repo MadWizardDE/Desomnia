@@ -111,7 +111,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Could not handoff local virtual watch '{host}'", Host.Name);
+                    Logger.LogError(ex, "Could not handoff watch of local virtual host '{host}'", Host.Name);
                 }
             }
         }

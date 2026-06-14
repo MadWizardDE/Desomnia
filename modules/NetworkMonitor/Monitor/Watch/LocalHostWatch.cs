@@ -126,7 +126,7 @@ namespace MadWizard.Desomnia.Network.Watch
         private async Task RegisterWithSleepProxy(NetworkHost proxy, SleepProxyService service, SleepProxyRegistration reg)
         {
             if (!proxy.IPAddresses.Any())
-                throw new NotSupportedException($"Sleep proxy '{proxy.Name}' has no IP address.");
+                throw new NotSupportedException($"Sleep Proxy '{proxy.Name}' has no IP address.");
 
             Message dnsRequest = (Message)reg;
 
@@ -144,7 +144,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
                     using var client = new UdpClient(ip.AddressFamily);
 
-                    Logger.LogTrace("Try to register '{Host}' with sleep proxy '{Proxy}' at {Endpoint}.", Host.Name, proxy.Name, endpoint);
+                    Logger.LogTrace("Try to register '{Host}' with Sleep Proxy '{Proxy}' at {Endpoint}", Host.Name, proxy.Name, endpoint);
 
                     await client.SendAsync(payload, endpoint, cancel.Token);
 
@@ -155,22 +155,22 @@ namespace MadWizard.Desomnia.Network.Watch
 
                 cancel.Cancel(); // a winner is in: stop and dispose the still-pending attempts
 
-                Logger.LogTrace("Received response from sleep proxy '{Proxy}' at {Endpoint}.", proxy.Name, response.RemoteEndPoint);
+                Logger.LogTrace("Received response from Sleep Proxy '{Proxy}' at {Endpoint}", proxy.Name, response.RemoteEndPoint);
 
                 var dnsResponse = (Message)new Message().Read(response.Buffer);
 
                 if (dnsResponse.Id != dnsRequest.Id)
                     throw new FormatException($"Sleep proxy '{proxy.Name}' replied with a mismatched message id.");
                 if (dnsResponse.Status != MessageStatus.NoError)
-                    throw new InvalidOperationException($"Sleep proxy '{proxy.Name}' rejected the registration: {dnsResponse.Status}.");
+                    throw new InvalidOperationException($"Sleep Proxy '{proxy.Name}' rejected the registration: {dnsResponse.Status}.");
 
                 TimeSpan? lease = dnsResponse.Options.OfType<EdnsLeaseOption>().FirstOrDefault()?.Duration;
 
-                Logger.LogInformation("Registered '{Host}' with sleep proxy '{Proxy}'; granted lease = {Lease}.", Host.Name, proxy.Name, lease);
+                Logger.LogInformation("Registered '{Host}' with Sleep Proxy '{Proxy}'; granted lease = {Lease}.", Host.Name, proxy.Name, lease);
             }
             catch (OperationCanceledException)
             {
-                throw new TimeoutException($"Sleep proxy '{proxy.Name}' did not respond within {HandoffOptions.Timeout}.");
+                throw new TimeoutException($"Sleep Proxy '{proxy.Name}' did not respond within {HandoffOptions.Timeout}.");
             }
         }
 
