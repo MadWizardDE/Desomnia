@@ -54,6 +54,8 @@ namespace MadWizard.Desomnia.Network
             Network.HostRemoved += Network_HostRemoved;
 
             Janitor.StartSweeping();
+
+            Logger.LogDebug($"Monitoring of '{Name}' has been started.");
         }
 
         internal void ResumeMonitoring()
@@ -108,6 +110,8 @@ namespace MadWizard.Desomnia.Network
             Device.EthernetCaptured -= HandlePacket;
 
             TriggerEvent(nameof(Disconnected));
+
+            Logger.LogDebug($"Monitoring of '{Name}' has been stopped.");
         }
 
         #region Host Events
