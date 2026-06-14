@@ -144,7 +144,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
                     using var client = new UdpClient(ip.AddressFamily);
 
-                    Logger.LogTrace("Try to register '{Host}' with Sleep Proxy '{Proxy}' at {Endpoint}", Host.Name, proxy.Name, endpoint);
+                    Logger.LogTrace("Try to register '{Host}' with Sleep Proxy '{Proxy}' via {Endpoint}", Host.Name, proxy.Name, endpoint);
 
                     await client.SendAsync(payload, endpoint, cancel.Token);
 
@@ -155,12 +155,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
                 cancel.Cancel(); // a winner is in: stop and dispose the still-pending attempts
 
-                Logger.LogTrace("Received response from Sleep Proxy '{Proxy}' at {Endpoint}", proxy.Name, response.RemoteEndPoint);
+                Logger.LogTrace("Received response from Sleep Proxy '{Proxy}' via {Endpoint}", proxy.Name, response.RemoteEndPoint);
 
                 var dnsResponse = (Message)new Message().Read(response.Buffer);
 
                 if (dnsResponse.Id != dnsRequest.Id)
-                    throw new FormatException($"Sleep proxy '{proxy.Name}' replied with a mismatched message id.");
+                    throw new FormatException($"Sleep Proxy '{proxy.Name}' replied with a mismatched message id.");
                 if (dnsResponse.Status != MessageStatus.NoError)
                     throw new InvalidOperationException($"Sleep Proxy '{proxy.Name}' rejected the registration: {dnsResponse.Status}.");
 
