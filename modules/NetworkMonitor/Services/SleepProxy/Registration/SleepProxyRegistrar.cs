@@ -152,7 +152,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                     if (args.HasExpired)
                     {
-                        await TryToEndLeaseGracefully(watch);
+                        await TryToExpireLeaseGracefully(watch);
                     }
 
                     Logger.LogDebug("Lease for '{Host}' is going to end; cleaning up...", watch.Host.Name);
@@ -189,21 +189,26 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             lease.Stop();
         }
 
-        private async Task TryToEndLeaseGracefully(RemoteHostWatch watch)
+        private async Task TryToExpireLeaseGracefully(RemoteHostWatch watch)
         {
-            if (options.WakeOnLeaseEnd && !await Reachability.Test(watch))
+            switch (options.ExpireLease)
             {
-                Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake host...", watch.Host.Name);
+                case LeaseExpireAction.None:
+                    return;
 
-                try
-                {
-                    await watch.WakeUp();
-                }
-                catch (HostTimeoutException ex)
-                {
-                    Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
-                        watch.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
-                }
+                case LeaseExpireAction.Wake when !await Reachability.Test(watch):
+                    Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake host...", watch.Host.Name);
+
+                    try
+                    {
+                        await watch.WakeUp();
+                    }
+                    catch (HostTimeoutException ex)
+                    {
+                        Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
+                            watch.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
+                    }
+                    break;
             }
         }
         #endregion

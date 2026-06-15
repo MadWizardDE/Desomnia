@@ -95,7 +95,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal TimeSpan?          SleepProxyLease         { get; set; } = null; // default, if not specified by client
         internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
         internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
-        internal bool               SleepProxyLeaseEndWake  { get; set; } = false; // shall we wake host, when lease ends?
+        internal LeaseExpireAction  SleepProxyLeaseExpire   { get; set; } = LeaseExpireAction.None; // shall we wake host, when lease ends?
 
         internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
         internal ushort             SleepProxyPort          { get; set; } = MulticastDNSService.MulticastPort;
@@ -105,7 +105,7 @@ namespace MadWizard.Desomnia.Network.Configuration
             MinLeaseDuration = SleepProxyLeaseMin,
             DefaultLeaseDuration = SleepProxyLease,
             MaxLeaseDuration = SleepProxyLeaseMax,
-            WakeOnLeaseEnd = SleepProxyLeaseEndWake,
+            ExpireLease = SleepProxyLeaseExpire,
         };
         #endregion
 

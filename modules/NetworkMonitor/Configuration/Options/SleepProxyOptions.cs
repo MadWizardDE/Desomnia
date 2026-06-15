@@ -6,7 +6,7 @@
         public TimeSpan?    DefaultLeaseDuration    { get; init; }
         public TimeSpan     MaxLeaseDuration        { get; init; }
 
-        public bool         WakeOnLeaseEnd          { get; init; }
+        public LeaseExpireAction ExpireLease        { get; init; }
 
         public TimeSpan DetermineLeaseDuration(TimeSpan? requestedDuration, TimeSpan? defaultDuration = null)
         {
@@ -19,5 +19,12 @@
 
             return defaultDuration ?? DefaultLeaseDuration ?? MaxLeaseDuration;
         }
+    }
+
+    public enum LeaseExpireAction
+    {
+        None = 0,
+
+        Wake = 1
     }
 }
