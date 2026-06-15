@@ -2,6 +2,7 @@
 using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
+using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Network.Watch;
@@ -29,20 +30,28 @@ namespace MadWizard.Desomnia.Network.Context
                      * So in order to detect the services of an already sleeping host,
                      * we have to wake it once.
                      */
-                    case RemoteHostWatch remote when !(await reachability.Test(remote)):
-                        Logger.LogInformation("Remote host '{Host}' is not reachable. " +
-                            "Waking up now, in order to detect services.", ctx.Host.Name);
+                    case RemoteHostWatch remote when remote.Host is not VirtualNetworkHost && !(await reachability.Test(remote)):
+                        if (remote.Host.PhysicalAddress is not null)
+                        {
+                            Logger.LogInformation("Remote host '{Host}' is not reachable. " +
+                                "Waking up now, in order to detect services.", ctx.Host.Name);
 
-                        try
-                        {
-                            await remote.WakeUp();
+                            try
+                            {
+                                await remote.WakeUp();
+                            }
+                            catch (HostTimeoutException ex)
+                            {
+                                Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
+                                    ctx.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
+                            }
                         }
-                        catch (HostTimeoutException ex)
+                        else
                         {
-                            Logger.LogWarning("Remote host '{Host}' didn't wake up after {Timeout} s",
-                                ctx.Host.Name, Math.Ceiling(ex.Timeout.TotalSeconds));
-                        } 
-                        
+                            Logger.LogWarning("Remote host '{Host}' is not reachable. " +
+                                "Cannot wake up, in order to detect services, since it has no MAC address configured.", ctx.Host.Name);
+                        }
+
                         break;
                 }
             }
