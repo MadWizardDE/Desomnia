@@ -3,7 +3,6 @@ using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
-using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.SleepProxy
 {
@@ -37,15 +36,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// </summary>
         protected override void ProcessUpdate(DNSUpdate update)
         {
-            Logger.LogDebug("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
+            Logger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
 
             var registration = ((SleepProxyRegistration)update.Request);
 
             try
             {
-                Logger.LogDebug("Attempt to register '{Name}' at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
-                    registration.Name, registration.PrimaryAddress.ToHexString(), registration.Services.Count, registration.IPAddresses.Count);
-
                 if (Registrar.Register(registration) is SleepProxyLease lease)
                 {
                     Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, lease.Duration);

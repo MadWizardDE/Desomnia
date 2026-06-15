@@ -46,6 +46,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 return null; // we already processed this registration
             }
 
+            Logger.LogDebug("Attempt to register '{Name}' at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
+                reg.Name, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
+
             try
             {
                 if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
@@ -55,8 +58,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     lease.AddInstanceForDisposal(ctxHost);
                 }
 
+                using var scope = Logger.BeginHostScope(ctxHost.Host);
+
                 if (ctxHost.Watch is not RemoteHostWatch remote)
                     throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
+
+                remote.LastSeen = DateTime.Now;
 
                 if (ctxHost.Auto.HasFlag(AutoDiscoveryType.Service))
                 {
@@ -81,7 +88,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     {
                         if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
                         {
-                            lease.AddInstanceForDisposal(new SleepProxyAddressLease(ctxHost.Host, adr.Key));
+                            lease.AddInstanceForDisposal(new SleepProxyAddressLease(Logger, ctxHost.Host, adr.Key));
 
                             Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
                         }

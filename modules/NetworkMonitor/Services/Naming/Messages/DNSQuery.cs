@@ -12,6 +12,7 @@ namespace MadWizard.Desomnia.Network.Naming
     {
         public PhysicalAddress  SourcePhysicalAddress   => field ??= packet.FindSourcePhysicalAddress() ?? throw new ArgumentException("Source MAC missing");
         public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
+        public IPAddress        TargetIPAddress         => field ??= packet.FindTargetIPAddress()       ?? throw new ArgumentException("Target IP missing");
         public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
 
         public IPEndPoint       SourceEndpoint          => field ??= new UDPEndPoint(SourceIPAddress, SourcePort);

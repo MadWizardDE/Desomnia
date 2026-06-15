@@ -58,6 +58,17 @@ namespace Microsoft.Extensions.Logging
             return null;
         }
 
+        public static IDisposable? BeginRealmScope(this ILogger logger, string? realm)
+        {
+            if (realm != null)
+            if (!NLog.ScopeContext.TryGetProperty("Realm", out _))
+            {
+                return logger.BeginScope(new Dictionary<string, object> { ["Realm"] = realm });
+            }
+
+            return null;
+        }
+
         public static async Task LogRequestError(this ILogger logger, DemandEvent @event, Exception ex)
         {
             await logger.LogEvent(LogLevel.Error, $"Error processing {@event};", @event.Host, @event.TriggerPacket, @event.Service, ex);

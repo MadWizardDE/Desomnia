@@ -7,7 +7,7 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
-    internal abstract class DNSService(ushort port) : INetworkService
+    internal abstract class DNSService(ushort port, string? realm = null) : INetworkService
     {
         public required ILogger<DNSService> WireLogger { private get; init; }
 
@@ -15,6 +15,8 @@ namespace MadWizard.Desomnia.Network.Naming
 
         void INetworkService.ProcessPacket(EthernetPacket packet)
         {
+            using var scope = WireLogger.BeginRealmScope(realm);
+
             if (!TryReadMessage(packet, out Message? message))
                 return;
 
@@ -84,11 +86,13 @@ namespace MadWizard.Desomnia.Network.Naming
         /// </summary>
         protected void RespondTo(DNSQuery query)
         {
+            using var scope = WireLogger.BeginRealmScope(realm);
+
             try
             {
                 IPPacket ip = query.SourceIPAddress.AddressFamily == AddressFamily.InterNetwork
-                    ? new IPv4Packet(Device.IPv4Address, query.SourceIPAddress) { TimeToLive = 255 }
-                    : new IPv6Packet(Device.IPv6LinkLocalAddress, query.SourceIPAddress) { HopLimit = 255 };
+                    ? new IPv4Packet(query.TargetIPAddress, query.SourceIPAddress) { TimeToLive = 255 }
+                    : new IPv6Packet(query.TargetIPAddress, query.SourceIPAddress) { HopLimit = 255 };
 
                 ip.PayloadPacket = new UdpPacket(port, query.SourcePort)
                 {
