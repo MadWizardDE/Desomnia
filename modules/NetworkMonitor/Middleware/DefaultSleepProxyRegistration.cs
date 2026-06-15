@@ -22,7 +22,7 @@ namespace MadWizard.Desomnia.Network.Middleware
 
                 if (context.Instance is SleepProxyRegistration reg)
                 {
-                    foreach (var watchService in watch)
+                    foreach (var watchService in watch.Where(w => w.ShouldHandoffToSleepProxy))
                     {
                         if (watchService.Service is not TransportNetworkService service)
                             continue;

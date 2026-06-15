@@ -40,6 +40,8 @@ namespace MadWizard.Desomnia.Network.Context
 
                 watch.OnActivated(args =>
                 {
+                    args.Instance.ShouldHandoffToSleepProxy = info.Handoff;
+
                     args.Instance.AddEventAction(nameof(NetworkServiceWatch.Demand), info.OnDemand);
                     args.Instance.AddEventAction(nameof(NetworkServiceWatch.Idle), info.OnIdle);
                 });

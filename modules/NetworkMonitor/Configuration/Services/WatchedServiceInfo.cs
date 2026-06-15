@@ -36,6 +36,10 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         }
         #endregion
 
+        #region HandoffOptions
+        internal bool           Handoff             { get; set; } = true;
+        #endregion
+
         #region                 KnockOptions
         internal string?        KnockMethod         { get; set; }
 

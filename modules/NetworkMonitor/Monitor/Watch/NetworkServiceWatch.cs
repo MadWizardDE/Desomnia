@@ -6,9 +6,11 @@ namespace MadWizard.Desomnia.Network.Watch
 {
     public class NetworkServiceWatch(NetworkService service) : NetworkWatch<Resource>
     {
+        public NetworkService Service => service;
+
         public virtual bool IsHidden { get; set; } = false;
 
-        public NetworkService Service => service;
+        public virtual bool ShouldHandoffToSleepProxy { get; set; } = true;
 
         public AdvertiseOptions     AdvertiseOptions    { get; init; }
         public KnockOptions?        KnockOptions        { get; init; }
