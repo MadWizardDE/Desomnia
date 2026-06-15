@@ -222,7 +222,7 @@ namespace Microsoft.Extensions.Configuration.Xml
         private static partial Regex ISO8601TimeSpanPattern();
 
 
-        [GeneratedRegex(@"^(?=.*\d+(?:d|h|min|s|ms))(?:(?<days>\d+)d)?(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
+        [GeneratedRegex(@"^(?=.*\d+(?:days|day|d|h|min|s|ms))(?:(?<days>\d+)(?:days|day|d))?(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
         private static partial Regex TimeSpanPattern();
     }
 }
