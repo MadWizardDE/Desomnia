@@ -8,7 +8,8 @@ namespace MadWizard.Desomnia.Network.Context
     {
         extension (NetworkContext context)
         {
-            internal NetworkHostContext? FindHostContextBy(PhysicalAddress? physical) => context.FirstOrDefault(ctx => physical?.Equals(ctx.Host.PhysicalAddress) ?? false);
+            internal NetworkHostContext? FindHostContextBy(string name)                 => context.FirstOrDefault(ctx => ctx.Host.Name.Equals(name));
+            internal NetworkHostContext? FindHostContextBy(PhysicalAddress? physical)   => context.FirstOrDefault(ctx => physical?.Equals(ctx.Host.PhysicalAddress) ?? false);
         }
 
         extension (NetworkHostContext context)

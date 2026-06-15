@@ -51,7 +51,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             try
             {
-                if (Context.FindHostContextBy(reg.PrimaryAddress) is not NetworkHostContext ctxHost)
+                if ((Context.FindHostContextBy(reg.PrimaryAddress) ?? Context.FindHostContextBy(reg.Name)) is not NetworkHostContext ctxHost)
                 {
                     ctxHost = CreateHost(reg);
 
