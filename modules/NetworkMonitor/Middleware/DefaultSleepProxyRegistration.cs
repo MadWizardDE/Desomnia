@@ -14,7 +14,7 @@ namespace MadWizard.Desomnia.Network.Middleware
         {
             if (context.FirstParameterOfType<LocalHostWatch>() is LocalHostWatch watch)
             {
-                context.ChangeParameters([
+                context.ChangeParameters([ ..context.Parameters,
                     TypedParameter.From(watch.Host),
                     TypedParameter.From(watch.HandoffOptions),
                     TypedParameter.From(watch.SleepProxyRegistrationCycle)
