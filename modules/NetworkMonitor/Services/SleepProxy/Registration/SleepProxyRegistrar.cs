@@ -75,39 +75,18 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
                 }
 
-                foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
+                Task.Run(() => // this is time consuming and not relevant for the DNS response, so let's decouple it
                 {
-                    if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
+                    foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
                     {
-                        lease.AddInstanceForDisposal(new SleepProxyAddressLease(ctxHost.Host, adr.Key));
-
-                        Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
-                    }
-                }
-
-                lease.Ended += async (sender, args) =>
-                {
-                    if (_activeLeases.Remove(remote.Host.PhysicalAddress!, out var owned))
-                    {
-                        using var scope = Logger.BeginHostScope(remote.Host);
-
-                        if (args.HasExpired)
+                        if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
                         {
-                            await TryToEndLeaseGracefully(remote);
+                            lease.AddInstanceForDisposal(new SleepProxyAddressLease(ctxHost.Host, adr.Key));
+
+                            Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
                         }
-
-                        Logger.LogDebug("Lease for '{Host}' is going to end; cleaning up...", remote.Host.Name);
-
-                        using (await Context.Network.Mutex.LockAsync())
-                        {
-                            owned.Dispose();
-                        }
-
-                        Logger.LogDebug("Lease for '{Host}' has ended", remote.Host.Name);
                     }
-                };
-
-                ValidateLease(remote, lease);
+                }).ContinueWith(t => FinishRegistration(remote, lease));
             }
             catch (Exception)
             {
@@ -154,9 +133,31 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         }
 
         #region Lease start/end validation
-        private async void ValidateLease(RemoteHostWatch watch, SleepProxyLease lease)
+        private async Task FinishRegistration(RemoteHostWatch watch, SleepProxyLease lease)
         {
             using var scope = Logger.BeginHostScope(watch.Host);
+
+            lease.Ended += async (sender, args) =>
+            {
+                if (_activeLeases.Remove(watch.Host.PhysicalAddress!, out var owned))
+                {
+                    using var scope = Logger.BeginHostScope(watch.Host);
+
+                    if (args.HasExpired)
+                    {
+                        await TryToEndLeaseGracefully(watch);
+                    }
+
+                    Logger.LogDebug("Lease for '{Host}' is going to end; cleaning up...", watch.Host.Name);
+
+                    using (await Context.Network.Mutex.LockAsync())
+                    {
+                        owned.Dispose();
+                    }
+
+                    Logger.LogDebug("Lease for '{Host}' has ended", watch.Host.Name);
+                }
+            };
 
             async Task stop(Event @event) => lease.Stop();
 
