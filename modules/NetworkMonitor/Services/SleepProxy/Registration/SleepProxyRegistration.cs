@@ -105,5 +105,13 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         // TODO wie mappen wir das?
         public ushort Priority  { get; set; }
         public ushort Weight    { get; set; }
+
+        public ProxyServiceInfo() {  }
+
+        public ProxyServiceInfo(AdvertiseOptions options)
+        {
+            AdvertiseHostTTL = options.HostTTL;
+            AdvertiseServiceTTL = options.ServiceTTL;
+        }
     }
 }

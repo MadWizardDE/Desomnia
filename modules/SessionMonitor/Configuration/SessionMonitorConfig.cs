@@ -74,6 +74,8 @@ namespace MadWizard.Desomnia.Session.Configuration
 
     public class SessionMonitorConfig : SessionMonitorConfig<SessionMonitorConfig, SessionWatchDescriptor>
     {
+        internal bool RegisterWithSleepProxy { get; set; } = true;
+
         #region SessionMonitor :: ClockOptions
         internal bool ClockTime { get; set; } = true;
         internal bool ClockRemote { get; set; } = false;

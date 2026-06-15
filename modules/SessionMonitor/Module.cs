@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Autofac.Core;
+using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using MadWizard.Desomnia.Session.Configuration;
 using MadWizard.Desomnia.Session.Manager;
 
@@ -17,6 +18,18 @@ namespace MadWizard.Desomnia.Session
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();
+
+                if (config.RegisterWithSleepProxy)
+                {
+                    // Add SMB port to SleepProxyRegistration
+                    builder.ComponentRegistryBuilder.Registered += (sender, args) =>
+                    {
+                        if (args.ComponentRegistration.IsLimitedTo<SleepProxyRegistration>())
+                            args.ComponentRegistration.PipelineBuilding += (_, pipeline) =>
+                                pipeline.Use(new RDPSleepProxyRegistration());
+                    };
+                }
+
             }
         }
     }

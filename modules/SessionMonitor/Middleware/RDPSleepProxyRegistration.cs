@@ -5,9 +5,9 @@ using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using MadWizard.Desomnia.Network.Watch;
 using System.Net;
 
-namespace MadWizard.Desomnia.NetworkSession
+namespace MadWizard.Desomnia.Session
 {
-    public sealed class SMBSleepProxyRegistration : IResolveMiddleware
+    public sealed class RDPSleepProxyRegistration : IResolveMiddleware
     {
         public PipelinePhase Phase => PipelinePhase.ParameterSelection;
 
@@ -20,11 +20,11 @@ namespace MadWizard.Desomnia.NetworkSession
                 if (context.Instance is SleepProxyRegistration reg)
                     reg.Services.Add(new ProxyServiceInfo(watch.AdvertiseOptions)
                     {
-                        Name = "SMB",
-                        ServiceName = "microsoft-ds",
+                        Name = "RDP",
+                        ServiceName = "ms-wbt-server",
 
                         Protocol = IPProtocol.TCP,
-                        Port = 445,
+                        Port = 3389,
                     });
             }
         }
