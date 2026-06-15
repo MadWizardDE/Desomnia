@@ -185,27 +185,7 @@ namespace Microsoft.Extensions.Configuration.Xml
         {
             foreach (var attribute in element.Attributes())
             {
-                if (ISO8601TimeSpanPattern().Match(attribute.Value).Success)
-                {
-                    TimeSpan time = XmlConvert.ToTimeSpan(attribute.Value);
-
-                    attribute.Value = time.ToString();
-                }
-
-                else if (TimeSpanPattern().Match(attribute.Value) is Match match && match.Success)
-                {
-                    TimeSpan time = TimeSpan.Zero;
-                    if (match.Groups.TryGetValue("hours", out var hours) && hours.Success)
-                        time += TimeSpan.FromHours(int.Parse(hours.Value));
-                    if (match.Groups.TryGetValue("minutes", out var minutes) && minutes.Success)
-                        time += TimeSpan.FromMinutes(int.Parse(minutes.Value));
-                    if (match.Groups.TryGetValue("seconds", out var seconds) && seconds.Success)
-                        time += TimeSpan.FromSeconds(int.Parse(seconds.Value));
-                    if (match.Groups.TryGetValue("milliseconds", out var milliseconds) && milliseconds.Success)
-                        time += TimeSpan.FromMilliseconds(int.Parse(milliseconds.Value));
-
-                    attribute.Value = time.ToString();
-                }
+                attribute.Value = NormalizeTimeSpanVariations(attribute.Value);
             }
         }
 
@@ -221,6 +201,8 @@ namespace Microsoft.Extensions.Configuration.Xml
             else if (TimeSpanPattern().Match(value) is Match match && match.Success)
             {
                 TimeSpan time = TimeSpan.Zero;
+                if (match.Groups.TryGetValue("days", out var days) && days.Success)
+                    time += TimeSpan.FromDays(int.Parse(days.Value));
                 if (match.Groups.TryGetValue("hours", out var hours) && hours.Success)
                     time += TimeSpan.FromHours(int.Parse(hours.Value));
                 if (match.Groups.TryGetValue("minutes", out var minutes) && minutes.Success)
@@ -240,7 +222,7 @@ namespace Microsoft.Extensions.Configuration.Xml
         private static partial Regex ISO8601TimeSpanPattern();
 
 
-        [GeneratedRegex(@"^(?=.*\d+(?:h|min|s|ms))(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
+        [GeneratedRegex(@"^(?=.*\d+(?:d|h|min|s|ms))(?:(?<days>\d+)d)?(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
         private static partial Regex TimeSpanPattern();
     }
 }
