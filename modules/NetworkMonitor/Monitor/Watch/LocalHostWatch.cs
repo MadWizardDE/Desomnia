@@ -2,7 +2,6 @@
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Services;
 using MadWizard.Desomnia.Network.SleepProxy;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using Makaretu.Dns;
@@ -18,13 +17,16 @@ namespace MadWizard.Desomnia.Network.Watch
     public class LocalHostWatch : HostDemandWatch
     {
         private bool _handoffDone = false;
-        private byte _handoffSleepProxyCount = 0;
+
+        internal byte SleepProxyRegistrationCycle { get; private set; }
 
         public override bool IsOnline => true; // the local proxy is always available
 
         public required NetworkSegment Network { private get; init; }
 
         public required AddressMappingService AddressMapping { protected get; init; }
+
+        public required Func<LocalHostWatch, SleepProxyRegistration> CreateSleepProxyRegistration { private get; init; }
 
         protected override bool ShouldStartRequest(EthernetPacket packet)
         {
@@ -44,11 +46,11 @@ namespace MadWizard.Desomnia.Network.Watch
                 {
                     if (SelectSleepProxy(out var proxy, out var service))
                     {
-                        var reg = CreateSleepProxyRegistration(_handoffSleepProxyCount);
+                        var reg = CreateSleepProxyRegistration(this);
 
                         await RegisterWithSleepProxy(proxy, service, reg);
 
-                        _handoffSleepProxyCount++;
+                        SleepProxyRegistrationCycle++;
                     }
                 }
 
@@ -90,37 +92,6 @@ namespace MadWizard.Desomnia.Network.Watch
             }
 
             return false;
-        }
-
-        private SleepProxyRegistration CreateSleepProxyRegistration(byte sequence = 1)
-        {
-            var reg = new SleepProxyRegistration(Host)
-            {
-                Sequence = sequence,
-
-                RequestedLease = HandoffOptions.LeaseDuration,
-                Password = HandoffOptions.Password,
-            };
-
-            foreach (var watch in this)
-            {
-                if (watch.Service is not TransportNetworkService service)
-                    continue;
-
-                reg.Services.Add(new ProxyServiceInfo
-                {
-                    Name        = service.Name,
-                    ServiceName = service.ServiceName,
-
-                    Protocol    = service.Port.Protocol,
-                    Port        = service.Port,
-
-                    AdvertiseHostTTL    = watch.AdvertiseOptions.HostTTL,
-                    AdvertiseServiceTTL = watch.AdvertiseOptions.ServiceTTL,
-                });
-            }
-
-            return reg;
         }
 
         private async Task RegisterWithSleepProxy(NetworkHost proxy, SleepProxyService service, SleepProxyRegistration reg)

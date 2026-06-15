@@ -1,3 +1,4 @@
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
@@ -16,7 +17,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
     {
         public byte             Version         { get; init; } = 1;
         /// <summary>The Owner option's sequence number (the host increments it on each registration).</summary>
-        public byte             Sequence        { get; init; } = 1;
+        public byte             Sequence        { get; init; } = 0;
 
         public PhysicalAddress  PrimaryAddress  { get; init; }
         public PhysicalAddress? TargetAddress   { get; init; }
@@ -33,7 +34,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         public Dictionary<IPAddress, IPAddressOptions>  IPAddresses { get; init; } = [];
         public List<ProxyServiceInfo>                   Services    { get; init; } = [];
 
-        public SleepProxyRegistration(NetworkHost host)
+        private SleepProxyRegistration(NetworkHost host)
         {
             Name = host.Name;
             Hostname = host.HostName;
@@ -49,6 +50,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 IPAddresses[ip] = host[ip];
             }
+        }
+
+        public SleepProxyRegistration(NetworkHost host, HandoffOptions options, byte sequence) : this(host)
+        {
+            RequestedLease = options.LeaseDuration;
+            Password = options.Password;
+
+            Sequence = sequence;
         }
 
         public SleepProxyRegistration(string name, string hostname, EdnsOwnerOption owner, EdnsLeaseOption? lease)

@@ -172,6 +172,11 @@ namespace MadWizard.Desomnia.Network.Context
 
                 RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
 
+                builder.RegisterType<SleepProxyRegistration>()
+                    .ConfigurePipeline(p => p.Use(new DefaultSleepProxyRegistration()))
+                    .InstancePerDependency()
+                    .AsSelf();
+
                 if (config.WatchMode == WatchMode.Promiscuous)
                 {
                     builder.RegisterType<PromiscuousModeMutex>()
