@@ -1,6 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Net.NetworkInformation;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
@@ -75,6 +76,17 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 {
                     // we can safely ignore this here
                 }
+            }
+        }
+    }
+
+    class SleepProxyPhysicalAddressLease(NetworkHost host, PhysicalAddress adr) : IDisposable
+    {
+        void IDisposable.Dispose()
+        {
+            if (adr.Equals(host.PhysicalAddress))
+            {
+                host.PhysicalAddress = null;
             }
         }
     }

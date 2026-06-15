@@ -13,7 +13,10 @@ namespace MadWizard.Desomnia.Network.Watch
                 await PhysicalWatch.WakeUp();
             }
 
-            await base.WakeUp(ip);
+            if (Host.PhysicalAddress is not null)
+            {
+                await base.WakeUp(ip);
+            }
         }
     }
 }

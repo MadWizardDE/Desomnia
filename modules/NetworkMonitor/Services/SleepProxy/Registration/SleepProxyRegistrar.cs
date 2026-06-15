@@ -84,6 +84,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                 Task.Run(() => // this is time consuming and not relevant for the DNS response, so let's decouple it
                 {
+                    if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null)
+                    {
+                        ctxHost.Host.PhysicalAddress = reg.PrimaryAddress;
+
+                        lease.AddInstanceForDisposal(new SleepProxyPhysicalAddressLease(ctxHost.Host, reg.PrimaryAddress));
+
+                        Logger.LogHostPhysicalAddressChanged(ctxHost.Host, reg.PrimaryAddress);
+                    }
+
                     foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
                     {
                         if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
