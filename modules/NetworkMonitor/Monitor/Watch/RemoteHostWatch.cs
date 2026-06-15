@@ -218,7 +218,7 @@ namespace MadWizard.Desomnia.Network.Watch
             await Reachability.MaybePingUntil(this, WakeOptions.Timeout);
         }
 
-        private int SendMagicPacket(IPAddress? hint = null)
+        protected virtual int SendMagicPacket(IPAddress? hint = null)
         {
             var wol = new WakeOnLanPacket(Host.PhysicalAddress ?? throw new HostAbortedException($"Host '{Host.Name}' has no PhysicalAddress configured."));
 

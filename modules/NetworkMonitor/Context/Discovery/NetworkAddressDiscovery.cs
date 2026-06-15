@@ -105,7 +105,7 @@ namespace MadWizard.Desomnia.Network.Context
                 Logger.LogWarning("Host \"{name}\" has no IP addresses configured.", Host.Name);
             }
 
-            if (Watch is HostDemandWatch)
+            if (Watch is HostDemandWatch && Watch.Host is not VirtualNetworkHost)
             {
                 if (Host.PhysicalAddress is null && Host.IsInLocalRange())
                 {
