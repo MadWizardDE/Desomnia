@@ -24,7 +24,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         readonly ConcurrentDictionary<PhysicalAddress, Owned<SleepProxyLease>> _activeLeases = [];
 
-        public SleepProxyLease? Register(SleepProxyRegistration reg)
+        public TimeSpan? Register(SleepProxyRegistration reg)
         {
             var duration = options.DetermineLeaseDuration(reg.RequestedLease);
 
@@ -39,7 +39,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                 lease.GrantedUntil = DateTime.Now + duration;
 
-                return lease;
+                return lease.Duration;
             }
             else
             {
@@ -102,7 +102,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             _activeLeases[reg.PrimaryAddress] = owned;
 
-            return lease;
+            return duration;
         }
 
         private NetworkHostContext CreateHost(SleepProxyRegistration reg)

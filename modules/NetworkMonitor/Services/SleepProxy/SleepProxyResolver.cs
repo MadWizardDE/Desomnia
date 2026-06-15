@@ -42,11 +42,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
             try
             {
-                if (Registrar.Register(registration) is SleepProxyLease lease)
+                if (Registrar.Register(registration) is TimeSpan duration)
                 {
-                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, lease.Duration);
+                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, duration);
 
-                    update.AnswerWithLease(lease.Duration);
+                    update.AnswerWithLease(duration);
 
                     RespondTo(update);
                 }

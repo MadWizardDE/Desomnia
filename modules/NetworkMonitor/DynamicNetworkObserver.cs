@@ -133,7 +133,7 @@ namespace MadWizard.Desomnia.Network
 
                 MonitoringStarted?.Invoke(this, context.Monitor);
 
-                Logger.LogDebug("Monitoring of '" + context.Monitor + "' has been started");
+                Logger.LogDebug("Monitoring of '" + context.Monitor.Name + "' has been started");
 
                 _contexts.Add(owned);
             }
