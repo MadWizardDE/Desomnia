@@ -11,6 +11,14 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         private IPAddress? FirstIP  { get; set; }
         private IPAddress? LastIP   { get; set; }
 
+        public IPAddressRangeInfo() { }
+
+        public IPAddressRangeInfo(IPAddressRange range)
+        {
+            FirstIP = range.Begin;
+            LastIP  = range.End;
+        }
+
         public IPAddressRange? AddressRange
         {
             get

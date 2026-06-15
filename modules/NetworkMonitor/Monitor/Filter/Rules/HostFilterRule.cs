@@ -14,19 +14,23 @@ namespace MadWizard.Desomnia.Network.Filter.Rules
         }
     }
 
-    public class StaticHostFilterRule(IEnumerable<IPAddress> addresses) : HostFilterRule
+    public class StaticHostFilterRule : HostFilterRule
     {
+        public required IEnumerable<IPAddress> Addresses { get; init; }
+
         public override bool MatchesAddress(IPAddress? ip = null)
         {
-            return ip != null && addresses.Contains(ip);
+            return ip != null && Addresses.Contains(ip);
         }
     }
 
-    public class DynamicHostFilterRule(NetworkHost host) : HostFilterRule
+    public class DynamicHostFilterRule : HostFilterRule
     {
+        public required NetworkHost Host { get; init; }
+
         public override bool MatchesAddress(IPAddress? ip = null)
         {
-            return ip != null && host.HasAddress(ip: ip);
+            return ip != null && Host.HasAddress(ip: ip);
         }
     }
 }

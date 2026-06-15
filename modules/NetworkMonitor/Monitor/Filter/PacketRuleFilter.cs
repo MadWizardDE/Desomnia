@@ -5,7 +5,7 @@ namespace MadWizard.Desomnia.Network.Filter
 {
     internal class PacketRuleFilter : IPacketFilter
     {
-        public required IEnumerable<PacketFilterRule> Rules { protected get; init; }
+        public required IEnumerable<PacketFilterRule> Rules { protected internal get; init; }
 
         public virtual bool ShouldFilter(EthernetPacket packet, PacketFilterOptions options)
         {

@@ -6,11 +6,13 @@ namespace MadWizard.Desomnia.Network.Filter.Rules
 {
     public abstract class HostRangeFilterRule : HostFilterRule { }
 
-    public class StaticHostRangeFilterRule(IPAddressRange range) : HostRangeFilterRule
+    public class StaticHostRangeFilterRule : HostRangeFilterRule
     {
+        public required IPAddressRange Range { get; init; }
+
         public override bool MatchesAddress(IPAddress? ip = null)
         {
-            return ip != null && range.Contains(ip);
+            return ip != null && Range.Contains(ip);
         }
     }
 
