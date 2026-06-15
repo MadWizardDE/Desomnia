@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj" />
+    <ProjectReference Include="..\NetworkMonitor\NetworkMonitor.csproj" />
   </ItemGroup>
 
 </Project>

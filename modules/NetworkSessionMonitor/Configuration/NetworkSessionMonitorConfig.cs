@@ -6,7 +6,8 @@ namespace MadWizard.Desomnia.NetworkSession.Configuration
     {
         // Options
         #region Network :: WatchOptions
-        internal bool WatchPassive { get; set; } = true;
+        internal bool RegisterWithSleepProxy    { get; set; } = true;
+        internal bool WatchPassive              { get; set; } = true;
 
         public WatchOptions MakeWatchOptions() => new()
         {
