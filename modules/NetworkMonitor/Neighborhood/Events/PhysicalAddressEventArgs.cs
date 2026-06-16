@@ -2,8 +2,8 @@
 
 namespace MadWizard.Desomnia.Network.Neighborhood.Events
 {
-    public class PhysicalAddressEventArgs(PhysicalAddress mac) : EventArgs
+    public class PhysicalAddressEventArgs(PhysicalAddress? mac) : EventArgs
     {
-        public PhysicalAddress PhysicalAddress => mac;
+        public PhysicalAddress? PhysicalAddress => mac;
     }
 }

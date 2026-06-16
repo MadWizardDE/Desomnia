@@ -9,7 +9,9 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public required IEnumerable<NetworkHost> VPNClients { get; init; }
 
-        public DateTime? LastSeenVPN { get; internal set; }
+        public DateTime? LastSeenVPN    { get; internal set; }
+
+        public DateTime? ValidUntil      { get; set; }
 
         public NetworkHost? FindVPNClient(IPAddress? ip)
         {

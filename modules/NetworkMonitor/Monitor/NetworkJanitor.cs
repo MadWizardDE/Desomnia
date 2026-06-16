@@ -1,4 +1,5 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Context;
 using MadWizard.Desomnia.Network.Neighborhood;
 using System.Net;
 
@@ -8,7 +9,7 @@ namespace MadWizard.Desomnia.Network
     {
         public required NetworkSegment Network { private get; init; }
 
-        private HashSet<NetworkHost> _sweepableHosts = [];
+        private HashSet<NetworkHostContext> _sweepableHosts = [];
 
         private CancellationTokenSource? _sweepCancellation;
 
@@ -28,6 +29,7 @@ namespace MadWizard.Desomnia.Network
                     using (await Network.Mutex.LockAsync(stoppingToken))
                     {
                         SweepHostAddresses(Network);
+                        SweepHosts(Network);
                     }
                 }
                 catch (OperationCanceledException)
@@ -37,15 +39,13 @@ namespace MadWizard.Desomnia.Network
             }
         }
 
-        internal void MakeHostEligibleForSweeping(NetworkHost host)
+        internal void MakeHostEligibleForSweeping(NetworkHostContext host)
         {
             _sweepableHosts.Add(host);
         }
 
         internal void SweepHostAddresses(NetworkSegment network)
         {
-            List<NetworkHost>? emptyHosts = null;
-
             foreach (var host in network)
             {
                 List<IPAddress>? removeIPs = null;
@@ -64,18 +64,25 @@ namespace MadWizard.Desomnia.Network
                 {
                     host.RemoveAddress(adr, true);
                 }
-
-                if (!host.IPAddresses.Any())
-                {
-                    (emptyHosts ??= []).Add(host);
-                }
             }
+        }
 
-            foreach (var host in (emptyHosts ?? Enumerable.Empty<NetworkHost>()).Where(_sweepableHosts.Contains))
+        internal void SweepHosts(NetworkSegment network)
+        {
+            foreach (var ctx in _sweepableHosts.ToArray())
             {
-                network.RemoveHost(host);
+                if (ctx.Host.FilterRefCount > 0)
+                    continue;
 
-                _sweepableHosts.Remove(host);
+                if (ctx.Host is NetworkRouter router)
+                {
+                    if (DateTime.Now < router.ValidUntil) // null will not match
+                        continue;
+                }
+
+                ctx.Dispose();
+
+                _sweepableHosts.Remove(ctx);
             }
         }
 

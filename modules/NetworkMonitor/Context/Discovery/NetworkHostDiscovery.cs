@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
+using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
@@ -26,7 +27,7 @@ namespace MadWizard.Desomnia.Network.Context
             }
         }
 
-        internal async Task DiscoverDynamicFilterHosts()
+        internal IEnumerable<NetworkHostContext> CreateDynamicFilterHosts()
         {
             var contexts = ((IEnumerable<FilterContext>)[this])
                 .Concat(_hostContexts).Concat(_hostContexts.SelectMany(ctx => ctx))
@@ -43,8 +44,10 @@ namespace MadWizard.Desomnia.Network.Context
                         Name = host
                     };
 
-                    CreateHost(new TypedParameter(typeof(NetworkHostInfo), config));
+                    yield return CreateDynamicHost(new TypedParameter(typeof(NetworkHostInfo), config));
                 }
+
+                ctx.Scope.Resolve<IEnumerable<PacketFilterRule>>(); // the rules should now be resolvable
             }
         }
 
@@ -95,6 +98,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Network.AddHost(context.Host);
 
+            Logger.LogDebug("Created host '{Name}'", context.Host.Name);
+
             if (context.Watch is NetworkHostWatch watch)
             {
                 this.Monitor.StartTracking(watch);
@@ -103,6 +108,8 @@ namespace MadWizard.Desomnia.Network.Context
             context.Scope.CurrentScopeEnding += (sender, args) =>
             {
                 Network.RemoveHost(context.Host);
+
+                Logger.LogDebug("Removed host '{Name}'", context.Host.Name);
 
                 if (context.Watch is NetworkHostWatch watch)
                 {
@@ -121,7 +128,7 @@ namespace MadWizard.Desomnia.Network.Context
         {
             var context = CreateHost(parameters);
 
-            Scope.Resolve<NetworkJanitor>().MakeHostEligibleForSweeping(context.Host);
+            Scope.Resolve<NetworkJanitor>().MakeHostEligibleForSweeping(context);
 
             return context;
         }

@@ -74,12 +74,16 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             _cacheHostName.Set(key, name, duration);
         }
 
-        public void RemoveHost(NetworkHost host)
+        public bool RemoveHost(NetworkHost host)
         {
             if (_hosts.TryRemove(host.Name, out var removed))
             {
                 HostRemoved?.Invoke(this, new(removed));
+
+                return true;
             }
+
+            return false;
         }
 
         public bool IsInLocalZone(string domainName)

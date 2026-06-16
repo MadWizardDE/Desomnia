@@ -48,11 +48,11 @@ namespace Microsoft.Extensions.Logging
             return scope;
         }
 
-        public static IDisposable? BeginHostScope(this ILogger logger, NetworkHost networkHost)
+        public static IDisposable? BeginHostScope(this ILogger logger, NetworkHost host)
         {
-            if (!NLog.ScopeContext.TryGetProperty("Host", out _))
+            if (!NLog.ScopeContext.TryGetProperty("Host", out var h) || h != host)
             {
-                return logger.BeginScope(new Dictionary<string, object> { ["Host"] = networkHost });
+                return logger.BeginScope(new Dictionary<string, object> { ["Host"] = host });
             }
 
             return null;
@@ -157,7 +157,7 @@ namespace Microsoft.Extensions.Logging
                     tokens.Add("remote");
 
                 if (host.ShouldAddressExpire(ip, out var expires))
-                    tokens.Add($"expires={expires -DateTime.Now}");
+                    tokens.Add($"expires=>{expires}<");
                 else if (host[ip].HasFlags(IPAddressFlags.Static))
                     tokens.Add("static");
 

@@ -117,13 +117,16 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config))
                     .ConfigurePipeline(p => p.Use(new DefaultNetworkServiceOptions(config)))
                     .InstancePerDependency()
+                    .ExternallyOwned()
                     .AsSelf();
                 builder.RegisterType<NetworkServiceContext>()
                     .InstancePerDependency()
+                    .ExternallyOwned()
                     .AsSelf();
                 builder.RegisterType<NetworkKnockContext>()
                     .WithParameter(TypedParameter.From(config))
                     .InstancePerDependency()
+                    .ExternallyOwned()
                     .AsSelf();
 
                 builder.RegisterType<NetworkJanitor>()
@@ -277,7 +280,7 @@ namespace MadWizard.Desomnia.Network.Context
         private void RegisterFilters(ContainerBuilder builder, NetworkMonitorConfig config)
         {
             builder.RegisterType<StaticHostFilterRule>().AsSelf();
-            builder.RegisterType<DynamicHostFilterRule>().AsSelf();
+            builder.RegisterType<DynamicHostFilterRule>().AsImplementedInterfaces().AsSelf();
             builder.RegisterType<StaticHostRangeFilterRule>().AsSelf();
             builder.RegisterType<DynamicHostRangeFilterRule>().AsSelf();
 
@@ -319,5 +322,15 @@ namespace MadWizard.Desomnia.Network.Context
         }
 
         IEnumerator<NetworkHostContext> IEnumerable<NetworkHostContext>.GetEnumerator() => _hostContexts.GetEnumerator();
+
+        public override void Dispose()
+        {
+            foreach (var ctx in _hostContexts.ToArray())
+                ctx.Dispose();
+            foreach (var ctx in _knockContexts.ToArray())
+                ctx.Dispose();
+
+            base.Dispose();
+        }
     }
 }

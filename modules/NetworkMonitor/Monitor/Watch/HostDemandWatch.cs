@@ -23,7 +23,8 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public required ILifetimeScope Scope { protected get; init; }
 
-        public required NetworkDevice Device { protected get; init; }
+        public required NetworkDevice   Device  { protected get; init; }
+        public required NetworkSegment  Network { protected internal get; init; }
 
         public required AdvertiseOptions        AdvertiseOptions    { get; init; }
         public required HandoffOptions          HandoffOptions      { get; init; }

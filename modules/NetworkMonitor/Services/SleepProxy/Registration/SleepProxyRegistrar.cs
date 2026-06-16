@@ -82,7 +82,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
                 }
 
-                Task.Run(() => // this is time consuming and not relevant for the DNS response, so let's decouple it
+                var filterHosts = CreateFilterHosts();
+
+                Task.Run(async () => // this is time consuming and not relevant for the DNS response, so let's decouple it
                 {
                     if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null)
                     {
@@ -102,6 +104,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                             Logger.LogHostAddressAdded(ctxHost.Host, adr.Key);
                         }
                     }
+
+                    foreach (var host in filterHosts)
+                    {
+                        await host.DiscoverAddresses();
+                    }
+
                 }).ContinueWith(t => FinishRegistration(remote, lease));
             }
             catch (Exception)
@@ -145,7 +153,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             hostInfo.WakePasswordBytes = reg.Password;
 
-            return Context.CreateDynamicHost([ new TypedParameter(hostInfo.GetType(), hostInfo), .. parameters ]);
+            return Context.CreateHost([ new TypedParameter(hostInfo.GetType(), hostInfo), .. parameters ]);
+        }
+
+        private IEnumerable<NetworkHostContext> CreateFilterHosts() // the remote host may register dynamic host filters
+        {
+            using (ExecutionContext.SuppressFlow()) // we need to establish a new logging context
+            {
+                return Task.Run(() => Context.CreateDynamicFilterHosts().ToList()).Result;
+            }
         }
 
         #region Lease start/end validation
@@ -164,7 +180,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         await TryToExpireLeaseGracefully(watch);
                     }
 
-                    Logger.LogDebug("Lease for '{Host}' is going to end; cleaning up...", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' is going to end; demounting...", watch.Host.Name);
 
                     using (await Context.Network.Mutex.LockAsync())
                     {
@@ -206,7 +222,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     return;
 
                 case LeaseExpireAction.Wake when !await Reachability.Test(watch):
-                    Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake host...", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake...", watch.Host.Name);
 
                     try
                     {
