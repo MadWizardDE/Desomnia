@@ -111,10 +111,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 {
                     var endpoint = new IPEndPoint(ip, service.Port);
 
-                    using var client = new UdpClient(ip.AddressFamily)
-                    {
-                        DontFragment = true
-                    };
+                    using var client = new UdpClient(ip.AddressFamily);
 
                     Logger.LogTrace("Try to register '{Host}' with sleep proxy '{Proxy}' via {Endpoint}", Host.Name, proxy.Name, endpoint);
 
