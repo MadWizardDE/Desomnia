@@ -47,7 +47,7 @@ namespace MadWizard.Desomnia.Network.Context
                     yield return CreateDynamicHost(new TypedParameter(typeof(NetworkHostInfo), config));
                 }
 
-                ctx.Scope.Resolve<IEnumerable<PacketFilterRule>>(); // the rules should now be resolvable
+                ctx.Scope?.Resolve<IEnumerable<PacketFilterRule>>(); // the rules should now be resolvable
             }
         }
 
