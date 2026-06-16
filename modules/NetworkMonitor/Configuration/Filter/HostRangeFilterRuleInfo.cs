@@ -8,8 +8,6 @@ namespace MadWizard.Desomnia.Network.Configuration.Filter
     {
         public string? Name { get; init; }
 
-        public bool IsDynamic => !string.IsNullOrWhiteSpace(Name) && AddressRange == null;
-
         public FilterRuleType Type { get; set; } = FilterRuleType.MustNot;
 
         public HostRangeFilterRuleInfo() { }
@@ -20,5 +18,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Filter
         }
 
         internal HostRangeFilterRuleInfo(IPAddressRange range) : base(range) { }
+
+        public bool IsDynamic => !string.IsNullOrWhiteSpace(Name) && AddressRange == null;
     }
 }

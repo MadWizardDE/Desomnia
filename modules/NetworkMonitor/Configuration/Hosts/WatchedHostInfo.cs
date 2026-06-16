@@ -38,8 +38,8 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         public virtual AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
             Type        = (Advertise            ?? network.Advertise),
-                        //| (AdvertiseHostname    ?? network.AdvertiseHosts ? AdvertiseType.Host : 0)
-                        //| (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Service : 0),
+                      //| (AdvertiseHostname    ?? network.AdvertiseHosts ? AdvertiseType.Host : 0)
+                      //| (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Service : 0),
 
             Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
 

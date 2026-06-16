@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Naming.Options;
+﻿using MadWizard.Desomnia.Network.Configuration.Filter;
+using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using Makaretu.Dns;
 
@@ -94,7 +95,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
         {
-            var services = records.OfType<PTRRecord>().Select(ParsePTR).ToDictionary(info => info.ServiceName!);
+            var services = records.OfType<PTRRecord>().Select(ParsePTR).ToDictionary(info => info.Service.LocalDomainName);
 
             try
             {
@@ -102,7 +103,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 {
                     switch (record)
                     {
-                        case SRVRecord srv when services[srv.ServiceName] is var service:
+                        case SRVRecord srv when services[srv.ServiceDomainName] is var service:
                             if (service.Protocol != srv.Protocol)
                                 throw new FormatException($"Protocol mismatch @ '{srv.ServiceName}': {service.Protocol} != {srv.Protocol}");
                             service.Port = srv.Port;
@@ -111,7 +112,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                             service.AdvertiseHostTTL = srv.TTL;
                             break;
 
-                        case TXTRecord txt when services[txt.ServiceName] is var service:
+                        case TXTRecord txt when services[txt.ServiceDomainName] is var service:
                             foreach (var pair in txt.KeyValuePairs)
                             {
                                 switch (pair.Key.ToLower())
@@ -124,13 +125,45 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                             break;
                     }
                 }
+
+                foreach (var option in records.OfType<OPTRecord>().SelectMany(opt => opt.Options).OfType<EdnsServiceOption>())
+                {
+                    ApplyServiceOption(services[option.ServiceDomainName], option);
+                }
             }
             catch (KeyNotFoundException ex)
             {
-                throw new FormatException("PTR record missing", ex);
+                throw new FormatException("Missing PTR record for service", ex);
             }
 
             return services.Values;
+        }
+
+        private static void ApplyServiceOption(ProxyServiceInfo service, EdnsServiceOption serviceOption)
+        {
+            switch (serviceOption)
+            {
+                // optional: add more serviceOption types
+
+                case EdnsServiceFilterOption option:
+                    foreach (var filter in option.Filters)
+                    {
+                        switch (filter)
+                        {
+                            case StaticHostFilterEntry entry:
+                                service.HostFilterRule.Add(new HostFilterRuleInfo(entry.Address)            { Type = entry.Type }); break;
+                            case DynamicHostFilterEntry entry:
+                                service.HostFilterRule.Add(new HostFilterRuleInfo(entry.Name)               { Type = entry.Type }); break;
+
+                            case StaticRangeFilterEntry entry:
+                                service.HostRangeFilterRule.Add(new HostRangeFilterRuleInfo(entry.Range)    { Type = entry.Type }); break;
+                            case LocalRangeFilterEntry entry:
+                                service.HostRangeFilterRule.Add(new LocalRangeFilterRuleInfo()              { Type = entry.Type }); break;
+                        }
+                    }
+                    
+                    break;
+            }
         }
         #endregion
 

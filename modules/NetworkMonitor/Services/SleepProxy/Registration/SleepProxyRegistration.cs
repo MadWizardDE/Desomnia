@@ -1,9 +1,11 @@
+using MadWizard.Desomnia.Network.Configuration.Filter;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using Makaretu.Dns;
+using NetTools;
 using System.Net;
 using System.Net.NetworkInformation;
 
@@ -91,6 +93,30 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 if (RequestedLease is TimeSpan lease)
                 {
                     yield return new EdnsLeaseOption { Duration = lease };
+                }
+
+                foreach (var service in Services)
+                {
+                    var option = new EdnsServiceFilterOption { ServiceDomainName = service.Service.LocalDomainName };
+
+                    foreach (var host in service.HostFilterRule)
+                    {
+                        if (host.IsDynamic)
+                            option.Filters.Add(new DynamicHostFilterEntry   { Type = host.Type, Name = host.Name! });
+                        else foreach(var ip in host.IPAddresses)
+                            option.Filters.Add(new StaticHostFilterEntry    { Type = host.Type, Address = ip });
+                    }
+
+                    foreach (var range in service.HostRangeFilterRule)
+                    {
+                        if (range is LocalRangeFilterRuleInfo)
+                            option.Filters.Add(new LocalRangeFilterEntry    { Type = range.Type });
+                        else if (range.AddressRange is IPAddressRange addressRange)
+                            option.Filters.Add(new StaticRangeFilterEntry   { Type = range.Type, Range = addressRange });
+                    }
+
+                    if (option.Filters.Count > 0)
+                        yield return option;
                 }
             }
         }

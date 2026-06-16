@@ -4,7 +4,7 @@ using System.Net;
 
 namespace MadWizard.Desomnia.Network.Neighborhood
 {
-    public class NetworkHostRange
+    public class NetworkHostRange : IIEnumerable<IPAddressRange>
     {
         readonly ConcurrentHashSet<IPAddressRange> _ranges = [];
 
@@ -31,7 +31,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         }
         public virtual bool RemoveAddress(IPAddress ip)
         {
-            var ranges = _ranges.Where(range => 
+            var ranges = _ranges.Where(range =>
                 range.AddressCount == 1 &&
                 range.Begin.Equals(ip) &&
                 range.End.Equals(ip))
@@ -57,5 +57,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             return false;
         }
+
+        public virtual IEnumerator<IPAddressRange> GetEnumerator() => _ranges.GetEnumerator();
     }
 }

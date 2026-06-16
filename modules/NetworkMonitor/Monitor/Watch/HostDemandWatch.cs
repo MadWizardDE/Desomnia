@@ -29,9 +29,9 @@ namespace MadWizard.Desomnia.Network.Watch
         public required HandoffOptions          HandoffOptions      { get; init; }
         public required DemandOptions           DemandOptions       { get; init; }
 
-        public required Lazy<IPacketFilter>     Filter              { private get; init; }
+        public required Lazy<IPacketFilter>     Filter              { internal get; init; }
 
-        public required PacketFilterOptions     FilterOptions       { private get; init; }
+        public required PacketFilterOptions     FilterOptions       { internal get; init; }
 
         readonly ConcurrentDictionary<object, DemandRequest> _ongoingRequests = [];
 

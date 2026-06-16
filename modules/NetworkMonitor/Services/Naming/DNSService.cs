@@ -122,6 +122,8 @@ namespace MadWizard.Desomnia.Network.Naming
         {
             EdnsOptionRegistry.Register<EdnsLeaseOption>();
             EdnsOptionRegistry.Register<EdnsOwnerOption>();
+
+            EdnsOptionRegistry.Register<EdnsServiceFilterOption>();
         }
     }
 }

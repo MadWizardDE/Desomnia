@@ -12,7 +12,7 @@ namespace MadWizard.Desomnia
      */
     public abstract class Resource : Actor, IInspectable
     {
-        readonly ISet<ResourceMonitor> Monitors = new HashSet<ResourceMonitor>();
+        protected readonly ISet<ResourceMonitor> Monitors = new HashSet<ResourceMonitor>();
 
         //public bool IsTrackedBy(object monitor) => Monitors.Contains(monitor);
         //public bool IsTrackedBy<T>() => Monitors.OfType<T>().Any();

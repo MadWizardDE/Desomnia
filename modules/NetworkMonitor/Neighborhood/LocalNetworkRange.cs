@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using NetTools;
+using System.Net;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Neighborhood
@@ -19,6 +20,13 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             }
 
             return false;
+        }
+
+        public override IEnumerator<IPAddressRange> GetEnumerator()
+        {
+            return Device.Interface.GetIPProperties().UnicastAddresses
+                .Select(u => new IPAddressRange(u.Address, u.PrefixLength))
+                .Distinct().GetEnumerator();
         }
     }
 }

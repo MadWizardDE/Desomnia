@@ -1,3 +1,4 @@
+using NetTools;
 using System.Net;
 
 namespace Makaretu.Dns
@@ -48,6 +49,8 @@ namespace Makaretu.Dns
 
         extension(PTRRecord ptr)
         {
+            public DomainName ServiceDomainName => ptr.Name;
+
             public string ServiceName => ptr.Name.Labels[0].Replace("_", "");
             public string ProtocolName => ptr.Name.Labels[1].Replace("_", "");
 
@@ -58,6 +61,8 @@ namespace Makaretu.Dns
 
         extension(SRVRecord srv)
         {
+            public DomainName ServiceDomainName => new(srv.Name.Labels[1], srv.Name.Labels[2], srv.Name.Labels[3]);
+
             public string ServiceName => srv.Name.Labels[1].Replace("_", "");
             public string ProtocolName => srv.Name.Labels[2].Replace("_", "");
 
@@ -74,6 +79,8 @@ namespace Makaretu.Dns
 
         extension(TXTRecord txt)
         {
+            public DomainName ServiceDomainName => new(txt.Name.Labels[1], txt.Name.Labels[2], txt.Name.Labels[3]);
+
             public string ServiceName => txt.Name.Labels[1].Replace("_", "");
             public string InstanceName => txt.Name.Labels[0];
 
@@ -93,5 +100,41 @@ namespace Makaretu.Dns
                 }
             }
         }
+
+        #region Wire read/write
+        extension(WireReader reader)
+        {
+            public IPAddress ReadAddress()
+            {
+                int size = reader.ReadByte(); // begin and end share the same address family
+
+                return reader.ReadIPAddress(size);
+            }
+
+            public IPAddressRange ReadAddressRange()
+            {
+                int size = reader.ReadByte(); // begin and end share the same address family
+
+                return new IPAddressRange(reader.ReadIPAddress(size), reader.ReadIPAddress(size));
+            }
+        }
+
+        extension(WireWriter writer)
+        {
+            public void WriteAddress(IPAddress address)
+            {
+                byte[] bytes = address.GetAddressBytes();
+
+                writer.WriteByte((byte)bytes.Length);
+                writer.WriteIPAddress(address);
+            }
+
+            public void WriteAddressRange(IPAddressRange range)
+            {
+                writer.WriteAddress(range.Begin); 
+                writer.WriteIPAddress(range.End); // shares the family/length of Begin
+            }
+        }
+        #endregion
     }
 }
