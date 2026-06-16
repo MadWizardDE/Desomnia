@@ -191,14 +191,16 @@ namespace Microsoft.Extensions.Configuration.Xml
 
         internal static string NormalizeTimeSpanVariations(string value)
         {
-            if (ISO8601TimeSpanPattern().Match(value).Success)
+            var trimmed = WhitespacePattern().Replace(value, "");
+
+            if (ISO8601TimeSpanPattern().IsMatch(trimmed))
             {
-                TimeSpan time = XmlConvert.ToTimeSpan(value);
+                TimeSpan time = XmlConvert.ToTimeSpan(trimmed);
 
                 return time.ToString();
             }
 
-            else if (TimeSpanPattern().Match(value) is Match match && match.Success)
+            else if (TimeSpanPattern().Match(trimmed) is Match match && match.Success)
             {
                 TimeSpan time = TimeSpan.Zero;
                 if (match.Groups.TryGetValue("days", out var days) && days.Success)
@@ -218,10 +220,10 @@ namespace Microsoft.Extensions.Configuration.Xml
             return value;
         }
 
+        [GeneratedRegex(@"\s+")]
+        private static partial Regex WhitespacePattern();
         [GeneratedRegex(@"^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+S)?)?$")]
         private static partial Regex ISO8601TimeSpanPattern();
-
-
         [GeneratedRegex(@"^(?=.*\d+(?:days|day|d|h|min|s|ms))(?:(?<days>\d+)(?:days|day|d))?(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
         private static partial Regex TimeSpanPattern();
     }
