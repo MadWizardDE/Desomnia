@@ -261,5 +261,15 @@ namespace MadWizard.Desomnia.Network.Context
         }
 
         IEnumerator<NetworkServiceContext> IEnumerable<NetworkServiceContext>.GetEnumerator() => _serviceContexts.GetEnumerator();
+
+        public override void Dispose()
+        {
+            foreach (var ctx in _serviceContexts.ToArray())
+                ctx.Dispose();
+
+            base.Dispose();
+
+            Logger.LogDebug("Disposed host '{Name}'", Host.Name);
+        }
     }
 }

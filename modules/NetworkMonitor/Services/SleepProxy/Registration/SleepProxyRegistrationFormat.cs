@@ -33,7 +33,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     TTL = adr.TTL,
                 };
 
-            reg.Services.AddRange(ReadServices(message.AuthorityRecords));
+            reg.Services.AddRange(ReadServices(message.AuthorityRecords, message.Options));
 
             return reg;
         }
@@ -93,7 +93,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             };
         }
 
-        static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records)
+        static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records, IEnumerable<EdnsOption> options)
         {
             var services = records.OfType<PTRRecord>().Select(ParsePTR).ToDictionary(info => info.Service.LocalDomainName);
 
@@ -126,7 +126,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     }
                 }
 
-                foreach (var option in records.OfType<OPTRecord>().SelectMany(opt => opt.Options).OfType<EdnsServiceOption>())
+                foreach (var option in options.OfType<EdnsServiceOption>())
                 {
                     ApplyServiceOption(services[option.ServiceDomainName], option);
                 }

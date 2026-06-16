@@ -14,9 +14,9 @@ namespace MadWizard.Desomnia.Network.Context
 
             init
             {
-                Logger = (ILogger)value.Resolve(typeof(ILogger<>).MakeGenericType(GetType()));
+                field = value;
 
-                parent.Disposer.AddInstanceForDisposal(field = value); // automatic child scope disposal
+                Logger = (ILogger) value.Resolve(typeof(ILogger<>).MakeGenericType(GetType()));
             }
         } = null!;
 
@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Network.Context
                 .AutoActivate();
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             Scope?.Dispose();
         }

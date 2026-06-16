@@ -123,7 +123,7 @@ namespace MadWizard.Desomnia.Network
 
                 await context.DiscoverRouters();
 
-                await context.DiscoverDynamicFilterHosts();
+                context.CreateDynamicFilterHosts();
 
                 await context.DiscoverAddresses();
 

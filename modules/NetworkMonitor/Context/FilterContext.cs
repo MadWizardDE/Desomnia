@@ -24,6 +24,8 @@ namespace MadWizard.Desomnia.Network.Context
 
         private readonly ConcurrentDictionary<NetworkService, TrafficFilterRequest> _dynamicTrafficFilters = [];
 
+        //public required Lazy<IEnumerable<PacketFilterRule>> Rules { internal get; init; }
+
         protected FilterContext(ILifetimeScope parent, string? tagName = null) : base(parent)
         {
             _needsTCPData = parent.ResolveOptional<SystemUsageInspector>() is not null;
@@ -62,6 +64,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(NetworkHostParameter<NetworkHost>.FindBy(filter.Name!))
                     .As<PacketFilterRule>().As<HostFilterRule>()
                     .WithMetadata("tag", _tagName)
+                    .AsImplementedInterfaces()
                     .SingleInstance();
 
                 _dynamicHostFilters.Add(filter);

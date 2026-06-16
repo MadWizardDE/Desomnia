@@ -24,13 +24,24 @@ namespace MadWizard.Desomnia.Network.Filter.Rules
         }
     }
 
-    public class DynamicHostFilterRule : HostFilterRule
+    public class DynamicHostFilterRule : HostFilterRule, IDisposable
     {
-        public required NetworkHost Host { get; init; }
+        public required NetworkHost Host
+        {
+            get; set
+            {
+                (field = value).FilterRefCount++;
+            }
+        }
 
         public override bool MatchesAddress(IPAddress? ip = null)
         {
             return ip != null && Host.HasAddress(ip: ip);
+        }
+
+        void IDisposable.Dispose()
+        {
+            Host.FilterRefCount--;
         }
     }
 }

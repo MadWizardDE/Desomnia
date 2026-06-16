@@ -161,7 +161,14 @@ namespace MadWizard.Desomnia.Network.Address
                 {
                     if (Network.LocalRange.Contains(ip))
                     {
-                        addresses.Update(ip, args.PhysicalAddress);
+                        if (args.PhysicalAddress is PhysicalAddress adr)
+                        {
+                            addresses.Update(ip, adr);
+                        }
+                        else
+                        {
+                            addresses.Delete(ip);
+                        }
                     }
                 }
             }

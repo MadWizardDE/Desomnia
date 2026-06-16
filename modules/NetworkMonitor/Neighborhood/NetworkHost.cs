@@ -21,6 +21,8 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public virtual PhysicalAddress? PhysicalAddress { get; set { field = value;  PhysicalAddressChanged?.Invoke(this, new(value!)); } }
 
+        internal int FilterRefCount { get; set; } = 0;
+
         #region IP addresses
         readonly ConcurrentDictionary<IPAddress, IPAddressOptions> _addresses = [];
 

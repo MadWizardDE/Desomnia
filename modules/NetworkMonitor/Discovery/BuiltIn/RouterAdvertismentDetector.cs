@@ -111,9 +111,14 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                 }
             }
 
-            if (router?.AddAddress(ip, new(lifetime)) ?? false)
+            if (router is not null)
             {
-                Logger.LogHostAddressAdded(router, ip);
+                router.ValidUntil = DateTime.Now + lifetime;
+
+                if (router.AddAddress(ip, new(lifetime)))
+                {
+                    Logger.LogHostAddressAdded(router, ip);
+                }
             }
         }
 

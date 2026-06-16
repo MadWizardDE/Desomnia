@@ -74,6 +74,8 @@ namespace MadWizard.Desomnia.Network.Context
     {
         internal async Task DiscoverAddresses()
         {
+            using var scope = Logger.BeginHostScope(Host);
+
             if (Auto != AutoDiscoveryType.Nothing)
             {
                 // Dynamically resolve IP addresses

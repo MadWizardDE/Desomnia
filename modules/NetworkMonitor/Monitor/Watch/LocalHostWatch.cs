@@ -22,8 +22,6 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public override bool IsOnline => true; // the local proxy is always available
 
-        public required NetworkSegment Network { internal get; init; }
-
         public required AddressMappingService AddressMapping { protected get; init; }
 
         public required Func<LocalHostWatch, SleepProxyRegistration> CreateSleepProxyRegistration { private get; init; }

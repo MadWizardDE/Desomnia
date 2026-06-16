@@ -142,7 +142,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: WatchOptions
         internal WatchMode          WatchMode               { get; set; } = WatchMode.Normal;
-        internal TimeSpan?          WatchTimeout            { get; set; } = TimeSpan.FromMinutes(1); //= null; // TODO: safety net, but why do we need this?
+        internal TimeSpan?          WatchTimeout            { get; set; } = null; // capturing should be stable now
         internal ushort?            WatchUDPPort            { get; set; } = null;
 
         public WatchOptions MakeWatchOptions() => new()
