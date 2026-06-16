@@ -70,13 +70,9 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
             if (_hosts.TryGetValue(host, out var families) && families.Contains(ip.AddressFamily))
             {
-                if (!host.HasAddress(ip:ip))
+                if (host.AddAddress(ip, new(lifetime ?? options.Refresh)))
                 {
-                    using var scope = Logger.BeginHostScope(host);
-                    Logger.LogDebug("Host '{HostName}' advertised unknown {Family} address '{IPAddress}'",
-                        host.Name, ip.ToFamilyName(), ip);
-
-                    host.AddAddress(ip, new(lifetime ?? options.Refresh));
+                    Logger.LogHostAddressAdded(host, ip);
                 }
             }
         }
