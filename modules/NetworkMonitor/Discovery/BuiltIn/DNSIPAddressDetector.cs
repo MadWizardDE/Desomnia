@@ -116,8 +116,8 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                             break;
 
                         case SocketError.NoData:
-                            // that simply means, there are not Options addresses known to the DNS
-                            Logger.LogTrace(errorMsg, family.ToFriendlyName(), host.HostName, "NO_DATA");
+                            // that simply means, there are no IP addresses known to the DNS
+                            //Logger.LogTrace(errorMsg, family.ToFriendlyName(), host.HostName, "NO_DATA");
                             break;
 
                         default:
