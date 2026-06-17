@@ -36,6 +36,10 @@ namespace MadWizard.Desomnia.Network.Context
             {
                 foreach (var configVPNClient in configRouter.VPNClient)
                 {
+                    configVPNClient.AutoDetect ??= Config.AutoDetect;
+
+                    configVPNClient.AutoDetect &= ~AutoDiscoveryType.MAC; // this can never work
+
                     CreateHost(new TypedParameter(typeof(NetworkHostInfo), configVPNClient));
                 }
 
