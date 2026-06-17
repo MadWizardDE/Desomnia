@@ -10,6 +10,8 @@ namespace MadWizard.Desomnia.Network
 
         void ProcessPacket(EthernetPacket packet) { }
 
+        async Task BeforeSuspend() { }
+
         void Suspend() { }
 
         void Shutdown() => Suspend();

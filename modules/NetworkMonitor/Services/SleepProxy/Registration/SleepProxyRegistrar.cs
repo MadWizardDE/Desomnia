@@ -180,7 +180,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         await TryToExpireLeaseGracefully(watch);
                     }
 
-                    Logger.LogDebug("Lease for '{Host}' is going to end; demounting...", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' is going to end; releasing hold resources...", watch.Host.Name);
 
                     using (await Context.Network.Mutex.LockAsync())
                     {

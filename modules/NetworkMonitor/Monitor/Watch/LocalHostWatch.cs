@@ -18,6 +18,8 @@ namespace MadWizard.Desomnia.Network.Watch
     {
         private bool _handoffDone = false;
 
+        internal bool HandoffNeeded => HandoffOptions.Type != HandoffType.None && _handoffDone == false;
+
         internal byte SleepProxyRegistrationCycle { get; private set; }
 
         public override bool IsOnline => true; // the local proxy is always available
@@ -38,27 +40,24 @@ namespace MadWizard.Desomnia.Network.Watch
 
         internal protected virtual async Task HandoffWatch()
         {
-            if (HandoffOptions.Type != HandoffType.None && _handoffDone == false)
+            if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
             {
-                if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
+                if (SelectSleepProxy(out var proxy, out var service))
                 {
-                    if (SelectSleepProxy(out var proxy, out var service))
-                    {
-                        var reg = CreateSleepProxyRegistration(this);
+                    var reg = CreateSleepProxyRegistration(this);
 
-                        await RegisterWithSleepProxy(proxy, service, reg);
+                    await RegisterWithSleepProxy(proxy, service, reg);
 
-                        SleepProxyRegistrationCycle++;
-                    }
+                    SleepProxyRegistrationCycle++;
                 }
-
-                if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
-                {
-                    SendUnMagicPacket(Host);
-                }
-
-                _handoffDone = true;
             }
+
+            if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
+            {
+                SendUnMagicPacket(Host);
+            }
+
+            _handoffDone = true;
         }
 
         internal protected virtual async Task ReclaimWatch()

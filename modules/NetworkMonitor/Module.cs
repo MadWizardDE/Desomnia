@@ -12,6 +12,7 @@ using MadWizard.Desomnia.Network.Knocking.Methods;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Middleware;
 using MadWizard.Desomnia.Network.Reachability;
+using MadWizard.Desomnia.Power.Guard;
 using Microsoft.Extensions.Configuration.Xml;
 using System.ComponentModel;
 
@@ -139,9 +140,10 @@ namespace MadWizard.Desomnia.Network
                     .InstancePerRequest()
                     .AsSelf();
 
-                // Feed NetworkMonitors dynamically into the SystemMonitor
-                builder.RegisterServiceMiddleware<IEnumerable<IInspectable>>(new DynamicNetworkMonitors());
-                /// builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors()); // TODO: has to be tested
+                // Make NetworkMonitors dynamically available
+                builder.RegisterServiceMiddleware<IEnumerable<IInspectable>>(new DynamicNetworkMonitors<IInspectable>());
+                builder.RegisterServiceMiddleware<IEnumerable<IPowerTransitionGuard>>(new DynamicNetworkMonitors<IPowerTransitionGuard>());
+                builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors<NetworkMonitor>());
             }
         }
     }

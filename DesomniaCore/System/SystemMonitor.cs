@@ -108,16 +108,25 @@ namespace MadWizard.Desomnia
         }
 
         [ActionHandler("reboot")]
-        internal async Task HandleActionReboot() => await power.Reboot();
+        internal async Task HandleActionReboot()    => await power.Reboot();
         [ActionHandler("shutdown")]
-        internal async Task HandleActionShutdown() => await power.Shutdown();
+        internal async Task HandleActionShutdown()  => await power.Shutdown();
+
         [ActionHandler("sleep")]
         internal async Task HandleActionSleep()
         {
             TriggerEvent(nameof(Suspend));
-            TriggerEvent(nameof(SuspendTimeout));
 
-            await power.Suspend();
+            try
+            {
+                TriggerEvent(nameof(SuspendTimeout));
+
+                await power.Suspend();
+            }
+            catch (OperationCanceledException)
+            {
+                CancelEventAction(nameof(SuspendTimeout));
+            }
         }
 
         [ActionHandler("sleepless")]

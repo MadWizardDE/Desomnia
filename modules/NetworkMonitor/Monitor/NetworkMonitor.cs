@@ -2,12 +2,13 @@
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Events;
 using MadWizard.Desomnia.Network.Watch;
+using MadWizard.Desomnia.Power.Guard;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 
 namespace MadWizard.Desomnia.Network
 {
-    public class NetworkMonitor : ResourceMonitor<NetworkHostWatch>
+    public class NetworkMonitor : ResourceMonitor<NetworkHostWatch>, IPowerTransitionGuard
     {
         public required ILogger<NetworkMonitor> Logger { private get; init; }
 
@@ -36,6 +37,17 @@ namespace MadWizard.Desomnia.Network
             using (Network.Mutex.Lock())
             {
                 return base.Inspect(interval);
+            }
+        }
+
+        async Task IPowerTransitionGuard.BeforeTransition(PowerTransition transition)
+        {
+            if (transition == PowerTransition.Suspend)
+            {
+                foreach (var service in Services)
+                {
+                    await service.BeforeSuspend();
+                }
             }
         }
 
@@ -115,7 +127,7 @@ namespace MadWizard.Desomnia.Network
         }
 
         #region Host Events
-        private void Network_HostRemoved(object? sender, NetworkHostEventArgs e)
+        private void Network_HostRemoved(object? sender, NetworkHostEventArgs e) // TODO: Kann das weg?
         {
             if (this[e.Host] is NetworkHostWatch watch)
             {

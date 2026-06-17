@@ -1,6 +1,8 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Configuration;
 using MadWizard.Desomnia.Logging;
+using MadWizard.Desomnia.Power.Guard;
+using MadWizard.Desomnia.Power.Manager;
 using MadWizard.Desomnia.Power.Watch;
 using NLog;
 
@@ -18,6 +20,8 @@ namespace MadWizard.Desomnia
                 .SingleInstance()
                 .AsSelf();
 
+            builder.RegisterDecorator<GuardedPowerManager, IPowerManager>();
+
             builder.RegisterType<SleepWatch>()
                 .AsImplementedInterfaces()
                 .SingleInstance();
@@ -27,6 +31,7 @@ namespace MadWizard.Desomnia
             builder.RegisterType<ShutdownWatch>()
                 .AsImplementedInterfaces()
                 .SingleInstance();
+
 
             builder.RegisterType<SystemMonitor>().As<IStartable>()
                 .WithParameter(TypedParameter.From(Config))

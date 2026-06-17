@@ -1,5 +1,4 @@
-﻿using MadWizard.Desomnia.Network.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace MadWizard.Desomnia.Network.Manager
@@ -13,16 +12,11 @@ namespace MadWizard.Desomnia.Network.Manager
     {
         public required ILogger<WakeOnLANConfigurator> Logger { private get; init; }
 
-        public required SystemMonitor System { private get; init; }
-
         public bool ShouldReplace { get; set; } = true;
 
         private WakeOnLANMode? _modesToReset;
 
-        void INetworkService.Startup() { if (System.MaySleep) ConfigureWakeOnLAN(); }
-        void INetworkService.Suspend() { ConfigureWakeOnLAN(); }
-
-        void ConfigureWakeOnLAN()
+        async Task INetworkService.BeforeSuspend()
         {
             if (manager is not null)
             {

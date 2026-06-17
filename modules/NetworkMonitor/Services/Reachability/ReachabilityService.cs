@@ -50,7 +50,7 @@ namespace MadWizard.Desomnia.Network.Reachability
 
                 if (cached.HasValue)
                 {
-                    Logger.LogTrace($"Testing reachability of {label} '{watch.Host.Name}': {(cached.Value ? "yes" : "no")}");
+                    Logger.LogTrace($"Testing reachability of {label} '{watch.Host.Name}': {(cached.Value ? "yes" : "no")} [cached]");
 
                     return cached.Value;
                 }

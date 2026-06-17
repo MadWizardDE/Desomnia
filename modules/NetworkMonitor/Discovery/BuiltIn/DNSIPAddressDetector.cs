@@ -56,22 +56,19 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
             {
                 Logger.LogDebug("Refreshing auto-configured IP addresses...");
 
-                using (await Network.Mutex.LockAsync())
+                foreach (var entry in _hosts)
                 {
-                    foreach (var entry in _hosts)
+                    var host = entry.Key;
+
+                    foreach (var family in entry.Value)
                     {
-                        var host = entry.Key;
-
-                        foreach (var family in entry.Value)
+                        foreach (var ip in await FindIPAddresses(host, family, _autoCancellation.Token)) using (await Network.Mutex.LockAsync())
                         {
-                            foreach (var ip in await FindIPAddresses(host, family, _autoCancellation.Token))
-                            {
-                                using var scope = Logger.BeginHostScope(host);
+                            using var scope = Logger.BeginHostScope(host);
 
-                                if (host.AddAddress(ip, new(options.Refresh)))
-                                {
-                                    Logger.LogHostAddressAdded(host, ip);
-                                }
+                            if (host.AddAddress(ip, new(options.Refresh)))
+                            {
+                                Logger.LogHostAddressAdded(host, ip);
                             }
                         }
                     }
@@ -102,11 +99,10 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
                 try
                 {
-                    addresses = await Dns.GetHostAddressesAsync(host.HostName, family, token);
+                    addresses = await Dns.GetHostAddressesAsync(host.HostName, family, cts.Token);
                 }
                 catch (SocketException ex)
                 {
-
                     switch (ex.SocketErrorCode)
                     {
                         case SocketError.TryAgain:
@@ -114,7 +110,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                             break;
 
                         case SocketError.HostNotFound:
-                            Logger.LogDebug(errorMsg, family.ToFriendlyName(), host.HostName, "NOT_FOUND");
+                            //Logger.LogDebug(errorMsg, family.ToFriendlyName(), host.HostName, "NOT_FOUND");
                             break;
 
                         case SocketError.NoData:
@@ -128,7 +124,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                     }
                 }
             }
-            catch (TimeoutException)
+            catch (OperationCanceledException)
             {
                 Logger.LogWarning(errorMsg, family, host.HostName, "TIMEOUT");
             }

@@ -3,7 +3,7 @@ using Autofac.Core.Resolving.Pipeline;
 
 namespace MadWizard.Desomnia.Network.Middleware
 {
-    internal class DynamicNetworkMonitors : IResolveMiddleware
+    internal class DynamicNetworkMonitors<T> : IResolveMiddleware where T : class
     {
         public PipelinePhase Phase => PipelinePhase.Sharing;
 
@@ -11,9 +11,9 @@ namespace MadWizard.Desomnia.Network.Middleware
         {
             next(context);
 
-            var dno = context.Resolve<DynamicNetworkObserver>();
+            var monitors = (IEnumerable<T>)context.Resolve<DynamicNetworkObserver>();
 
-            context.Instance = ((IEnumerable<IInspectable>)context.Instance!).Union(dno);
+            context.Instance = ((IEnumerable<T>)context.Instance!).Union(monitors);
         }
     }
 }

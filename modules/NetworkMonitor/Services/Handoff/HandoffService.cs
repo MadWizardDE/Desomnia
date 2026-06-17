@@ -3,16 +3,13 @@ using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network.Handoff
 {
-    public class HandoffService : INetworkService
+    public class HandoffService(NetworkMonitor monitor) : INetworkService
     {
         public required ILogger<HandoffService> Logger { private get; init; }
 
-        public required SystemMonitor   System  { private get; init; }
-        public required NetworkMonitor  Monitor { private get; init; }
+        void INetworkService.Startup() { }
 
-        void INetworkService.Startup() => System.Suspend += System_Suspend;
-
-        private async Task System_Suspend(Event data)
+        async Task INetworkService.BeforeSuspend()
         {
             await HandoffLocalWatches(); // throw an exception if a handoff failed, but was required -> suspend cancelled
         }
@@ -31,7 +28,7 @@ namespace MadWizard.Desomnia.Network.Handoff
 
         private async Task HandoffLocalWatches()
         {
-            var watches = Monitor.OfType<LocalHostWatch>();
+            var watches = monitor.OfType<LocalHostWatch>().Where(watch => watch.HandoffNeeded);
 
             if (watches.Any())
             {
@@ -41,7 +38,7 @@ namespace MadWizard.Desomnia.Network.Handoff
                 {
                     using var scope = Logger.BeginHostScope(watch.Host);
 
-                    Logger.LogDebug("Handing off local watch for '{}'...", watch.Host);
+                    Logger.LogDebug("Handing off local watch for '{Host}'...", watch.Host.Name);
 
                     try
                     {
@@ -61,7 +58,7 @@ namespace MadWizard.Desomnia.Network.Handoff
 
         async void INetworkService.Resume()
         {
-            foreach (var watch in Monitor.OfType<LocalHostWatch>())
+            foreach (var watch in monitor.OfType<LocalHostWatch>())
             {
                 using var scope = Logger.BeginHostScope(watch.Host);
 
@@ -69,6 +66,6 @@ namespace MadWizard.Desomnia.Network.Handoff
             }
         }
 
-        void INetworkService.Shutdown() => System.Suspend -= System_Suspend;
+        void INetworkService.Shutdown() { }
     }
 }
