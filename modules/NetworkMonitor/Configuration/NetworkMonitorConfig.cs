@@ -89,7 +89,6 @@ namespace MadWizard.Desomnia.Network.Configuration
         #region Network :: HandoffOptions
         internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
         internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
-        internal bool               HandoffParallel         { get; set; } = true;
         #endregion
 
         #region Network :: SleepProxyOptions
