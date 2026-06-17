@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
         {
             var ctxLocalHost = Context.First(ctx => ctx.Host is LocalHost);
 
-            foreach (var instance in manager)
+            foreach (var instance in manager) using (Context.Network.Mutex.Lock())
             {
                 try
                 {
@@ -48,7 +48,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 
         private void UnWatchInstaces(object? sender = null, EventArgs? e = null)
         {
-            foreach (var srv in _services)
+            foreach (var srv in _services) using (Context.Network.Mutex.Lock())
             {
                 srv.Key.StopTracking(srv.Value.Watch);
 
