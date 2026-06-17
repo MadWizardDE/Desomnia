@@ -31,21 +31,30 @@ namespace MadWizard.Desomnia.Network.Handoff
 
         private async Task HandoffLocalWatches()
         {
-            foreach (var watch in Monitor.OfType<LocalHostWatch>())
-            {
-                using var scope = Logger.BeginHostScope(watch.Host);
+            var watches = Monitor.OfType<LocalHostWatch>();
 
-                try
+            if (watches.Any())
+            {
+                Logger.LogDebug("Handing off local watches...");
+
+                foreach (var watch in watches)
                 {
-                    await watch.HandoffWatch();
-                }
-                catch (Exception ex)
-                {
-                    if (!watch.HandoffOptions.IsRequired)
+                    using var scope = Logger.BeginHostScope(watch.Host);
+
+                    Logger.LogDebug("Handing off local watch for '{}'...", watch.Host);
+
+                    try
                     {
-                        Logger.LogError(ex, "Could not handoff watch for '{Host}'.", watch.Host.Name);
+                        await watch.HandoffWatch();
                     }
-                    else throw;
+                    catch (Exception ex)
+                    {
+                        if (!watch.HandoffOptions.IsRequired)
+                        {
+                            Logger.LogError(ex, "Could not handoff watch for '{Host}'.", watch.Host.Name);
+                        }
+                        else throw;
+                    }
                 }
             }
         }

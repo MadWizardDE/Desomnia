@@ -1,12 +1,14 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context;
 using MadWizard.Desomnia.Network.Neighborhood;
-using System.Net;
+using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network
 {
     public class NetworkJanitor(SweepOptions options)
     {
+        public ILogger<NetworkJanitor> Logger { private get; init; }
+
         public required NetworkSegment Network { private get; init; }
 
         private HashSet<NetworkHostContext> _sweepableHosts = [];
@@ -48,21 +50,20 @@ namespace MadWizard.Desomnia.Network
         {
             foreach (var host in network)
             {
-                List<IPAddress>? removeIPs = null;
-                foreach (var ip in host.IPAddresses)
+                foreach (var ip in host.IPAddresses.ToArray())
                 {
                     if (host.ShouldAddressExpire(ip, out var expires))
                     {
                         if (DateTime.Now - expires > options.Delay)
                         {
-                            (removeIPs ??= []).Add(ip);
+                            if (host.RemoveAddress(ip, true))
+                            {
+                                using var scope = Logger.BeginHostScope(host);
+
+                                Logger.LogHostAddressRemoved(host, ip);
+                            }
                         }
                     }
-                }
-
-                foreach (var adr in removeIPs ?? Enumerable.Empty<IPAddress>())
-                {
-                    host.RemoveAddress(adr, true);
                 }
             }
         }

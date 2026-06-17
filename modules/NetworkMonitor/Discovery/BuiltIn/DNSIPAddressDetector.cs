@@ -66,6 +66,8 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                         {
                             foreach (var ip in await FindIPAddresses(host, family, _autoCancellation.Token))
                             {
+                                using var scope = Logger.BeginHostScope(host);
+
                                 if (host.AddAddress(ip, new(options.Refresh)))
                                 {
                                     Logger.LogHostAddressAdded(host, ip);

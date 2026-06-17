@@ -61,7 +61,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                 {
                     var lifetime = TimeSpan.FromSeconds(ndp.RouterLifetime);
 
-                    Logger.LogDebug($"Received NDP router advertisement from {ip} -> {mac.ToHexString()} with lifetime = {lifetime}");
+                    //Logger.LogTrace($"Received NDP router advertisement from {ip} -> {mac.ToHexString()} with lifetime = {lifetime}");
 
                     await RememberRouterAddress(mac, ip, lifetime);
 

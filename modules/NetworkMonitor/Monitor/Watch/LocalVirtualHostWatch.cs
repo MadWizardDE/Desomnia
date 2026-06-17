@@ -137,6 +137,7 @@ namespace MadWizard.Desomnia.Network.Watch
             return tokens;
         }
 
+        #region VM action handlers
         [ActionHandler("wake")]
         public virtual async Task Wake(DemandEvent @event)
         {
@@ -181,6 +182,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 await VM.Stop();
             }
         }
+        #endregion
 
         public override void Dispose()
         {
