@@ -6,6 +6,7 @@ using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Demand.Detector;
 using MadWizard.Desomnia.Network.Discovery;
 using MadWizard.Desomnia.Network.Filter;
+using MadWizard.Desomnia.Network.Handoff;
 using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Knocking.Methods;
 using MadWizard.Desomnia.Network.Manager;
@@ -107,10 +108,15 @@ namespace MadWizard.Desomnia.Network
                     .AsImplementedInterfaces()
                     .InstancePerNetwork()
                     .AsSelf();
+                builder.RegisterType<HandoffService>()
+                    .AsImplementedInterfaces()
+                    .InstancePerNetwork()
+                    .AsSelf();
                 builder.RegisterType<KnockService>()
                     .AsImplementedInterfaces()
                     .InstancePerNetwork()
                     .AsSelf();
+
 
                 // Demand Triggers //
 

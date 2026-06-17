@@ -10,6 +10,7 @@ using NLog;
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
+LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkRealmLayoutRenderer>()); // FIXME
 
 bool debug = false;
 bool autoReload = false;
