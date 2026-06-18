@@ -10,6 +10,7 @@ using MadWizard.Desomnia.Network.Handoff;
 using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Knocking.Methods;
 using MadWizard.Desomnia.Network.Manager;
+using MadWizard.Desomnia.Network.Manager.Guard;
 using MadWizard.Desomnia.Network.Middleware;
 using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Power.Guard;
@@ -92,6 +93,11 @@ namespace MadWizard.Desomnia.Network
                 builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
 
                 // Network Services //
+
+                // Safeguard around the platform neighbour cache: track installed mappings, suppress
+                // deletes of entries already removed, and purge any leftovers when the network
+                // scope is disposed.
+                builder.RegisterDecorator<GuardedLocalAddressMapping, ILocalAddressMapping>();
 
                 builder.RegisterType<AddressMappingService>()
                     .AsImplementedInterfaces()
