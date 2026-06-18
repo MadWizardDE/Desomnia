@@ -105,10 +105,10 @@ namespace MadWizard.Desomnia.Service.Bridge.Notification
         {
             try
             {
-                await power.Suspend();
-
                 if (session.IsRemoteConnected)
                     await session.Disconnect();
+
+                await power.Suspend();
             }
             catch (Exception ex)
             {

@@ -77,7 +77,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
         internal protected virtual async Task ReclaimWatch()
         {
-            _handoffDone = false;
+            if (_handoffDone)
+            {
+                _handoffDone = false;
+
+                Logger.LogDebug("Reclaimed watch for '{Host}'", Host.Name);
+            }
         }
 
         #region SleepProxy
