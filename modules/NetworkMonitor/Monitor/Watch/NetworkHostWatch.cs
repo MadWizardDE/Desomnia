@@ -23,12 +23,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public NetworkServiceWatch? this[NetworkService? service] => this.Where(watch => watch.Service == service).FirstOrDefault();
 
-        internal protected override void StartWatch()
+        internal protected override async Task StartWatch()
         {
             foreach (var service in this)
-                service.StartWatch();
+                await service.StartWatch();
 
-            base.StartWatch();
+            await base.StartWatch();
         }
 
         protected internal override void ReportNetworkTraffic(EthernetPacket packet)
@@ -49,12 +49,12 @@ namespace MadWizard.Desomnia.Network.Watch
             }
         }
 
-        internal protected override void StopWatch()
+        internal protected override async Task StopWatch(bool gracefully)
         {
             foreach (var service in this)
-                service.StopWatch();
+                await service.StopWatch(gracefully);
 
-            base.StopWatch();
+            await base.StopWatch(gracefully);
         }
 
         protected override bool ShouldInspectResource(NetworkServiceWatch service) => !service.IsHidden;

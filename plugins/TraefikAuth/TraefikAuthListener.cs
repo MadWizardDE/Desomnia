@@ -1,5 +1,4 @@
-﻿using MadWizard.Desomnia.Network.Services;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text;
 
@@ -13,7 +12,7 @@ namespace MadWizard.Desomnia.Network.Traefik
 
         readonly HttpListener _http = new();
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             foreach (var endpoint in Endpoints)
             {
@@ -63,7 +62,7 @@ namespace MadWizard.Desomnia.Network.Traefik
             }
         }
 
-        void INetworkService.Shutdown()
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason)
         {
             _http.Stop();
 

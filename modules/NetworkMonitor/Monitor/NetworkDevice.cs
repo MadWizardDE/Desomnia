@@ -38,16 +38,16 @@ namespace MadWizard.Desomnia.Network
                     {
                         Logger.LogDebug("BPF rule = '{expr}'", value);
 
-                        Device.OnCaptureStopped -= Device_OnCaptureStopped;
-                        Device.StopCapture();
+                        //Device.OnCaptureStopped -= Device_OnCaptureStopped;
+                        //Device.StopCapture();
                     }
 
                     Device.Filter = value;
 
                     if (runtime)
                     {
-                        Device.StartCapture();
-                        Device.OnCaptureStopped += Device_OnCaptureStopped;
+                        //Device.StartCapture();
+                        //Device.OnCaptureStopped += Device_OnCaptureStopped;
                     }
                 }
             }
@@ -102,6 +102,8 @@ namespace MadWizard.Desomnia.Network
         internal BlockingCollection<RawCapture>? PacketQueue { get; private set; }
         internal Thread? ProcessingThread { get; private set; }
 
+        private bool _shouldBeCapturing;
+
         public NetworkDevice(ILogger<NetworkDevice> logger, NetworkInterface @interface, ILiveDevice device)
         {
             Logger = logger;
@@ -122,6 +124,9 @@ namespace MadWizard.Desomnia.Network
 
         public void StartCapture()
         {
+            if (IsCapturing)
+                return;
+
             PacketQueue = [];
 
             ProcessingThread = new Thread(ProcessQueuedPackets)
@@ -130,6 +135,8 @@ namespace MadWizard.Desomnia.Network
                 IsBackground = true
             };
             ProcessingThread.Start();
+
+            _shouldBeCapturing = true;
 
             Device.OnPacketArrival += Device_OnPacketArrival;
             Device.StartCapture();
@@ -188,8 +195,36 @@ namespace MadWizard.Desomnia.Network
 
         private void Device_OnCaptureStopped(object sender, CaptureStoppedEventStatus status)
         {
-            Logger.Log(status == CaptureStoppedEventStatus.ErrorWhileCapturing ? LogLevel.Error : LogLevel.Warning, 
-                "Packet capturing stopped."); // let's see if this happens
+            string message = $"Stopped capturing network device \"{Name}\"";
+
+            Device.OnCaptureStopped -= Device_OnCaptureStopped;
+            Device.OnPacketArrival -= Device_OnPacketArrival;
+
+            PacketQueue?.CompleteAdding();
+            ProcessingThread?.Join(TimeSpan.FromSeconds(5));
+            PacketQueue?.Dispose();
+            PacketQueue = null;
+
+            ProcessingThread = null;
+
+            switch (status)
+            {
+                case CaptureStoppedEventStatus.CompletedWithoutError when _shouldBeCapturing == false:
+                    Logger.LogInformation(message);
+                    return;
+
+                case CaptureStoppedEventStatus.CompletedWithoutError when _shouldBeCapturing:
+                    Logger.LogWarning(message + " – restarting...");
+                    break;
+
+                case CaptureStoppedEventStatus.ErrorWhileCapturing:
+                    if (Device.LastError is string error)
+                        message += " – " + error;
+                    Logger.LogError(message);
+                    break;
+            }
+
+            StartCapture();
         }
 
         /// <summary>
@@ -346,21 +381,12 @@ namespace MadWizard.Desomnia.Network
 
         public void StopCapture()
         {
-            if (!Device.Started)
-                return;
+            if (IsCapturing)
+            {
+                _shouldBeCapturing = false;
 
-            Device.OnCaptureStopped -= Device_OnCaptureStopped;
-            Device.StopCapture();
-            Device.OnPacketArrival -= Device_OnPacketArrival;
-
-            PacketQueue?.CompleteAdding();
-            ProcessingThread?.Join(TimeSpan.FromSeconds(5));
-            PacketQueue?.Dispose();
-            PacketQueue = null;
-
-            ProcessingThread = null;
-
-            Logger.LogInformation($"Stopped capturing network device \"{Name}\"");
+                Device.StopCapture();
+            }
         }
 
         private bool TryOpen(ILiveDevice device, ref bool maxResponsiveness, ref bool noCaptureLocal)
@@ -412,10 +438,7 @@ namespace MadWizard.Desomnia.Network
 
         void IDisposable.Dispose()
         {
-            if (IsCapturing)
-            {
-                StopCapture();
-            }
+            StopCapture();
 
             lock (Device)
             {

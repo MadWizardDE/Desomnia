@@ -34,11 +34,13 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #region         HandoffOptions
         HandoffType?    Handoff         { get; set; }
         TimeSpan?       HandoffTimeout  { get; set; }
+        int?            HandoffRetry    { get; set; }
 
         public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
         {
             Type = Handoff ?? network.Handoff,
             Timeout = HandoffTimeout ?? network.HandoffTimeout,
+            Retry = HandoffRetry ?? network.HandoffRetry,
         };
         #endregion
 

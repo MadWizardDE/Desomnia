@@ -53,7 +53,7 @@ namespace MadWizard.Desomnia.Network.Manager
             }
         }
 
-        void INetworkService.Shutdown() 
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason)
         {
             if (_modesToReset is WakeOnLANMode reset)
             {

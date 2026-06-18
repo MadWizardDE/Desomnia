@@ -20,7 +20,7 @@ namespace MadWizard.Desomnia.Network.Address
         public required NetworkSegment  Network { private get; init; }
         public required NetworkMonitor  Monitor { private get; init; }
 
-        public void Advertise(AddressMapping mapping, EthernetPacket? respondTo = null)
+        public void Advertise(AddressMapping mapping, EthernetPacket? respondTo = null, PhysicalAddress? source = null)
         {
             switch (mapping.IPAddress.AddressFamily)
             {
@@ -28,7 +28,7 @@ namespace MadWizard.Desomnia.Network.Address
                     && arp.Operation == ArpOperation.Request && !arp.IsProbe()
                     && arp.TargetProtocolAddress.Equals(mapping.IPAddress):
                     //Logger.LogDebug($"Received ARP request for Options {mapping.Options}");
-                    SendARPResponse(mapping.IPAddress, mapping.PhysicalAddress, arp.SenderProtocolAddress, arp.SenderHardwareAddress);
+                    SendARPResponse(mapping.IPAddress, mapping.PhysicalAddress, arp.SenderProtocolAddress, arp.SenderHardwareAddress, macSource: source);
                     break;
 
                 case AddressFamily.InterNetwork:
@@ -38,11 +38,11 @@ namespace MadWizard.Desomnia.Network.Address
                 case AddressFamily.InterNetworkV6 when respondTo?.Extract<IPv6Packet>() is IPv6Packet ipv6
                     && ipv6.Extract<NdpNeighborSolicitationPacket>() is NdpNeighborSolicitationPacket ndp
                     && !ipv6.SourceAddress.Equals(IPAddress.IPv6Any) && ndp.TargetAddress.Equals(mapping.IPAddress):
-                    SendNDPAdvertisement(mapping.IPAddress, mapping.PhysicalAddress, ipv6.SourceAddress, respondTo.FindSourcePhysicalAddress());
+                    SendNDPAdvertisement(mapping.IPAddress, mapping.PhysicalAddress, ipv6.SourceAddress, respondTo.FindSourcePhysicalAddress(), macSource: source);
                     break;
 
                 case AddressFamily.InterNetworkV6:
-                    SendNDPAdvertisement(mapping.IPAddress, mapping.PhysicalAddress);
+                    SendNDPAdvertisement(mapping.IPAddress, mapping.PhysicalAddress, macSource: source);
                     break;
 
                 default:
@@ -53,7 +53,7 @@ namespace MadWizard.Desomnia.Network.Address
         #region Manage static address mappings
         private IEnumerable<NetworkHost> EligibleHosts => Monitor.Where(watch => watch is not LocalHostWatch).Select(watch => watch.Host);
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             if (EligibleHosts.Any())
             {
@@ -125,7 +125,7 @@ namespace MadWizard.Desomnia.Network.Address
         }
 
 
-        void INetworkService.Shutdown()
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason)
         {
             if (EligibleHosts.Any())
             {
@@ -187,7 +187,7 @@ namespace MadWizard.Desomnia.Network.Address
         #endregion
 
         #region ARP/NDP protocol implementation
-        private void SendARPAnnouncement(IPAddress ip, PhysicalAddress mac, PhysicalAddress? macTarget = null)
+        private void SendARPAnnouncement(IPAddress ip, PhysicalAddress mac, PhysicalAddress? macTarget = null, PhysicalAddress? macSource = null)
         {
             if (macTarget == null)
             {
@@ -200,8 +200,10 @@ namespace MadWizard.Desomnia.Network.Address
                 Logger.LogDebug($"Sending ARP announcement <{ip} -> {mac.ToHexString()}> to {macTarget.ToHexString()}");
             }
 
+            macSource ??= Device.PhysicalAddress;
+
             //var response = new EthernetPacket(Options.ParseMetrics("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
-            var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
+            var response = new EthernetPacket(macSource, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Request, PhysicalAddressExt.Empty, ip, mac, ip)
             };
@@ -209,7 +211,7 @@ namespace MadWizard.Desomnia.Network.Address
             Device.SendPacket(response);
         }
 
-        private void SendARPResponse(IPAddress ip, PhysicalAddress mac, IPAddress ipTarget, PhysicalAddress macTarget)
+        private void SendARPResponse(IPAddress ip, PhysicalAddress mac, IPAddress ipTarget, PhysicalAddress macTarget, PhysicalAddress? macSource = null)
         {
             if (mac.Equals(macTarget))
             {
@@ -218,10 +220,12 @@ namespace MadWizard.Desomnia.Network.Address
                 return;
             }
 
+            macSource ??= Device.PhysicalAddress;
+
             Logger.LogDebug($"Sending ARP response <{ip} -> {mac.ToHexString()}> to {ipTarget}");
 
             //var response = new EthernetPacket(Options.ParseMetrics("F0-E1-D2-C3-B4-A5"), macTarget, EthernetType.Arp)
-            var response = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.Arp)
+            var response = new EthernetPacket(macSource, macTarget, EthernetType.Arp)
             {
                 PayloadPacket = new ArpPacket(ArpOperation.Response, macTarget, ipTarget, mac, ip)
             };
@@ -229,7 +233,7 @@ namespace MadWizard.Desomnia.Network.Address
             Device.SendPacket(response);
         }
 
-        private void SendNDPAdvertisement(IPAddress ip, PhysicalAddress mac, IPAddress? ipTarget = null, PhysicalAddress? macTarget = null, bool unsolicited = false)
+        private void SendNDPAdvertisement(IPAddress ip, PhysicalAddress mac, IPAddress? ipTarget = null, PhysicalAddress? macTarget = null, PhysicalAddress? macSource = null, bool unsolicited = false)
         {
             if (mac.Equals(macTarget))
             {
@@ -254,8 +258,9 @@ namespace MadWizard.Desomnia.Network.Address
             var ipSource = Device.IPv6LinkLocalAddress;
             ipTarget ??= Device.IPv6LinkLocalMulticastAddress;
             macTarget ??= ipTarget?.DeriveLayer2MulticastAddress();
+            macSource ??= Device.PhysicalAddress;
 
-            var request = new EthernetPacket(Device.PhysicalAddress, macTarget, EthernetType.IPv6)
+            var request = new EthernetPacket(macSource, macTarget, EthernetType.IPv6)
             {
                 PayloadPacket = new IPv6Packet(ipSource, ipTarget).WithNDPNeighborAdvertisement(flags, ip, mac)
             };

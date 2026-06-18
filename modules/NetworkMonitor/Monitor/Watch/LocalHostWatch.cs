@@ -16,9 +16,9 @@ namespace MadWizard.Desomnia.Network.Watch
 {
     public class LocalHostWatch : HostDemandWatch
     {
-        private bool _handoffDone = false;
+        protected bool _handoffDone = false;
 
-        internal bool HandoffNeeded => HandoffOptions.Type != HandoffType.None && _handoffDone == false;
+        internal bool HandoffPending => HandoffOptions.Type != HandoffType.None && _handoffDone == false;
 
         internal byte SleepProxyRegistrationCycle { get; private set; }
 
@@ -46,9 +46,13 @@ namespace MadWizard.Desomnia.Network.Watch
                 {
                     var reg = CreateSleepProxyRegistration(this);
 
-                    await RegisterWithSleepProxy(proxy, service, reg);
+                    await RegisterWithSleepProxy(proxy, service, reg); // TODO handoff retry implementieren
 
                     SleepProxyRegistrationCycle++;
+                }
+                else if (HandoffOptions.IsRequired)
+                {
+                    throw new Exception("No sleep proxy available, but a handoff is required.");
                 }
             }
 

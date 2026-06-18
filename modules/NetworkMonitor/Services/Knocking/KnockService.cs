@@ -15,8 +15,10 @@ namespace MadWizard.Desomnia.Network.Knocking
 
         public required IIndex<string, IKnockMethod> Methods { private get; init; }
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
+            using var scope = Logger.BeginRealmScope("knocking");
+
             foreach (var stanza in Stanzas)
             {
                 Logger.LogDebug($"Listening on {stanza.Port} for SPA stanza '{stanza.Label}'" +
@@ -30,6 +32,8 @@ namespace MadWizard.Desomnia.Network.Knocking
             {
                 foreach (var stanza in Stanzas.Where(stanza => stanza.Port.Accepts(transport)))
                 {
+                    using var scope = Logger.BeginRealmScope("knocking");
+
                     try
                     {
                         if (stanza.PacketFilter.ShouldFilter(packet)) continue; // maybe filter packet

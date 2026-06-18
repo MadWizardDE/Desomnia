@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network.Context
 {
-    public abstract class Context(ILifetimeScope parent) : IDisposable
+    public abstract class Context : IDisposable
     {
         protected ILogger Logger { get; set; } = null!;
 

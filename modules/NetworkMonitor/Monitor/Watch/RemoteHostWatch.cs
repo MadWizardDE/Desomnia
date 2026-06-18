@@ -69,23 +69,30 @@ namespace MadWizard.Desomnia.Network.Watch
 
         internal async Task<bool> ValidateHandoff()
         {
+            using var scope = Logger.BeginHostScope(Host);
+
             Logger.LogDebug("Try to validate handoff from '{Host}'...", Host.Name);
 
-            _pingTimer?.Stop();
+            var stopwatch = Stopwatch.StartNew();
 
-            await Task.Delay(HandoffOptions.Timeout);
+            var tries = 0;
 
-            await DetermineIfHostCanBeSeen(true);
-
-            if (!IsSuspended)
+            do
             {
-                Logger.LogError("Could not validate handoff from {Host}; host is still alive after {Timeout}", Host.Name, HandoffOptions.Timeout);
-            }
+                _pingTimer?.Stop();
+
+                await Task.Delay(HandoffOptions.Timeout);
+
+                if (await DetermineIfHostCanBeSeen(true))
+                {
+                    Logger.LogWarning("Could not validate handoff from '{Host}'; host is still alive after {Timeout} seconds", Host.Name, Math.Floor(stopwatch.Elapsed.TotalSeconds));
+                }
+            } while (!IsSuspended && tries++ < (HandoffOptions.Retry ?? 0));
 
             return IsSuspended;
         }
 
-        private async Task DetermineIfHostCanBeSeen(bool hasSuspended = false)
+        private async Task<bool> DetermineIfHostCanBeSeen(bool hasSuspended = false)
         {
             using var mutex = await _pingLock.LockAsync();
 
@@ -93,9 +100,11 @@ namespace MadWizard.Desomnia.Network.Watch
 
             try
             {
-                if (await Reachability.Test(this, label: "remote host"))
+                if (await Reachability.Test(this, useCache: false, label: "remote host"))
                 {
                     LastSeen = DateTime.Now;
+
+                    return true;
                 }
                 else
                 {
@@ -105,6 +114,8 @@ namespace MadWizard.Desomnia.Network.Watch
                     }
 
                     LastUnseen = DateTime.Now;
+
+                    return false;
                 }
             }
             finally
@@ -368,7 +379,7 @@ namespace MadWizard.Desomnia.Network.Watch
         #endregion
 
         #region Triggers for Ping
-        protected internal override void StartWatch()
+        protected internal override async Task StartWatch()
         {
             if (PingOptions.Frequency is TimeSpan interval && interval > TimeSpan.Zero)
             {
@@ -378,7 +389,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 _pingTimer.Start();
             }
 
-            base.StartWatch();
+            await base.StartWatch();
         }
 
         private async void Timer_Elapsed(object? sender, ElapsedEventArgs e)
@@ -393,12 +404,12 @@ namespace MadWizard.Desomnia.Network.Watch
             }
         }
 
-        protected internal override void StopWatch()
+        protected internal override async Task StopWatch(bool gracefully)
         {
             _pingTimer?.Stop();
             _pingTimer = null;
 
-            base.StopWatch();
+            await base.StopWatch(gracefully);
         }
         #endregion
 

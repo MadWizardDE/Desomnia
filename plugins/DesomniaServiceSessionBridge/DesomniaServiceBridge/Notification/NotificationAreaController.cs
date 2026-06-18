@@ -101,14 +101,14 @@ namespace MadWizard.Desomnia.Service.Bridge.Notification
             }
         }
 
-        void ISessionMessageHandler<EnterStandbyMessage>.Handle(ISession session, EnterStandbyMessage message)
+        async void ISessionMessageHandler<EnterStandbyMessage>.Handle(ISession session, EnterStandbyMessage message)
         {
             try
             {
-                if (session.IsRemoteConnected)
-                    session.Disconnect();
+                await power.Suspend();
 
-                power.Suspend();
+                if (session.IsRemoteConnected)
+                    await session.Disconnect();
             }
             catch (Exception ex)
             {

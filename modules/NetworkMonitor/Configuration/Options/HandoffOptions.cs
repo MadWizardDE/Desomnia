@@ -7,6 +7,8 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
     {
         public readonly HandoffType Type            { get; init; }
 
+        public readonly int?        Retry           { get; init; }
+
         public readonly TimeSpan    Timeout         { get; init; }
         public readonly TimeSpan?   LeaseDuration   { get; init; }
 

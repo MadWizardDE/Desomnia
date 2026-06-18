@@ -24,30 +24,33 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         readonly ConcurrentDictionary<PhysicalAddress, Owned<SleepProxyLease>> _activeLeases = [];
 
-        public TimeSpan? Register(SleepProxyRegistration reg)
+        public SleepProxyLease? Register(SleepProxyRegistration reg)
         {
             var duration = options.DetermineLeaseDuration(reg.RequestedLease);
 
             SleepProxyLease lease;
             if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var owned))
             {
+                Logger.LogDebug("Attempt to register '{Name}' [{Sequence}] at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
+                    reg.Name, reg.Sequence, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
+
                 lease = (owned = CreateLease(duration, reg.Sequence)).Value;
             }
-            else if ((lease = owned.Value).Sequence < reg.Sequence)
+            else if (owned.Value.Sequence < reg.Sequence)
             {
-                // TODO check registration?
+                Logger.LogDebug("Attempt to re-register '{Name}' [{NewSequence} > {OldSequence}] at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)... ",
+                    reg.Name, reg.Sequence, owned.Value.Sequence, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
 
-                lease.GrantedUntil = DateTime.Now + duration;
+                owned.Dispose(); owned = null;
 
-                return lease.Duration;
+                _activeLeases.Remove(reg.PrimaryAddress, out _);
+
+                lease = (owned = CreateLease(duration, reg.Sequence)).Value;
             }
             else
             {
                 return null; // we already processed this registration
             }
-
-            Logger.LogDebug("Attempt to register '{Name}' at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
-                reg.Name, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
 
             try
             {
@@ -57,8 +60,6 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                     lease.AddInstanceForDisposal(ctxHost);
                 }
-
-                using var scope = Logger.BeginHostScope(ctxHost.Host);
 
                 if (ctxHost.Watch is not RemoteHostWatch remote)
                     throw new NotSupportedException("Service registration is only supported for watched remote hosts.");
@@ -82,10 +83,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
                 }
 
-                var filterHosts = CreateFilterHosts();
+                var filterHosts = Context.CreateDynamicFilterHosts().ToList(); // the remote host may register dynamic host filters
 
                 Task.Run(async () => // this is time consuming and not relevant for the DNS response, so let's decouple it
                 {
+                    using var scope = Logger.BeginHostScope(remote.Host);
+
                     if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null)
                     {
                         ctxHost.Host.PhysicalAddress = reg.PrimaryAddress;
@@ -109,7 +112,6 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     {
                         await host.DiscoverAddresses();
                     }
-
                 }).ContinueWith(t => FinishRegistration(remote, lease));
             }
             catch (Exception)
@@ -119,7 +121,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             _activeLeases[reg.PrimaryAddress] = owned;
 
-            return duration;
+            return lease;
         }
 
         private NetworkHostContext CreateHost(SleepProxyRegistration reg)
@@ -156,19 +158,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             return Context.CreateHost([ new TypedParameter(hostInfo.GetType(), hostInfo), .. parameters ]);
         }
 
-        private IEnumerable<NetworkHostContext> CreateFilterHosts() // the remote host may register dynamic host filters
-        {
-            using (ExecutionContext.SuppressFlow()) // we need to establish a new logging context
-            {
-                return Task.Run(() => Context.CreateDynamicFilterHosts().ToList()).Result;
-            }
-        }
-
         #region Lease start/end validation
         private async Task FinishRegistration(RemoteHostWatch watch, SleepProxyLease lease)
         {
-            using var scope = Logger.BeginHostScope(watch.Host);
-
             lease.Ended += async (sender, args) =>
             {
                 if (_activeLeases.Remove(watch.Host.PhysicalAddress!, out var owned))
@@ -187,31 +179,36 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         owned.Dispose();
                     }
 
-                    Logger.LogDebug("Lease for '{Host}' has ended", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' has {Verb}", watch.Host.Name, args.HasExpired  ? "expired" : args.HasFailed ? "failed" :  "ended");
                 }
             };
 
-            async Task stop(Event @event) => lease.Stop();
+            async Task stop(Event @event) => lease.Stop(SleepProxyLeaseEndReason.HostStarted);
 
             try
             {
                 if (await watch.ValidateHandoff())
                 {
-                    lease.Ended += (sender, args) => watch.Started -= stop;
-
-                    Logger.LogDebug("Handoff from {Host} successful; lease granted until: {GrantedUntil}", watch.Host.Name, lease.GrantedUntil);
+                    using (Logger.BeginHostScope(watch.Host))
+                    {
+                        Logger.LogDebug("Handoff from {Host} successful; lease granted until: {GrantedUntil}", watch.Host.Name, lease.GrantedUntil);
+                    }
 
                     watch.Started += stop;
-                    
+
+                    lease.Disposed += (sender, args) => watch.Started -= stop;
+
                     return;
                 }
             }
             catch (Exception ex)
             {
+                using var scope = Logger.BeginHostScope(watch.Host);
+
                 Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name); 
             }
 
-            lease.Stop();
+            lease.Stop(SleepProxyLeaseEndReason.Failed);
         }
 
         private async Task TryToExpireLeaseGracefully(RemoteHostWatch watch)
@@ -222,7 +219,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     return;
 
                 case LeaseExpireAction.Wake when !await Reachability.Test(watch):
-                    Logger.LogDebug("Lease for '{Host}' is going to end, but the remote host is not responding; trying to wake...", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' is going to expire, but the remote host is not responding; trying to wake...", watch.Host.Name);
 
                     try
                     {

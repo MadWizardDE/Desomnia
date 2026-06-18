@@ -1,5 +1,4 @@
-﻿using MadWizard.Desomnia.Network.Services;
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System.Net.NetworkInformation;
@@ -19,7 +18,7 @@ namespace MadWizard.Desomnia.Network.Context.Watch
         private DateTime _probedAuthorityTime;
         private bool? _establishdAuthority;
 
-        async void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             _probedAuthorityTime = DateTime.Now;
 

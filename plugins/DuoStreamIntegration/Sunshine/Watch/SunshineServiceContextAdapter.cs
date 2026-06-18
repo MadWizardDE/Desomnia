@@ -15,7 +15,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
 
         private Dictionary<DuoInstance, SunshineServiceContext> _services = [];
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             WatchInstances();
 
@@ -58,7 +58,7 @@ namespace MadWizard.Desomnia.Service.Duo.Sunshine.Watch
             _services.Clear();
         }
 
-        void INetworkService.Shutdown()
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason)
         {
             manager.Stopped -= UnWatchInstaces;
             manager.Started -= WatchInstances;

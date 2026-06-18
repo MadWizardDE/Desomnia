@@ -35,6 +35,7 @@ namespace MadWizard.Desomnia.Session.Manager
         [DllImport("wtsapi32.dll")]
         private static extern void WTSFreeMemory(nint memory);
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct WTS_SESSION_INFO
         {
             public uint SessionID;

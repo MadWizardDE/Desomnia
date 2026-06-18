@@ -42,13 +42,19 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
             try
             {
-                if (Registrar.Register(registration) is TimeSpan duration)
+                if (Registrar.Register(registration) is SleepProxyLease lease)
                 {
-                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, duration);
+                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, lease.Duration);
 
-                    update.AnswerWithLease(duration);
+                    update.AnswerWithLease(lease.Duration);
 
                     RespondTo(update);
+
+                    lease.Ended += (sender, args) =>
+                    {
+                        // TODO: Warum wird das manchmal zum Host gelogged??
+                        Logger.LogDebug("Lease for '{Name}' has {Verb}", registration.Name, args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
+                    };
                 }
             }
             catch (Exception ex)

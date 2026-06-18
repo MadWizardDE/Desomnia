@@ -8,39 +8,26 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {
     internal class SleepProxyLease : IDisposable
     {
-        private ScheduledTimer? _timer;
+        private ScheduledTimer _timer;
 
         readonly Stack<IDisposable> _disposables = [];
 
         public required byte Sequence { get; init; }
 
-        public DateTime GrantedUntil
-        {
-            get; set
-            {
-                if (value < DateTime.Now)
-                    throw new ArgumentException(nameof(GrantedUntil));
-
-                field = value;
-
-                _timer?.Dispose();
-
-                _timer = new ScheduledTimer(field)
-                {
-                    Enabled = true
-                };
-
-                _timer.Elapsed += (sender, args) => Stop(true);
-            }
-        }
-
-        public TimeSpan Duration => GrantedUntil - DateTime.Now;
+        public TimeSpan Duration { get; init; }
+        public DateTime GrantedSince { get; } = DateTime.Now;
+        public DateTime GrantedUntil => GrantedSince + Duration;
 
         public event EventHandler<SleepProxyLeaseEndEventArgs>? Ended;
+        public event EventHandler? Disposed;
 
         public SleepProxyLease(TimeSpan duration)
         {
-            GrantedUntil = DateTime.Now + duration;
+            Duration = duration;
+
+            _timer = new ScheduledTimer(GrantedUntil);
+            _timer.Elapsed += (sender, args) => Stop(SleepProxyLeaseEndReason.Expired);
+            _timer.Start();
         }
 
         public void AddInstanceForDisposal(IDisposable instance)
@@ -48,34 +35,38 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             _disposables.Push(instance);
         }
 
-        internal void Stop(bool expired = false)
+        internal void Stop(SleepProxyLeaseEndReason reason)
         {
-            if (_timer != null)
+            if (_timer.Enabled)
             {
-                _timer?.Stop();
-                _timer = null;
+                _timer.Stop();
 
-                Ended?.Invoke(this, new(expired));
+                Ended?.Invoke(this, new(reason));
             }
         }
 
         public void Dispose()
         {
-            _timer?.Dispose();
-            _timer = null;
-
-            while (_disposables.Count > 0)
+            if (_timer != null)
             {
-                var item = _disposables.Pop();
+                _timer.Dispose();
+                _timer = null!;
 
-                try
+                while (_disposables.Count > 0)
                 {
-                    item.Dispose();
+                    var item = _disposables.Pop();
+
+                    try
+                    {
+                        item.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // we can safely ignore this here
+                    }
                 }
-                catch (ObjectDisposedException)
-                {
-                    // we can safely ignore this here
-                }
+
+                Disposed?.Invoke(this, EventArgs.Empty);
             }
         }
     }
@@ -102,8 +93,20 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         }
     }
 
-    class SleepProxyLeaseEndEventArgs(bool expired = false) : EventArgs
+    class SleepProxyLeaseEndEventArgs(SleepProxyLeaseEndReason reason) : EventArgs
     {
-        public bool HasExpired => expired;
+        public SleepProxyLeaseEndReason Reason => reason;
+
+        public bool HasExpired => Reason == SleepProxyLeaseEndReason.Expired;
+        public bool HasFailed => Reason == SleepProxyLeaseEndReason.Failed;
+    }
+
+    enum SleepProxyLeaseEndReason
+    {
+        Failed,
+
+        HostStarted,
+
+        Expired
     }
 }

@@ -30,25 +30,63 @@ namespace MadWizard.Desomnia.Network.Watch
             Suspended += async (@event) => HandleSuspended();
         }
 
-        protected internal override async Task ReclaimWatch()
+        protected internal override async Task StartWatch()
         {
-            if (!IsOnline && Host.IPAddresses.Where(AdvertiseOptions.ShouldAdvertiseOnLocalHostResume) is var ips && ips.Any())
-            {
-                Logger.LogDebug($"Resuming operation, taking ownership of watched IP addresses...");
+            await base.StartWatch();
 
-                foreach (var ip in ips)
+            if (!IsOnline && AdvertiseOptions.Type == AdvertiseType.Never)
+            {
+                try
+                {
+                    await HandoffWatch();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Could not handoff watch for '{Host}'.", Host.Name);
+                }
+            }
+        }
+
+        private async Task ReclaimAddresses(IEnumerable<IPAddress> addresses)
+        {
+            if (addresses.Any()) using (Logger.BeginHostScope(Host))
+            {
+                Logger.LogDebug($"Reclaiming ownership of virtual IP addresses...");
+
+                foreach (var ip in addresses)
                 {
                     try
                     {
                         if (await RequestIPUnicastTrafficTo(ip) is PhysicalAddress mac)
                         {
-                            AddressMapping.Advertise(new(ip, mac));
+                            AddressMapping.Advertise(new(ip, mac),
+                                // need to send from host address, so that any sleep proxy
+                                // registers this as host activity and an end the lease
+                                source: Host.PhysicalAddress);
                         }
                     }
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "Could not reclaim IP for '{Host}'.", Host.Name);
                     }
+                }
+            }
+        }
+
+        protected internal override async Task ReclaimWatch()
+        {
+            if (AdvertiseOptions.Type == AdvertiseType.Never && !IsOnline)
+                return;
+
+            if (!IsOnline)
+            {
+                if (_handoffDone && SleepProxyRegistrationCycle > 0)
+                {
+                    await ReclaimAddresses(Host.SelectIPAddressesBy(HandoffOptions));
+                }
+                else
+                {
+                    await ReclaimAddresses(Host.IPAddresses.Where(AdvertiseOptions.ShouldAdvertiseOnLocalHostResume));
                 }
             }
 
@@ -106,6 +144,17 @@ namespace MadWizard.Desomnia.Network.Watch
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "Could not handoff watch of local virtual host '{host}'", Host.Name);
+                }
+            }
+        }
+
+        protected internal override async Task StopWatch(bool gracefully)
+        {
+            if (gracefully)
+            {
+                if (!IsOnline && AdvertiseOptions.Type == AdvertiseType.Never && _handoffDone)
+                {
+                    await ReclaimAddresses(Host.SelectIPAddressesBy(HandoffOptions));
                 }
             }
         }

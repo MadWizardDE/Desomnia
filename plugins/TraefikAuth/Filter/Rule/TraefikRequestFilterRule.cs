@@ -7,6 +7,8 @@ namespace MadWizard.Desomnia.Network.Traefik.Filter.Rule
     {
         public override bool Matches(HttpListenerRequest request)
         {
+            http.ToString(); // TODO warnung
+
             throw new NotImplementedException();
         }
     }

@@ -14,7 +14,7 @@ namespace MadWizard.Desomnia.Network.Trace
 
         public IEnumerable<NetworkHost> Hosts => Network.Where(host => options.Hosts.Contains(host.Name));
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             Logger.LogDebug("Tracing network hosts:");
 

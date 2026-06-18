@@ -4,7 +4,7 @@ namespace MadWizard.Desomnia.Network
 {
     public interface INetworkService
     {
-        void Startup() => Resume();
+        async Task Startup() => Resume();
 
         void Resume() { }
 
@@ -14,6 +14,13 @@ namespace MadWizard.Desomnia.Network
 
         void Suspend() { }
 
-        void Shutdown() => Suspend();
+        async Task Shutdown(NetworkShutdownReason reason) => Suspend();
+    }
+
+    public enum NetworkShutdownReason
+    {
+        ApplicationShutdown = 0,
+
+        InterfaceDisconnected = 1
     }
 }

@@ -7,7 +7,7 @@ namespace MadWizard.Desomnia.Network.Handoff
     {
         public required ILogger<HandoffService> Logger { private get; init; }
 
-        void INetworkService.Startup() { }
+        async Task INetworkService.Startup() { }
 
         async Task INetworkService.BeforeSuspend()
         {
@@ -28,31 +28,58 @@ namespace MadWizard.Desomnia.Network.Handoff
 
         private async Task HandoffLocalWatches()
         {
-            var watches = monitor.OfType<LocalHostWatch>().Where(watch => watch.HandoffNeeded);
+            var watches = monitor.OfType<LocalHostWatch>().Where(watch => watch.HandoffPending);
 
-            if (watches.Any())
+            if (watches.Where(watch => watch is not LocalVirtualHostWatch) is var watchesPhysical && watchesPhysical.Any())
             {
                 Logger.LogDebug("Handing off local watches...");
 
                 foreach (var watch in watches)
                 {
-                    using var scope = Logger.BeginHostScope(watch.Host);
-
-                    Logger.LogDebug("Handing off local watch for '{Host}'...", watch.Host.Name);
-
-                    try
-                    {
-                        await watch.HandoffWatch();
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!watch.HandoffOptions.IsRequired)
-                        {
-                            Logger.LogError(ex, "Could not handoff watch for '{Host}'.", watch.Host.Name);
-                        }
-                        else throw;
-                    }
+                    await HandoffLocalWatch(watch);
                 }
+            }
+
+            if (watches.OfType<LocalVirtualHostWatch>() is var watchesVirtual && watchesVirtual.Any())
+            {
+                Logger.LogDebug("Handing off local virtual watches...");
+
+                await Task.WhenAll(watchesVirtual.Select(HandoffLocalWatch));
+            }
+        }
+
+        private async Task HandoffLocalWatch(LocalHostWatch watch)
+        {
+            using var scope = Logger.BeginHostScope(watch.Host);
+
+            Logger.LogDebug("Handing off local watch for '{Host}'...", watch.Host.Name);
+
+            try
+            {
+                await watch.HandoffWatch();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not handoff watch for '{Host}'.", watch.Host.Name);
+
+                if (watch.HandoffOptions.IsRequired)
+                {
+                    throw;
+                }
+            }
+        }
+
+        private async Task ReclaimLocalWatch(LocalHostWatch watch)
+        {
+            using var scope = Logger.BeginHostScope(watch.Host);
+
+            try
+            {
+                await watch.ReclaimWatch();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not reclaim watch for '{Host}'.", watch.Host.Name);
             }
         }
 
@@ -60,12 +87,10 @@ namespace MadWizard.Desomnia.Network.Handoff
         {
             foreach (var watch in monitor.OfType<LocalHostWatch>())
             {
-                using var scope = Logger.BeginHostScope(watch.Host);
-
-                await watch.ReclaimWatch();
+                await ReclaimLocalWatch(watch);
             }
         }
 
-        void INetworkService.Shutdown() { }
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason) { }
     }
 }

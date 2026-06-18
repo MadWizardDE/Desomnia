@@ -1,11 +1,10 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace MadWizard.Desomnia
 {
-    public class ActionManager(IOptions<SystemMonitorConfig> config) : IStartable
+    public class ActionManager : IStartable
     {
         public required ILogger<ActionManager> Logger { protected get; init; }
 

@@ -26,7 +26,7 @@ namespace MadWizard.Desomnia.Network.Context
 
         //public required Lazy<IEnumerable<PacketFilterRule>> Rules { internal get; init; }
 
-        protected FilterContext(ILifetimeScope parent, string? tagName = null) : base(parent)
+        protected FilterContext(ILifetimeScope parent, string? tagName = null)
         {
             _needsTCPData = parent.ResolveOptional<SystemUsageInspector>() is not null;
 

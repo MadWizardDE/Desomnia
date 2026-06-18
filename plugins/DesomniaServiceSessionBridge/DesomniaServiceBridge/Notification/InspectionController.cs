@@ -103,7 +103,7 @@ namespace MadWizard.Desomnia.Service.Bridge.Notification
             {
                 var descriptor = ComponentContext.Resolve(typeof(ITokenDescriptor<>).MakeGenericType(token.GetType())) as ITokenDescriptor<T>;
 
-                return descriptor.DescribeToken(token);
+                return descriptor?.DescribeToken(token) ?? default;
             }
             catch (ComponentNotRegisteredException)
             {

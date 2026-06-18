@@ -2,7 +2,7 @@
 {
     internal class TraefikAuthOptions
     {
-        public string Prefix { get; set; }
+        public string Prefix { get; set; } = string.Empty; // TODO warnung
         public TimeSpan Timeout { get; set; }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using ConcurrentCollections;
-using MadWizard.Desomnia.Network.Services;
 using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Network.Filter
@@ -47,7 +46,7 @@ namespace MadWizard.Desomnia.Network.Filter
             }
         }
 
-        void INetworkService.Startup()
+        async Task INetworkService.Startup()
         {
             _shouldApplyFilter = true;
 
@@ -95,7 +94,7 @@ namespace MadWizard.Desomnia.Network.Filter
             Update(filter);
         }
 
-        void INetworkService.Shutdown()
+        async Task INetworkService.Shutdown(NetworkShutdownReason reason)
         {
             _shouldApplyFilter = false;
 

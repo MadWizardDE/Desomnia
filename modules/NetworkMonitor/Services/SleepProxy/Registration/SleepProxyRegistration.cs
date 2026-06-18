@@ -47,15 +47,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 TargetAddress = virtualHost.PhysicalHost.PhysicalAddress;
             }
-
-            foreach (var ip in host.IPAddresses)
-            {
-                IPAddresses[ip] = host[ip];
-            }
         }
 
         public SleepProxyRegistration(NetworkHost host, HandoffOptions options, byte sequence) : this(host)
         {
+            foreach (var ip in host.SelectIPAddressesBy(options))
+            {
+                IPAddresses[ip] = host[ip];
+            }
+
             RequestedLease = options.LeaseDuration;
             Password = options.Password;
 

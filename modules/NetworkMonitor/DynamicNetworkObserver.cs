@@ -96,17 +96,7 @@ namespace MadWizard.Desomnia.Network
 
             foreach (var context in orphaned.Where(c => !c.Value.IsSuspended))
             {
-                await ShutdownContext(context);
-            }
-        }
-
-        internal async Task ReconfigureNetworkMonitors()
-        {
-            using (await _mutex.LockAsync()) // process only one change at a time
-            {
-                await UnconfigureNetworkMonitors();
-
-                await ConfigureNetworkMonitors();
+                await ShutdownContext(context, NetworkShutdownReason.InterfaceDisconnected);
             }
         }
 
@@ -127,7 +117,7 @@ namespace MadWizard.Desomnia.Network
 
                 await context.DiscoverAddresses();
 
-                context.Monitor.StartMonitoring();
+                await context.Monitor.StartMonitoring();
 
                 await context.DiscoverServices();
 
@@ -145,17 +135,15 @@ namespace MadWizard.Desomnia.Network
             }
         }
 
-        private async Task ShutdownContext(Owned<NetworkContext> context)
+        private async Task ShutdownContext(Owned<NetworkContext> context, NetworkShutdownReason reason)
         {
             if (_contexts.Remove(context))
             {
-                context.Value.Monitor.StopMonitoring();
+                await context.Value.Monitor.StopMonitoring(reason);
 
                 MonitoringStopped?.Invoke(this, context.Value.Monitor);
 
                 Logger.LogDebug("Monitoring of '" + context.Value.Monitor.Name + "' has been stopped");
-
-                context.Value.Device.StopCapture();
 
                 context.Dispose();
             }
@@ -165,7 +153,7 @@ namespace MadWizard.Desomnia.Network
         {
             foreach (var context in _contexts.ToArray())
             {
-                await ShutdownContext(context);
+                await ShutdownContext(context, NetworkShutdownReason.ApplicationShutdown);
             }
         }
 

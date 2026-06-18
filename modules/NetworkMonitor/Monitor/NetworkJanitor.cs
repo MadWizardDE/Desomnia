@@ -7,7 +7,7 @@ namespace MadWizard.Desomnia.Network
 {
     public class NetworkJanitor(SweepOptions options)
     {
-        public ILogger<NetworkJanitor> Logger { private get; init; }
+        public required ILogger<NetworkJanitor> Logger { private get; init; }
 
         public required NetworkSegment Network { private get; init; }
 

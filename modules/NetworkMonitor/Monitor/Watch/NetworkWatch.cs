@@ -11,11 +11,8 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public TrafficThreshold? Threshold { get; set; }
 
-        public event EventHandler<EventArgs>? WatchStarted;
-        public event EventHandler<EventArgs>? WatchStopped;
-
-        internal protected virtual void StartWatch()    => WatchStarted?.Invoke(this, EventArgs.Empty);
-        internal protected virtual void StopWatch()     => WatchStopped?.Invoke(this, EventArgs.Empty);
+        internal protected virtual Task StartWatch() => Task.CompletedTask;
+        internal protected virtual Task StopWatch(bool gracefully)  => Task.CompletedTask;
 
         protected void ReportNetworkTraffic(long? bytes = null)
         {
