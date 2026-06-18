@@ -46,7 +46,18 @@ namespace MadWizard.Desomnia.Network.Watch
                 {
                     var reg = CreateSleepProxyRegistration(this);
 
-                    await RegisterWithSleepProxy(proxy, service, reg); // TODO handoff retry implementieren
+                    var tries = 0;
+                    while (true) try
+                    {
+                        await RegisterWithSleepProxy(proxy, service, reg); break;
+                    }
+                    catch
+                    {
+                        if (tries++ < HandoffOptions.Retry)
+                            continue;
+
+                        throw;
+                    }
 
                     SleepProxyRegistrationCycle++;
                 }
