@@ -163,7 +163,7 @@ namespace MadWizard.Desomnia.Network.Watch
             
             if (ips.Any())
             {
-                Logger.LogDebug($"Taking ownership of IP addresses...");
+                Logger.LogDebug($"Taking ownership of remote IP addresses...");
 
                 foreach (var ip in ips)
                 {

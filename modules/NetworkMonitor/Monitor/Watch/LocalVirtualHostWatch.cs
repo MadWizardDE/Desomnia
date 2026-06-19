@@ -51,7 +51,7 @@ namespace MadWizard.Desomnia.Network.Watch
         {
             if (addresses.Any()) using (Logger.BeginHostScope(Host))
             {
-                Logger.LogDebug($"Reclaiming ownership of virtual IP addresses...");
+                Logger.LogDebug($"Reclaiming ownership of local virtual IP addresses...");
 
                 foreach (var ip in addresses)
                 {

@@ -52,7 +52,7 @@ namespace MadWizard.Desomnia.Network.Watch
                     var reg = CreateSleepProxyRegistration(this);
 
                     if (reg.IPAddresses.Count  == 0)
-                        throw new Exception($"Sleep proxy registration without IP address.");
+                        throw new Exception($"Sleep proxy registration has no IP address.");
 
                     var tries = 0;
                     while (true) try
