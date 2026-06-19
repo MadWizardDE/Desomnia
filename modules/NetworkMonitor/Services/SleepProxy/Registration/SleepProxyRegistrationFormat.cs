@@ -33,6 +33,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     TTL = adr.TTL,
                 };
 
+            if (reg.IPAddresses.Count == 0)
+                throw new FormatException("DNS UPDATE without any address record");
+
             reg.Services.AddRange(ReadServices(message.AuthorityRecords, message.Options));
 
             return reg;
