@@ -40,11 +40,19 @@ namespace MadWizard.Desomnia.Network.Watch
 
         internal protected virtual async Task HandoffWatch()
         {
+            if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
+            {
+                SendUnMagicPacket(Host);
+            }
+
             if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
             {
                 if (SelectSleepProxy(out var proxy, out var service))
                 {
                     var reg = CreateSleepProxyRegistration(this);
+
+                    if (reg.IPAddresses.Count  == 0)
+                        throw new Exception($"Sleep proxy registration without IP address.");
 
                     var tries = 0;
                     while (true) try
@@ -61,15 +69,10 @@ namespace MadWizard.Desomnia.Network.Watch
 
                     SleepProxyRegistrationCycle++;
                 }
-                else if (HandoffOptions.IsRequired)
+                else
                 {
-                    throw new Exception("No sleep proxy available, but a handoff is required.");
+                    throw new Exception("No sleep proxy available.");
                 }
-            }
-
-            if (HandoffOptions.Type.HasFlag(HandoffType.UnMagicPacket))
-            {
-                SendUnMagicPacket(Host);
             }
 
             _handoffDone = true;

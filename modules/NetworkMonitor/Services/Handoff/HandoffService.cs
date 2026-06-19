@@ -32,7 +32,7 @@ namespace MadWizard.Desomnia.Network.Handoff
 
             if (watches.Where(watch => watch is not LocalVirtualHostWatch) is var watchesPhysical && watchesPhysical.Any())
             {
-                Logger.LogDebug("Handing off local watches...");
+                Logger.LogDebug("Attempt to handoff local watch...");
 
                 foreach (var watch in watches)
                 {
@@ -42,7 +42,7 @@ namespace MadWizard.Desomnia.Network.Handoff
 
             if (watches.OfType<LocalVirtualHostWatch>() is var watchesVirtual && watchesVirtual.Any())
             {
-                Logger.LogDebug("Handing off local virtual watches...");
+                Logger.LogDebug("Attempt to handoff {Count} local virtual watch(es)...", watchesVirtual.Count());
 
                 await Task.WhenAll(watchesVirtual.Select(HandoffLocalWatch));
             }
@@ -60,7 +60,7 @@ namespace MadWizard.Desomnia.Network.Handoff
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not handoff watch for '{Host}'.", watch.Host.Name);
+                Logger.LogError(ex, "Could not handoff watch for '{Host}'", watch.Host.Name);
 
                 if (watch.HandoffOptions.IsRequired)
                 {

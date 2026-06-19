@@ -85,7 +85,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
                 if (await DetermineIfHostCanBeSeen(true))
                 {
-                    Logger.LogWarning("Could not validate handoff from '{Host}'; host is still alive after {Timeout} seconds", Host.Name, Math.Floor(stopwatch.Elapsed.TotalSeconds));
+                    Logger.LogDebug("Could not validate handoff from '{Host}'; host is still alive after {Timeout} seconds", Host.Name, Math.Floor(stopwatch.Elapsed.TotalSeconds));
                 }
             } while (!IsSuspended && tries++ < HandoffOptions.Retry);
 
