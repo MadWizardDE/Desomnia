@@ -20,36 +20,44 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         public required ReachabilityService Reachability { private get; set; }
 
-        public required Func<TimeSpan, byte, Owned<SleepProxyLease>> CreateLease { private get; init; }
+        public required Func<SleepProxyRegistration, TimeSpan, Owned<SleepProxyLease>> CreateLease { private get; init; }
 
         readonly ConcurrentDictionary<PhysicalAddress, Owned<SleepProxyLease>> _activeLeases = [];
 
-        public SleepProxyLease? Register(SleepProxyRegistration reg)
+        public bool Register(SleepProxyRegistration reg, out SleepProxyLease lease)
         {
             var duration = options.DetermineLeaseDuration(reg.RequestedLease);
 
-            SleepProxyLease lease;
             if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var owned))
             {
                 Logger.LogDebug("Attempt to register '{Name}' [{Sequence}] at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
                     reg.Name, reg.Sequence, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
 
-                lease = (owned = CreateLease(duration, reg.Sequence)).Value;
+                lease = (owned = CreateLease(reg, duration)).Value;
             }
-            else if (owned.Value.Sequence < reg.Sequence)
+            else if ((lease = owned.Value).Registration.Sequence < reg.Sequence)
             {
                 Logger.LogDebug("Attempt to re-register '{Name}' [{NewSequence} > {OldSequence}] at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)... ",
-                    reg.Name, reg.Sequence, owned.Value.Sequence, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
+                    reg.Name, reg.Sequence, owned.Value.Registration.Sequence, reg.PrimaryAddress.ToHexString(), reg.Services.Count, reg.IPAddresses.Count);
 
                 owned.Dispose(); owned = null;
 
                 _activeLeases.Remove(reg.PrimaryAddress, out _);
 
-                lease = (owned = CreateLease(duration, reg.Sequence)).Value;
+                lease = (owned = CreateLease(reg, duration)).Value;
             }
             else
             {
-                return null; // we already processed this registration
+                // A registration we've already seen (sequence <= the held lease). Exact-duplicate messages are filtered
+                // out by the resolver, so this is a re-send the host expects us to re-acknowledge -- as long as it still
+                // describes the same registration we hold; otherwise it's a conflict.
+                if (!lease.Registration.Matches(reg))
+                    throw new InvalidOperationException(
+                        $"Registration of '{reg.Name}' [{reg.Sequence}] " +
+                        $"at {reg.PrimaryAddress.ToHexString()} " +
+                        $"conflicts with the held lease.");
+
+                return false;
             }
 
             try
@@ -83,11 +91,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     throw new NotSupportedException($"Registration of services is not configured for {ctxHost.Host.Name}.");
                 }
 
+                _activeLeases[reg.PrimaryAddress] = owned;
+
                 var filterHosts = Context.CreateDynamicFilterHosts().ToList(); // the remote host may register dynamic host filters
 
                 Task.Run(async () => // this is time consuming and not relevant for the DNS response, so let's decouple it
                 {
                     using var scope = Logger.BeginHostScope(remote.Host);
+
+                    var lease = _activeLeases[reg.PrimaryAddress].Value;
 
                     if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null)
                     {
@@ -112,16 +124,17 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     {
                         await host.DiscoverAddresses();
                     }
-                }).ContinueWith(t => FinishRegistration(remote, lease));
+
+                    return lease;
+
+                }).ContinueWith(t => FinishRegistration(remote, t.Result));
             }
             catch (Exception)
             {
                 owned.Dispose(); throw;
             }
 
-            _activeLeases[reg.PrimaryAddress] = owned;
-
-            return lease;
+            return true;
         }
 
         private NetworkHostContext CreateHost(SleepProxyRegistration reg)
@@ -179,7 +192,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         owned.Dispose();
                     }
 
-                    Logger.LogDebug("Lease for '{Host}' has {Verb}", watch.Host.Name, args.HasExpired  ? "expired" : args.HasFailed ? "failed" :  "ended");
+                    string msg = "Lease for '{Host}' has " + (args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
+
+                    if (args.HasFailed && args.Timeout is TimeSpan timeout)
+                        msg += $"; host was still alive after {Math.Floor(timeout.TotalSeconds)} seconds";
+
+                    Logger.Log(args.HasFailed ? LogLevel.Warning : LogLevel.Debug, msg, watch.Host.Name);
                 }
             };
 

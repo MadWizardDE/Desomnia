@@ -12,7 +12,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         readonly Stack<IDisposable> _disposables = [];
 
-        public required byte Sequence { get; init; }
+        public required SleepProxyRegistration Registration { get; init; }
 
         public TimeSpan Duration { get; init; }
         public DateTime GrantedSince { get; } = DateTime.Now;
@@ -96,6 +96,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
     class SleepProxyLeaseEndEventArgs(SleepProxyLeaseEndReason reason) : EventArgs
     {
         public SleepProxyLeaseEndReason Reason => reason;
+
+        public TimeSpan? Timeout { get; init; }
 
         public bool HasExpired => Reason == SleepProxyLeaseEndReason.Expired;
         public bool HasFailed => Reason == SleepProxyLeaseEndReason.Failed;

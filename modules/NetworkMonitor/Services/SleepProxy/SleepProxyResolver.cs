@@ -11,7 +11,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     /// the proxy service itself (<c>_sleep-proxy._udp.local</c>) and the services that watched hosts
     /// have asked us to advertise on their behalf while they are asleep / unreachable.
     /// </summary>
-    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : DNSService(service.Port), IMulticastDNSResolver
+    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : GuardedDNSService(service.Port), IMulticastDNSResolver
     {
         public required ILogger<SleepProxyResolver> Logger { private get; init; }
 
@@ -36,30 +36,32 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// </summary>
         protected override void ProcessUpdate(DNSUpdate update)
         {
-            Logger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
-
-            var registration = ((SleepProxyRegistration)update.Request);
+            var reg = ((SleepProxyRegistration)update.Request);
 
             try
             {
-                if (Registrar.Register(registration) is SleepProxyLease lease)
+                if (Registrar.Register(reg, out var lease))
                 {
-                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", registration.Name, lease.Duration);
+                    Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", reg.Name, lease.Duration);
 
                     update.AnswerWithLease(lease.Duration);
-
-                    RespondTo(update);
 
                     lease.Ended += (sender, args) =>
                     {
                         // TODO: Warum wird das manchmal zum Host gelogged??
-                        Logger.LogDebug("Lease for '{Name}' has {Verb}", registration.Name, args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
+                        Logger.LogDebug("Lease for '{Name}' has {Verb}", reg.Name, args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
                     };
                 }
+                else // no new registration was created, we merely confirm the existing one
+                {
+                    update.AnswerWithLease(lease.GrantedUntil - DateTime.Now);
+                }
+
+                RespondTo(update);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Registration of '{Name}' failed.", registration.Name);
+                Logger.LogError(ex, "Registration of '{Name}' failed.", reg.Name);
 
                 update.AnswerWithError(ex);
 

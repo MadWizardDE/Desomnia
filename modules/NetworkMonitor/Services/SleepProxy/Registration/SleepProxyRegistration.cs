@@ -121,6 +121,24 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
         }
 
+        /// <summary>
+        /// Whether <paramref name="other"/> describes substantially the same registration as this one: the same host
+        /// identity (MAC, wake target, names) defending the same addresses and services. The transient negotiation
+        /// fields (message <see cref="Id"/>, <see cref="Sequence"/>, requested lease, password) are intentionally ignored.
+        /// </summary>
+        internal bool Matches(SleepProxyRegistration other)
+        {
+            return Equals(Name, other.Name)
+                && Equals(Hostname, other.Hostname)
+                && Equals(PrimaryAddress, other.PrimaryAddress)
+                && Equals(TargetAddress, other.TargetAddress)
+                && Equals(Password, other.Password)
+                && IPAddresses.Keys.ToHashSet().SetEquals(other.IPAddresses.Keys)
+                && ServiceSignatures().SetEquals(other.ServiceSignatures());
+        }
+
+        private HashSet<string> ServiceSignatures() => [.. Services.Select(s => $"{s.Service.LocalDomainName}|{s.Port}")];
+
         public static explicit operator SleepProxyRegistration(Message message) => SleepProxyRegistrationFormat.ParseUpdateMessage(message);
         public static explicit operator Message(SleepProxyRegistration reg)     => SleepProxyRegistrationFormat.BuildUpdateMessage(reg);
 

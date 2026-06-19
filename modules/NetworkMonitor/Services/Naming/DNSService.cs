@@ -20,6 +20,11 @@ namespace MadWizard.Desomnia.Network.Naming
             if (!TryReadMessage(packet, out Message? message))
                 return;
 
+            ProcessMessage(packet, message);
+        }
+
+        protected virtual void ProcessMessage(EthernetPacket packet, Message message)
+        {
             try
             {
                 if (message.IsQuery)
@@ -33,6 +38,9 @@ namespace MadWizard.Desomnia.Network.Naming
 
                         case MessageOperation.Update:
                             DNSUpdate update = new(packet, message);
+
+                            WireLogger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
+
                             ProcessUpdate(update);
                             break;
                     }
