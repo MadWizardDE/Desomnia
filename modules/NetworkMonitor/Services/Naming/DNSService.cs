@@ -38,9 +38,6 @@ namespace MadWizard.Desomnia.Network.Naming
 
                         case MessageOperation.Update:
                             DNSUpdate update = new(packet, message);
-
-                            WireLogger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
-
                             ProcessUpdate(update);
                             break;
                     }

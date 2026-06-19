@@ -36,6 +36,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// </summary>
         protected override void ProcessUpdate(DNSUpdate update)
         {
+            Logger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
+
             var reg = ((SleepProxyRegistration)update.Request);
 
             try
