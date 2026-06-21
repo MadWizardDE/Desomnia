@@ -192,7 +192,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         owned.Dispose();
                     }
 
-                    string msg = "Lease for '{Host}' has " + (args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
+                    string msg = "Lease for '{Host}' has " 
+                    + (args.HasExpired ? "expired" 
+                        : args.HasFailed  ? "failed" 
+                        : "ended");
 
                     if (args.HasFailed && args.Timeout is TimeSpan timeout)
                         msg += $"; host was still alive after {Math.Floor(timeout.TotalSeconds)} seconds";

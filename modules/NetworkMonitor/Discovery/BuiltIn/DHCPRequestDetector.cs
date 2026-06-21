@@ -30,9 +30,9 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                             {
                                 case AddressRequestOption requestAddr when requestAddr.RequestedIP is IPAddress ip:
                                 {
-                                    using var scope = Logger.BeginHostScope(host);
-                                    Logger.LogTrace("Host '{HostName}' requested {Family} address '{IPAddress}'",
-                                        host.Name, ip.ToFamilyName(), ip);
+                                    using (Logger.BeginHostScope(host))
+                                        Logger.LogTrace("Host '{HostName}' requested {Family} address '{IPAddress}'",
+                                            host.Name, ip.ToFamilyName(), ip);
 
                                     if (host.HasAddress(ip: ip)) // only if the IP already belongs to the host
                                     {

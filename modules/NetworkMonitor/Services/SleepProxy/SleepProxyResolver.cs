@@ -50,8 +50,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                     lease.Ended += (sender, args) =>
                     {
-                        // TODO: Warum wird das manchmal zum Host gelogged??
-                        Logger.LogDebug("Lease for '{Name}' has {Verb}", reg.Name, args.HasExpired ? "expired" : args.HasFailed ? "failed" : "ended");
+                        Logger.LogDebug("Lease for '{Name}' has {Verb}", reg.Name, 
+                            args.HasExpired ? "expired" : 
+                            args.HasFailed  ? "failed" 
+                            : "ended");
                     };
                 }
                 else // no new registration was created, we merely confirm the existing one
