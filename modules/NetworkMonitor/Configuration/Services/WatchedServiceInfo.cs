@@ -4,6 +4,7 @@ using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using System.Net;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Services
 {
@@ -54,7 +55,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         internal string?        KnockSecret         { get; set; }
         internal string?        KnockSecretAuth     { get; set; }
         internal DigestType?    KnockSecretAuthType { get; set; }
-        internal string?        KnockSecretEncoding { get; set; }
+        internal Encoding?      KnockSecretEncoding { get; set; }
 
         public KnockOptions? MakeKnockOptions()
         {

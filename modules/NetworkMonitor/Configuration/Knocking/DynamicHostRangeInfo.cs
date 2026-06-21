@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using System.Net;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Knocking
 {
@@ -37,7 +38,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Knocking
 
     public class KeyData
     {
-        public string? Encoding { get; set; }
+        public Encoding? Encoding { get; set; }
 
         public string? Text { get; set; }
     }

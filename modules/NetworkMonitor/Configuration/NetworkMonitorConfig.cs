@@ -1,4 +1,5 @@
 ﻿using MadWizard.Desomnia.Configuration;
+using MadWizard.Desomnia.Configuration.Converter;
 using MadWizard.Desomnia.Network.Configuration.Converter;
 using MadWizard.Desomnia.Network.Configuration.Filter;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
@@ -90,6 +91,9 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
         internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
         internal int                HandoffRetry            { get; set; } = 0;
+
+        internal string?            HandoffPassword         { get; set; }
+        internal Encoding           HandoffPasswordEncoding { get; set; } = Encoding.ASCII;
         #endregion
 
         #region Network :: SleepProxyOptions
@@ -123,7 +127,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal string?            KnockSecret             { get; set; }
         internal string?            KnockSecretAuth         { get; set; }
         internal DigestType         KnockSecretAuthType     { get; set; } = default;
-        internal string             KnockSecretEncoding     { get; set; } = "UTF-8";
+        internal Encoding           KnockSecretEncoding     { get; set; } = Encoding.UTF8;
         #endregion
 
         #region Network :: PingOptions
@@ -135,7 +139,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal WakeType           WakeType                { get; set; } = WakeType.Auto;
         internal ushort             WakePort                { get; set; } = 9;
         internal string?            WakePassword            { get; set; }
-        internal Encoding           WakeEncoding            { get; set; } = Encoding.ASCII; // TODO: is this a good default, can it be set?
+        internal Encoding           WakePasswordEncoding    { get; set; } = Encoding.ASCII;
         internal TimeSpan           WakeTimeout             { get; set; } = TimeSpan.FromSeconds(10);
         internal TimeSpan?          WakeRepeat              { get; set; }
         internal bool               WakePing                { get; set; } = false;
@@ -208,6 +212,7 @@ namespace MadWizard.Desomnia.Network.Configuration
             TypeDescriptor.AddAttributes(typeof(PhysicalAddress),   new TypeConverterAttribute(typeof(PhysicalAddressConverter)));
             TypeDescriptor.AddAttributes(typeof(IPAddress),         new TypeConverterAttribute(typeof(IPAddressConverter)));
             TypeDescriptor.AddAttributes(typeof(IPNetwork),         new TypeConverterAttribute(typeof(IPNetworkConverter)));
+            TypeDescriptor.AddAttributes(typeof(Encoding),          new TypeConverterAttribute(typeof(EncodingConverter)));
         }
     }
 }

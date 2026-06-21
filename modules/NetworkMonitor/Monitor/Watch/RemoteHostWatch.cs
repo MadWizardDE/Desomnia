@@ -186,6 +186,8 @@ namespace MadWizard.Desomnia.Network.Watch
         [ActionHandler("wake")]
         public virtual async Task Wake(DemandEvent @event)
         {
+            using var scope = Logger.BeginHostScope(Host);
+
             if (WakeOptions.Type == WakeType.None)
             {
                 Logger.LogDebug($"Did not try to wake '{Host.Name}', because waking is disabled."); return;

@@ -12,7 +12,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
         public readonly TimeSpan    Timeout         { get; init; }
         public readonly TimeSpan?   LeaseDuration   { get; init; }
 
-        public readonly byte[]?     Password        { get; init; } // TODO implement in config
+        public readonly byte[]?     Password        { get; init; }
 
         public bool IsRequired => Type.HasFlag(HandoffType.Required);
 

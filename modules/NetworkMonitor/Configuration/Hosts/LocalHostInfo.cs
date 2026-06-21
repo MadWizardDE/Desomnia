@@ -1,6 +1,7 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Filter;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Hosts
 {
@@ -32,16 +33,30 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         #region         HandoffOptions
-        HandoffType?    Handoff         { get; set; }
-        TimeSpan?       HandoffTimeout  { get; set; }
-        int?            HandoffRetry    { get; set; }
+        HandoffType?    Handoff                 { get; set; }
+        TimeSpan?       HandoffTimeout          { get; set; }
+        int?            HandoffRetry            { get; set; }
 
-        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
+        string?         HandoffPassword         { get; set; }
+        byte[]?         HandoffPasswordBytes    { get; set; }
+        Encoding?       HandoffPasswordEncoding { get; set; }
+
+        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network)
         {
-            Type = Handoff ?? network.Handoff,
-            Timeout = HandoffTimeout ?? network.HandoffTimeout,
-            Retry = HandoffRetry ?? network.HandoffRetry,
-        };
+            if ((HandoffPassword ?? network.HandoffPassword) is string password)
+            {
+                HandoffPasswordBytes ??= (HandoffPasswordEncoding ?? network.HandoffPasswordEncoding).GetBytes(password);
+            }
+
+            return new()
+            {
+                Type = Handoff ?? network.Handoff,
+                Timeout = HandoffTimeout ?? network.HandoffTimeout,
+                Retry = HandoffRetry ?? network.HandoffRetry,
+
+                Password = HandoffPasswordBytes
+            };
+        }
         #endregion
 
         // Ports

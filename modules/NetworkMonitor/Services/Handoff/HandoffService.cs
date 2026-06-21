@@ -34,7 +34,7 @@ namespace MadWizard.Desomnia.Network.Handoff
             {
                 Logger.LogDebug("Attempt to handoff local watch...");
 
-                foreach (var watch in watches)
+                foreach (var watch in watchesPhysical)
                 {
                     await HandoffLocalWatch(watch);
                 }

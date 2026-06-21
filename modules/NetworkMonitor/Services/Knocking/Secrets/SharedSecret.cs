@@ -16,29 +16,15 @@ namespace MadWizard.Desomnia.Network.Knocking.Secrets
             AuthType = authType;
         }
 
-        public SharedSecret(string? key, string? authKey, DigestType authType, string encoding)
+        public SharedSecret(string? key, string? authKey, DigestType authType, Encoding encoding)
         {
             Key = TryConvert(key, encoding) ?? [];
             AuthKey = TryConvert(authKey, encoding);
             AuthType = authType;
         }
 
-        internal static byte[]? TryConvert(string? str, string encoding)
-        {
-            if (str is not null)
-            {
-                if (encoding.Equals("base64", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return Convert.FromBase64String(str);
-                }
-                else
-                {
-                    return Encoding.GetEncoding(encoding).GetBytes(str);
-                }
-            }
-
-            return null;
-        }
+        internal static byte[]? TryConvert(string? str, Encoding encoding)
+            => str is not null ? encoding.GetBytes(str) : null;
     }
 
     public enum DigestType

@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Configuration.Filter;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Hosts
 {
@@ -11,10 +12,10 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
 
         // Options
         #region                     DemandOptions
-        internal DemandSource?      DemandSource        { get; set; }
-        internal TimeSpan?          DemandTimeout       { get; set; }
-        internal bool?              DemandForward       { get; set; }
-        internal int?               DemandParallel      { get; set; }
+        internal DemandSource?      DemandSource            { get; set; }
+        internal TimeSpan?          DemandTimeout           { get; set; }
+        internal bool?              DemandForward           { get; set; }
+        internal int?               DemandParallel          { get; set; }
 
         public virtual DemandOptions MakeDemandOptions(NetworkMonitorConfig network) => new()
         {
@@ -26,14 +27,14 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         #region                     AdvertiseOptions
-        internal AdvertiseType?     Advertise           { get; set; }
-        internal bool?              AdvertiseHostname   { get; set; }
-        internal bool?              AdvertiseServices   { get; set; }
+        internal AdvertiseType?     Advertise               { get; set; }
+        internal bool?              AdvertiseHostname       { get; set; }
+        internal bool?              AdvertiseServices       { get; set; }
 
-        internal TimeSpan?          AdvertiseTimeout    { get; set; }
+        internal TimeSpan?          AdvertiseTimeout        { get; set; }
 
-        internal TimeSpan?          AdvertiseHostTTL    { get; set; }
-        internal TimeSpan?          AdvertiseServiceTTL { get; set; }
+        internal TimeSpan?          AdvertiseHostTTL        { get; set; }
+        internal TimeSpan?          AdvertiseServiceTTL     { get; set; }
 
         public virtual AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
@@ -50,28 +51,42 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         #region                     HandoffOptions
-        internal HandoffType?       Handoff             { get; set; }
-        internal TimeSpan?          HandoffTimeout      { get; set; }
-        internal int?               HandoffRetry        { get; set; }
+        internal HandoffType?       Handoff                 { get; set; }
+        internal TimeSpan?          HandoffTimeout          { get; set; }
+        internal int?               HandoffRetry            { get; set; }
 
-        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network) => new()
+        internal string?            HandoffPassword         { get; set; }
+        internal byte[]?            HandoffPasswordBytes    { get; set; }
+        internal Encoding?          HandoffPasswordEncoding { get; set; }
+
+        public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network)
         {
-            Type = Handoff ?? network.Handoff,
-            Timeout = HandoffTimeout ?? network.HandoffTimeout,
-            Retry = HandoffRetry ?? network.HandoffRetry,
-        };
+            if ((HandoffPassword ?? network.HandoffPassword) is string password)
+            {
+                HandoffPasswordBytes ??= (HandoffPasswordEncoding ?? network.HandoffPasswordEncoding).GetBytes(password);
+            }
+
+            return new()
+            {
+                Type = Handoff ?? network.Handoff,
+                Timeout = HandoffTimeout ?? network.HandoffTimeout,
+                Retry = HandoffRetry ?? network.HandoffRetry,
+
+                Password = HandoffPasswordBytes
+            };
+        }
         #endregion
 
         // Events
-        public NamedAction?         OnServiceDemand     { get; set; }
-        public NamedAction?         OnDemand            { get; set; } = new NamedAction("wake");
-        public DelayedAction?       OnIdle              { get; set; }
+        public NamedAction?         OnServiceDemand         { get; set; }
+        public NamedAction?         OnDemand                { get; set; } = new NamedAction("wake");
+        public DelayedAction?       OnIdle                  { get; set; }
 
-        public DelayedAction?       OnStart             { get; set; }
-        public DelayedAction?       OnSuspend           { get; set; }
-        public DelayedAction?       OnStop              { get; set; }
+        public DelayedAction?       OnStart                 { get; set; }
+        public DelayedAction?       OnSuspend               { get; set; }
+        public DelayedAction?       OnStop                  { get; set; }
 
-        public NamedAction?         OnMagicPacket       { get; set; }
+        public NamedAction?         OnMagicPacket           { get; set; }
 
         // Services
         public IList<WatchedServiceInfo> Service { get; set; } = [];

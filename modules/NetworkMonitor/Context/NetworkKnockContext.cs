@@ -11,6 +11,7 @@ using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Services.Knocking;
 using NetTools;
 using System.Net;
+using System.Text;
 
 namespace MadWizard.Desomnia.Network.Context
 {
@@ -129,7 +130,7 @@ namespace MadWizard.Desomnia.Network.Context
 
             DigestType authType = default;
 
-            string defaultEncoding = data.Encoding ?? "UTF-8";
+            Encoding defaultEncoding = data.Encoding ?? Encoding.UTF8;
 
             if (data.Key is KeyData keyData)
             {

@@ -50,9 +50,12 @@ namespace Microsoft.Extensions.Logging
 
         public static IDisposable? BeginHostScope(this ILogger logger, NetworkHost host)
         {
-            if (!NLog.ScopeContext.TryGetProperty("Host", out var h) || h != host)
+            if (!NLog.ScopeContext.TryGetProperty("Request", out _)) // don't change host scope, during request scope
             {
-                return logger.BeginScope(new Dictionary<string, object> { ["Host"] = host });
+                if (!NLog.ScopeContext.TryGetProperty("Host", out var h) || h != host)
+                {
+                    return logger.BeginScope(new Dictionary<string, object> { ["Host"] = host });
+                }
             }
 
             return null;

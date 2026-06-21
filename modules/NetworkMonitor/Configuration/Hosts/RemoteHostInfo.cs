@@ -5,7 +5,7 @@ using System.Text;
 
 namespace MadWizard.Desomnia.Network.Configuration.Hosts
 {
-    public class RemoteHostInfo : WatchedHostInfo
+    public abstract class RemoteHostInfo : WatchedHostInfo
     {
         // Options
         #region                 AdvertiseOptions
@@ -45,7 +45,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         internal string?        KnockSecret         { get; set; }
         internal string?        KnockSecretAuth     { get; set; }
         internal DigestType?    KnockSecretAuthType { get; set; }
-        internal string?        KnockSecretEncoding { get; set; }
+        internal Encoding?      KnockSecretEncoding { get; set; }
         #endregion
 
         #region                 PingOptions
@@ -64,7 +64,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         internal ushort?        WakePort            { get; set; }
         internal string?        WakePassword        { get; set; }
         internal byte[]?        WakePasswordBytes   { get; set; }
-        internal Encoding?      WakeEncoding        { get; set; }
+        internal Encoding?      WakePasswordEncoding{ get; set; }
         internal TimeSpan?      WakeTimeout         { get; set; }
         internal TimeSpan?      WakeRepeat          { get; set; }
         internal bool?          WakePing            { get; set; }
@@ -75,7 +75,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         {
             if ((WakePassword ?? network.WakePassword) is string password)
             {
-                WakePasswordBytes ??= (WakeEncoding ?? network.WakeEncoding).GetBytes(password);
+                WakePasswordBytes ??= (WakePasswordEncoding ?? network.WakePasswordEncoding).GetBytes(password);
             }
 
             return new()
