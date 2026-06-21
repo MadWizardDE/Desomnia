@@ -52,6 +52,8 @@ namespace MadWizard.Desomnia.Network
 
                 // Composites //
 
+                builder.RegisterComposite<CompositeWatchedServiceDiscovery, IWatchedServiceDiscovery>();
+                builder.RegisterComposite<CompositeServiceDiscovery, IServiceDiscovery>();
                 builder.RegisterComposite<CompositeRouterDiscovery, IRouterDiscovery>();
                 builder.RegisterComposite<CompositeIPAddressDiscovery, IIPAddressDiscovery>();
                 builder.RegisterComposite<CompositePhysicalAddressDiscovery, IPhysicalAddressDiscovery>();

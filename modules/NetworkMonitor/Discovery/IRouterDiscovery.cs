@@ -2,7 +2,7 @@
 
 namespace MadWizard.Desomnia.Network.Discovery
 {
-    internal interface IRouterDiscovery
+    public interface IRouterDiscovery
     {
         Task DiscoverRouters(NetworkSegment network);
     }

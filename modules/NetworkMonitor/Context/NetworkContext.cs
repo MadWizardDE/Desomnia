@@ -235,6 +235,7 @@ namespace MadWizard.Desomnia.Network.Context
 
                 RegisterRouterDiscovery(builder, config);
                 RegisterAddressDiscovery(builder, config);
+                RegisterServiceDiscovery(builder, config);
 
                 RegisterFilters(builder, config);
                 RegisterTrafficFilters(builder, config);

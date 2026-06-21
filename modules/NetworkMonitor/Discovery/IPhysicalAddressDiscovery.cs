@@ -2,7 +2,7 @@
 
 namespace MadWizard.Desomnia.Network.Discovery
 {
-    internal interface IPhysicalAddressDiscovery
+    public interface IPhysicalAddressDiscovery
     {
         Task DiscoverAddress(NetworkHost host);
     }
