@@ -1,4 +1,8 @@
-﻿namespace MadWizard.Desomnia.Configuration
+﻿using MadWizard.Desomnia.Configuration.Converter;
+using System.ComponentModel;
+using System.Text;
+
+namespace MadWizard.Desomnia.Configuration
 {
     public class SystemMonitorConfig
     {
@@ -15,7 +19,9 @@
         public DelayedAction?   OnSuspendTimeout    { get; set; }
         public DelayedAction?   OnResume            { get; set; }
 
-        // public IList<ActionGroupConfig> ActionGroup { get; private set; } = [];
-
+        static SystemMonitorConfig()
+        {
+            TypeDescriptor.AddAttributes(typeof(Encoding), new TypeConverterAttribute(typeof(EncodingConverter)));
+        }
     }
 }
