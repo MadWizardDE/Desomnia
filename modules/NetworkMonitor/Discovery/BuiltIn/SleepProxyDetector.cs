@@ -112,14 +112,9 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
         {
             var metrics = SleepProxyMetrics.ParseInstanceName(instance.Name, out string name);
 
-            NetworkHost? host = Network[name] ?? Network[instance.HostName, byHostName: true];
+            Logger.LogDebug("Discovered sleep proxy '{Name}' with metrics '{Metrics}'", name, metrics);
 
-            if (host is null)
-            {
-                host = CreateProxyHost(name, instance.HostName);
-
-                Logger.LogDebug("Dynamically discovered sleep proxy '{Host}' with metrics '{Metrics}'", host.Name, metrics);
-            }
+            NetworkHost host = Network[name] ?? Network[instance.HostName, byHostName: true] ?? CreateProxyHost(name, instance.HostName);
 
             if (host.Services.WithPort(instance.Port) is not TransportNetworkService service)
             {
