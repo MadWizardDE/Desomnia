@@ -133,7 +133,7 @@ namespace Microsoft.Extensions.Configuration.Xml
         {
             foreach (var attribute in element.Attributes())
             {
-                if (source.EnumAttributes.Contains(attribute.Name.LocalName))
+                if (source.EnumAttributes.Any(name => attribute.Name.LocalName.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     attribute.Value = attribute.Value.Replace("|", ",").Replace("-", "").Trim();
                 }

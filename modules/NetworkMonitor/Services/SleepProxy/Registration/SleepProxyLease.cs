@@ -35,13 +35,13 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             _disposables.Push(instance);
         }
 
-        internal void Stop(SleepProxyLeaseEndReason reason)
+        internal void Stop(SleepProxyLeaseEndReason reason, TimeSpan? timeout = null)
         {
             if (_timer.Enabled)
             {
                 _timer.Stop();
 
-                Ended?.Invoke(this, new(reason));
+                Ended?.Invoke(this, new(reason) { Timeout = timeout });
             }
         }
 

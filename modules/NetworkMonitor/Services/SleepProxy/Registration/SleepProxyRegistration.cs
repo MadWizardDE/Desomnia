@@ -56,7 +56,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 IPAddresses[ip] = host[ip];
             }
 
-            RequestedLease = options.LeaseDuration;
+            RequestedLease = options.Duration;
             Password = options.Password;
 
             Sequence = sequence;
@@ -146,13 +146,18 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
     public class ProxyServiceInfo : WatchedServiceInfo
     {
-        // TODO wie mappen wir das?
+        // TODO: wie mappen wir das?
         public ushort Priority  { get; set; }
         public ushort Weight    { get; set; }
 
-        public ProxyServiceInfo() {  }
+        // TODO: wie mappen wir TXT records?
 
-        public ProxyServiceInfo(AdvertiseOptions options)
+        public ProxyServiceInfo()
+        {
+            AdvertiseTimeout = TimeSpan.Zero; // proxied services should be answered immediately
+        }
+
+        public ProxyServiceInfo(AdvertiseOptions options) : this()
         {
             AdvertiseHostTTL = options.HostTTL;
             AdvertiseServiceTTL = options.ServiceTTL;

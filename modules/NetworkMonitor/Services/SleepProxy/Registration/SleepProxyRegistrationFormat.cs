@@ -92,7 +92,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                 Protocol = ptr.Protocol,
 
-                AdvertiseServiceTTL = ptr.TTL
+                AdvertiseServiceTTL = ptr.TTL,
             };
         }
 

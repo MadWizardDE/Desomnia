@@ -38,15 +38,14 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
 
         public virtual AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
-            Type        = (Advertise            ?? network.Advertise),
-                      //| (AdvertiseHostname    ?? network.AdvertiseHosts ? AdvertiseType.Host : 0)
-                      //| (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Service : 0),
+            Type        = (Advertise            ?? network.Advertise)
+                        | (AdvertiseHostname    ?? network.AdvertiseHosts       ? AdvertiseType.Host    : 0)
+                        | (AdvertiseServices    ?? network.AdvertiseServices    ? AdvertiseType.Service : 0),
 
             Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
 
             HostTTL     = AdvertiseHostTTL      ?? network.AdvertiseHostTTL,
             ServiceTTL  = AdvertiseServiceTTL   ?? network.AdvertiseServiceTTL,
-
         };
         #endregion
 
@@ -69,6 +68,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
             return new()
             {
                 Type = Handoff ?? network.Handoff,
+                Duration = network.SleepProxyLease,
                 Timeout = HandoffTimeout ?? network.HandoffTimeout,
                 Retry = HandoffRetry ?? network.HandoffRetry,
 

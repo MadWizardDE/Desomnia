@@ -2,6 +2,7 @@
 using Autofac.Core.Resolving.Pipeline;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
+using MadWizard.Desomnia.Network.Configuration.Options;
 
 namespace MadWizard.Desomnia.Network.Middleware
 {
@@ -11,6 +12,11 @@ namespace MadWizard.Desomnia.Network.Middleware
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
+            if (context.FirstParameterOfType<LocalHostInfo>() is LocalHostInfo configLocalHost)
+            {
+                ApplyDefaultAdvertiseOptions(configLocalHost);
+            }
+
             if (context.FirstParameterOfType<WatchedHostInfo>() is WatchedHostInfo configHost)
             {
                 ApplyDefaultActions(configHost);
@@ -33,6 +39,21 @@ namespace MadWizard.Desomnia.Network.Middleware
             }
         }
 
+        private void ApplyDefaultAdvertiseOptions(LocalHostInfo configLocalHost)
+        {
+            var options = configLocalHost.MakeAdvertiseOptions(config);
+
+            foreach (var service in configLocalHost.Services)
+            {
+                service.Advertise ??= options.Type;
+                service.AdvertiseTimeout ??= options.Timeout;
+                service.AdvertiseHostTTL ??= options.HostTTL;
+                service.AdvertiseServiceTTL ??= options.ServiceTTL;
+
+                service.Advertise &= ~AdvertiseType.Host; // remove host flag
+            }
+        }
+
         private void ApplyDefaultAdvertiseOptions(WatchedHostInfo configHost)
         {
             var options = configHost.MakeAdvertiseOptions(config);
@@ -43,6 +64,8 @@ namespace MadWizard.Desomnia.Network.Middleware
                 service.AdvertiseTimeout        ??= options.Timeout;
                 service.AdvertiseHostTTL        ??= options.HostTTL;
                 service.AdvertiseServiceTTL     ??= options.ServiceTTL;
+
+                service.Advertise &= ~AdvertiseType.Host; // remove host flag
             }
         }
 

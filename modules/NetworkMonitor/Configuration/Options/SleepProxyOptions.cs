@@ -21,6 +21,16 @@
         }
     }
 
+    public enum SleepProxyDiscoveryType
+    {
+        None    = 0,
+
+        Eager   = 1 << 1,
+        Lazy    = 1 << 2,
+
+        Fast    = 1 << 5
+    }
+
     public enum LeaseExpireAction
     {
         None = 0,

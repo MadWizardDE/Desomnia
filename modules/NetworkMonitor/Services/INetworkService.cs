@@ -1,4 +1,5 @@
 ﻿using PacketDotNet;
+using System.ComponentModel;
 
 namespace MadWizard.Desomnia.Network
 {
@@ -15,6 +16,12 @@ namespace MadWizard.Desomnia.Network
         void Suspend() { }
 
         async Task Shutdown(NetworkShutdownReason reason) => Suspend();
+
+        public class Metadata
+        {
+            [DefaultValue(0)]
+            public int Order { get; set; }
+        }
     }
 
     public enum NetworkShutdownReason

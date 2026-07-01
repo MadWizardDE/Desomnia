@@ -17,13 +17,6 @@ namespace MadWizard.Desomnia.Network.Naming.Resolver
         {
             foreach (var question in query.Questions)
             {
-                // When the QU bit is set the sender also accepts a direct unicast reply,
-                // which a real responder may send straight back to it. We never observe
-                // that on the wire, so we cannot tell whether the query gets answered;
-                // to stay non-invasive, ignore these questions entirely.
-                if (question.QU)
-                    continue;
-
                 bool wantIPv4 = question.Type is DnsType.A or DnsType.ANY;
                 bool wantIPv6 = question.Type is DnsType.AAAA or DnsType.ANY;
 
@@ -44,7 +37,7 @@ namespace MadWizard.Desomnia.Network.Naming.Resolver
                             if (ip.AddressFamily == AddressFamily.InterNetworkV6 && !wantIPv6)
                                 continue;
 
-                            query.AnswerWith(host, ip, new(watch.AdvertiseOptions, true));
+                            query.AnswerWith(host, ip, new(watch.AdvertiseOptions, delay: true));
                         }
                 }
             }

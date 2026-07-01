@@ -173,6 +173,18 @@ namespace MadWizard.Desomnia.Network.Context
                     args.Instance.ForceUnicast = config.AdvertiseUnicast;
                 });
 
+                builder.RegisterType<HostnameResolver>()
+                    .AsImplementedInterfaces()
+                    .SingleInstance();
+                builder.RegisterType<ServiceResolver>()
+                    .AsImplementedInterfaces()
+                    .SingleInstance();
+
+                builder.RegisterType<MulticastServiceBrowser>()
+                    .AsImplementedInterfaces() // IMulticastDNSListener
+                    .SingleInstance()
+                    .AsSelf();
+
                 RegisterTrafficFilter(builder, new UDPTrafficType(MulticastDNSService.MulticastPort));
 
                 builder.RegisterType<SleepProxyRegistration>()
@@ -188,11 +200,7 @@ namespace MadWizard.Desomnia.Network.Context
                         .InstancePerNetwork()
                         .AsSelf();
 
-                    builder.RegisterType<HostnameResolver>()
-                        .AsImplementedInterfaces()
-                        .SingleInstance();
-
-                    if (true) // TODO when enable Sleep Proxy?
+                    if (config.ShouldAdvertiseSleepProxy)
                     {
                         var service = new SleepProxyService(Config.SleepProxyPort)
                         {
@@ -214,10 +222,6 @@ namespace MadWizard.Desomnia.Network.Context
                         builder.RegisterType<SleepProxyResolver>()
                             .WithParameter(new LocalHostParameter<NetworkHost>())
                             .WithParameter(TypedParameter.From(service))
-                            .AsImplementedInterfaces()
-                            .SingleInstance();
-
-                        builder.RegisterType<SleepProxyServiceResolver>()
                             .AsImplementedInterfaces()
                             .SingleInstance();
                     }

@@ -15,10 +15,28 @@ namespace MadWizard.Desomnia.Network.Context
         private static void RegisterServiceDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
         {
             if (config.AutoDetect.HasFlag(AutoDiscoveryType.SleepProxy))
-                builder.RegisterType<SleepProxyDetector>()
-                    .AsImplementedInterfaces()
+            {
+                var reg = builder.RegisterType<SleepProxyDetector>().As<IDisposable>()
+                    .WithParameter(TypedParameter.From(config.AutoTimeout))
                     .SingleInstance()
                     .AsSelf();
+
+                if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Eager))
+                {
+                    reg.As<IServiceDiscovery>();
+                }
+
+                else if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Lazy))
+                {
+                    // SleepProxyDetector has to be called first, so that the HandoffService can find any proxy
+                    reg.As<INetworkService>().WithMetadata<INetworkService.Metadata>(meta => meta.For(m => m.Order, -1));
+
+                    if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Fast))
+                    {
+                        reg.OnActivated(args => args.Instance.UseFirstSleepProxy = true);
+                    }
+                }
+            }
 
             builder.RegisterType<RemoteHostServiceDetector>()
                 .AsImplementedInterfaces()

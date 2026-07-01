@@ -31,6 +31,7 @@ namespace MadWizard.Desomnia.Network
                     using (await Network.Mutex.LockAsync(stoppingToken))
                     {
                         SweepHostAddresses(Network);
+                        SweepHostServices(Network);
                         SweepHosts(Network);
                     }
                 }
@@ -68,11 +69,38 @@ namespace MadWizard.Desomnia.Network
             }
         }
 
+        internal void SweepHostServices(NetworkSegment network)
+        {
+            foreach (var host in network)
+            {
+                foreach (var service in host.Services.ToArray())
+                {
+                    if (host.ShouldServiceExpire(service, out var expires))
+                    {
+                        if (DateTime.Now - expires > options.Delay)
+                        {
+                            if (host.RemoveService(service, true))
+                            {
+                                using var scope = Logger.BeginHostScope(host);
+
+                                Logger.LogHostServiceRemoved(host, service, true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         internal void SweepHosts(NetworkSegment network)
         {
             foreach (var ctx in _sweepableHosts.ToArray())
             {
                 if (ctx.Host.FilterRefCount > 0)
+                    continue;
+
+                // A dynamically discovered host (e.g. a Sleep Proxy) is only retired once every service
+                // it advertised has expired and been swept; until then we keep it in the map.
+                if (ctx.Host.Services.Any())
                     continue;
 
                 if (ctx.Host is NetworkRouter router)

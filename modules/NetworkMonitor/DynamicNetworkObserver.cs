@@ -121,6 +121,8 @@ namespace MadWizard.Desomnia.Network
 
                 await context.DiscoverServices();
 
+                await context.Monitor.StartWatch();
+
                 MonitoringStarted?.Invoke(this, context.Monitor);
 
                 Logger.LogDebug("Monitoring of '" + context.Monitor.Name + "' has been started");

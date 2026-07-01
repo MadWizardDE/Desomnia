@@ -11,11 +11,16 @@ namespace MadWizard.Desomnia.Network.Naming
     {
         public required ILogger<DNSService> WireLogger { private get; init; }
 
-        public required NetworkDevice Device { private get; init; }
+        public required NetworkDevice Device { protected get; init; }
+
+        public virtual async Task Startup() { }
 
         void INetworkService.ProcessPacket(EthernetPacket packet)
         {
             using var scope = WireLogger.BeginRealmScope(realm);
+
+            if (packet.SourceHardwareAddress.Equals(Device.PhysicalAddress))
+                return; // don't even think about this
 
             if (!TryReadMessage(packet, out Message? message))
                 return;
@@ -121,6 +126,8 @@ namespace MadWizard.Desomnia.Network.Naming
         {
             Device.SendPacket(packet, true);
         }
+
+        public virtual async Task Shutdown(NetworkShutdownReason reason) { }
 
         /// <summary>Register the sleep-proxy EDNS0 options codes used by the Bonjour Sleep Proxy registration that Makaretu doesn't know about.</summary>
         static DNSService()

@@ -1,6 +1,4 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
-using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Services;
+﻿using MadWizard.Desomnia.Network.Naming.Messages;
 using Makaretu.Dns;
 using PacketDotNet;
 using System.Net;
@@ -8,7 +6,7 @@ using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
-    public class DNSQuery(EthernetPacket packet, Message message)
+    public class DNSQuery(EthernetPacket packet, Message message) : DNSMessage
     {
         public PhysicalAddress  SourcePhysicalAddress   => field ??= packet.FindSourcePhysicalAddress() ?? throw new ArgumentException("Source MAC missing");
         public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
@@ -19,89 +17,44 @@ namespace MadWizard.Desomnia.Network.Naming
 
         public IEnumerable<Question> Questions => message.Questions;
 
-        internal TimeSpan Delay { get; private set; } = TimeSpan.Zero;
-
         internal Message Request => message;
 
-        internal Message Response { get; init; } = new Message() { QR = true, AA = true };
+        /// <summary>
+        /// Whether this query came from a legacy one-shot resolver (an ephemeral source port rather than
+        /// the mDNS port). Such queriers expect a conventional unicast DNS reply (RFC 6762 §6.7).
+        /// </summary>
+        internal bool IsLegacy => SourcePort != MulticastDNSService.MulticastPort;
 
-        private void AnswerWith(ResourceRecord record, TimeSpan delay = default)
+        /// <summary>
+        /// Known-answer suppression (RFC 6762 §7.1): drop any answer the querier already lists in its
+        /// own answer section with a remaining TTL of more than half the record's true TTL.
+        /// </summary>
+        internal void SuppressKnownAnswers()
         {
-            Response.Answers.Add(record);
+            if (Request.Answers.Count == 0)
+                return;
 
-            if (delay > Delay)
-            {
-                Delay = delay;
-            }
+            Response.Answers.RemoveAll(record => Request.Answers.Any(known =>
+                known.IsSameRecord(record) && known.TTL.TotalSeconds > record.TTL.TotalSeconds / 2));
         }
 
-        public void AnswerWith(NetworkHost host, IPAddress ip, AnswerOptions options = default)
+        /// <summary>
+        /// Reshapes the response as a conventional unicast reply for a legacy one-shot resolver
+        /// (RFC 6762 §6.7): mirror the query id, repeat the question, and cap every record's TTL at 10 s.
+        /// The cache-flush bit is left clear (see <see cref="ApplyCacheFlush"/>).
+        /// </summary>
+        internal void MakeLegacy()
         {
-            var record = AddressRecord.Create(host.LocalDomainName, ip);
-            record.TTL = host[ip].TTL ?? options.HostTTL;
+            Response.Id = Request.Id;
 
-            AnswerWith(record, options.Delay);
-        }
+            foreach (Question question in Request.Questions)
+                Response.Questions.Add(question);
 
-        public void AnswerWith(NetworkHost host, TransportNetworkService service, DomainName? instance = default, AnswerOptions options = default)
-        {
-            instance ??= new([host.Name, .. service.LocalDomainName.Labels]);
+            TimeSpan cap = TimeSpan.FromSeconds(10);
 
-            AnswerWith(new PTRRecord
-            {
-                Name = service.LocalDomainName,
-                DomainName = instance,
-
-                TTL = options.ServiceTTL
-            }, options.Delay);
-
-            Response.AdditionalRecords.Add(new SRVRecord
-            {
-                Name = instance,
-                Target = host.LocalDomainName,
-                Port = service.Port,
-
-                TTL = options.HostTTL
-            });
-
-            Response.AdditionalRecords.Add(new TXTRecord
-            {
-                Name = instance,
-                Strings = [string.Empty],
-
-                TTL = options.HostTTL
-            });
-
-            foreach (IPAddress ip in host.IPAddresses)
-            {
-                var record = AddressRecord.Create(host.LocalDomainName, ip);
-                record.TTL = host[ip].TTL ?? options.HostTTL;
-
-                Response.AdditionalRecords.Add(record);
-            }
-        }
-
-        public struct AnswerOptions
-        {
-            /// <summary>TTL for advertised host address records (RFC 6762 §10 recommends 120 s for host names).</summary>
-            public TimeSpan HostTTL { readonly get => field == default ? TimeSpan.FromSeconds(120) : field; set; }
-            // RFC 6762 §10: shared records (PTRs) get a long TTL, host-specific records (SRV/TXT/A) a short one.
-            public TimeSpan ServiceTTL { readonly get => field == default ? TimeSpan.FromMinutes(75) : field; set; }
-
-            public TimeSpan Delay { get; set; }
-
-            public AnswerOptions(AdvertiseOptions options, bool delay = false)
-            {
-                if (options.HostTTL is TimeSpan ttlHost)
-                    HostTTL = ttlHost;
-                if (options.ServiceTTL is TimeSpan ttlService)
-                    ServiceTTL = ttlService;
-
-                if (delay)
-                {
-                    Delay = options.Timeout;
-                }
-            }
+            foreach (ResourceRecord record in Response.Answers.Concat(Response.AdditionalRecords))
+                if (record.TTL > cap)
+                    record.TTL = cap;
         }
     }
 }

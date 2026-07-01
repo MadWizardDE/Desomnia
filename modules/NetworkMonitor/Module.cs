@@ -37,6 +37,7 @@ namespace MadWizard.Desomnia.Network
                     .AddEnumAttribute("advertise")
                     .AddEnumAttribute("handoff")
                     .AddEnumAttribute("protocol")
+                    .AddEnumAttribute("sleepProxyDiscovery")
                     .AddEnumAttribute("wakeType");
         }
 

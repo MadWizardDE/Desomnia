@@ -15,7 +15,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         // Options
         #region                 AdvertiseOptions
         internal AdvertiseType? Advertise           { get; set; }
+
         internal TimeSpan?      AdvertiseTimeout    { get; set; }
+
         internal TimeSpan?      AdvertiseHostTTL    { get; set; }
         internal TimeSpan?      AdvertiseServiceTTL { get; set; }
 

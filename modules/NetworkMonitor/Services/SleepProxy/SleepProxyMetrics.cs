@@ -15,6 +15,27 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         public static SleepProxyMetrics Average => new(50, 50, 50, 50);
         public static SleepProxyMetrics Worst   => new(99, 99, 99, 99);
 
+        public static SleepProxyMetrics ParseInstanceName(string instanceName, out string name)
+        {
+            string[] parts = instanceName.Split(' ', 2);
+
+            if (parts.Length == 2)
+            {
+                name = parts[1]; parts = parts[0].Split('-');
+
+                if (parts.Length == 4
+                    && byte.TryParse(parts[0], out byte intent)
+                    && byte.TryParse(parts[1], out byte portability)
+                    && byte.TryParse(parts[2], out byte marginalPower)
+                    && byte.TryParse(parts[3], out byte totalPower))
+                {
+                    return new SleepProxyMetrics(intent, portability, marginalPower, totalPower);
+                }
+            }
+
+            throw new FormatException($"Invalid sleep proxy instance name: '{instanceName}'");
+        }
+
         public SleepProxyMetrics(byte intent, byte portability, byte marginalPower, byte totalPower)
         {
             Intent = intent;

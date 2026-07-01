@@ -25,21 +25,34 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         #region AdvertiseOptions
+        private bool?       AdvertiseServices       { get; set; }
+
+        private TimeSpan?   AdvertiseTimeout        { get; set; }
+
+        private TimeSpan?   AdvertiseHostTTL        { get; set; }
+        private TimeSpan?   AdvertiseServiceTTL     { get; set; }
+
         public AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
-            Type        = AdvertiseType.Never,
-            Timeout     = TimeSpan.MaxValue,
+            Type        = AdvertiseType.Never
+
+                        | (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Service : 0),
+
+            Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
+
+            HostTTL     = AdvertiseHostTTL      ?? network.AdvertiseHostTTL,
+            ServiceTTL  = AdvertiseServiceTTL   ?? network.AdvertiseServiceTTL,
         };
         #endregion
 
-        #region         HandoffOptions
-        HandoffType?    Handoff                 { get; set; }
-        TimeSpan?       HandoffTimeout          { get; set; }
-        int?            HandoffRetry            { get; set; }
+        #region             HandoffOptions
+        HandoffType?        Handoff                 { get; set; }
+        TimeSpan?           HandoffTimeout          { get; set; }
+        int?                HandoffRetry            { get; set; }
 
-        string?         HandoffPassword         { get; set; }
-        byte[]?         HandoffPasswordBytes    { get; set; }
-        Encoding?       HandoffPasswordEncoding { get; set; }
+        string?             HandoffPassword         { get; set; }
+        byte[]?             HandoffPasswordBytes    { get; set; }
+        Encoding?           HandoffPasswordEncoding { get; set; }
 
         public virtual HandoffOptions MakeHandoffOptions(NetworkMonitorConfig network)
         {
@@ -51,6 +64,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
             return new()
             {
                 Type = Handoff ?? network.Handoff,
+                Duration = network.SleepProxyLease,
                 Timeout = HandoffTimeout ?? network.HandoffTimeout,
                 Retry = HandoffRetry ?? network.HandoffRetry,
 

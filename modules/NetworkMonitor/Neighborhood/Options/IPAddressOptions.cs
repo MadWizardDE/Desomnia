@@ -16,16 +16,20 @@
         {
             if (lifetime.HasValue)
             {
+                TTL = lifetime;
+
                 Expires = DateTime.Now + lifetime;
             }
         }
 
         public readonly bool HasFlags(IPAddressFlags flags) => Flags.HasFlag(flags);
+
+        public readonly bool HasExpired => Expires < DateTime.Now;
     }
 
     public enum IPAddressFlags
     {
-        None = 0,
+        None        = 0,
 
         Static      = 1 << 0,
     }

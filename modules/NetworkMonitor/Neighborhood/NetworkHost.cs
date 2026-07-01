@@ -136,8 +136,25 @@ namespace MadWizard.Desomnia.Network.Neighborhood
         public event EventHandler<ServiceAddedEventArgs>? ServiceAdded;
         public event EventHandler<ServiceRemovedEventArgs>? ServiceRemoved;
 
-        public virtual void AddService(NetworkService service, ServiceOptions options = default)
+        public virtual bool AddService(NetworkService service, ServiceOptions options = default)
         {
+            if (_services.TryGetValue(service, out ServiceOptions existing))
+            {
+                // Already known: a re-advertisement only pushes the expiry further out, mirroring
+                // how IP addresses are refreshed. Statically configured services never expire.
+                if (!existing.HasFlags(ServiceFlags.Static))
+                {
+                    if (existing.Expires < options.Expires)
+                    {
+                        existing.Expires = options.Expires;
+
+                        _services[service] = existing;
+                    }
+                }
+
+                return false;
+            }
+
             if (service is TransportNetworkService tran)
             {
                 foreach (var t in _services.Keys.OfType<TransportNetworkService>())
@@ -148,6 +165,21 @@ namespace MadWizard.Desomnia.Network.Neighborhood
             _services[service] = options;
 
             ServiceAdded?.Invoke(this, new(service, options.Expires));
+
+            return true;
+        }
+        public bool ShouldServiceExpire(NetworkService service, out DateTime expires)
+        {
+            expires = DateTime.MaxValue;
+
+            if (this[service].Expires is DateTime date)
+            {
+                expires = date;
+
+                return true;
+            }
+
+            return false;
         }
         public virtual bool RemoveService(NetworkService service, bool expired = false)
         {

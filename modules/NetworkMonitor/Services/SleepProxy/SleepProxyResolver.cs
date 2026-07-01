@@ -1,8 +1,11 @@
 using MadWizard.Desomnia.Network.Naming;
+using MadWizard.Desomnia.Network.Naming.Messages;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
+
+using static MadWizard.Desomnia.Network.Naming.Messages.DNSMessage;
 
 namespace MadWizard.Desomnia.Network.SleepProxy
 {
@@ -17,17 +20,37 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
         public required SleepProxyRegistrar Registrar { private get; init; }
 
+        /// <summary>This proxy's DNS-SD instance name, e.g. "10-10-10-10 desktop._sleep-proxy._udp.local".</summary>
+        private DomainName Instance => new([$"{service.Metrics} {proxy.Name}", .. service.LocalDomainName.Labels]);
+
+        void IMulticastDNSResolver.Announce(DNSMessage announcement)
+        {
+            announcement.AnswerWith(proxy, service, Instance);
+        }
+
         void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
             foreach (var question in query.Questions.Where(q => q.Type is (DnsType.PTR or DnsType.ANY)))
             {
+                // Service-type enumeration (RFC 6763 §9): make the sleep-proxy type discoverable to
+                // generic DNS-SD browsers, just as a real Bonjour Sleep Proxy advertises itself.
+                if (question.Name == MakaretuDnsExt.ServiceEnumeration)
+                {
+                    query.AnswerWith(MakaretuDnsExt.ServiceEnumeration, service.LocalDomainName);
+
+                    continue;
+                }
+
                 if (question.Name == service.LocalDomainName)
                 {
-                    DomainName instance = new([$"{service.Metrics} {proxy.Name}", .. service.LocalDomainName.Labels]);
-
-                    query.AnswerWith(proxy, service, instance);
+                    query.AnswerWith(proxy, service, Instance);
                 }
             }
+        }
+
+        void IMulticastDNSResolver.Goodbye(DNSMessage goodbye)
+        {
+            goodbye.AnswerWith(proxy, service, Instance, AnswerOptions.Goodbye);
         }
 
         /// <summary>
@@ -50,10 +73,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
                     lease.Ended += (sender, args) =>
                     {
-                        Logger.LogDebug("Lease for '{Name}' has {Verb}", reg.Name, 
-                            args.HasExpired ? "expired" : 
-                            args.HasFailed  ? "failed" 
-                            : "ended");
+                        if (args.HasFailed)
+                            Logger.LogDebug("Handoff from '{Name}' has failed", reg.Name);
+                        else
+                            Logger.LogDebug("Lease for '{Name}' has {Verb}", reg.Name,
+                                args.HasExpired ? "expired" : "ended");
                     };
                 }
                 else // no new registration was created, we merely confirm the existing one

@@ -19,9 +19,45 @@ namespace Makaretu.Dns
         /// <summary>The top bit of the CLASS field (QU on questions, cache-flush on records).</summary>
         private const ushort MulticastFlag = 0x8000;
 
+        /// <summary>
+        /// The DNS-SD service-type enumeration meta-query name, <c>_services._dns-sd._udp.local</c>
+        /// (RFC 6763 §9). A PTR query for this name asks which service <em>types</em> exist on the link;
+        /// each answer is a PTR whose RDATA is one offered service type (e.g. <c>_ssh._tcp.local</c>).
+        /// </summary>
+        public static readonly DomainName ServiceEnumeration = new("_services", "_dns-sd", "_udp", "local");
+
         extension(Message message)
         {
             public IEnumerable<EdnsOption> Options => message.AdditionalRecords.OfType<OPTRecord>().SelectMany(opt => opt.Options);
+        }
+
+        extension(ResourceRecord record)
+        {
+            /// <summary>
+            /// Sets the mDNS cache-flush bit on this record's CLASS (RFC 6762 §10.2). Only valid on
+            /// <em>unique</em> records (A/AAAA/SRV/TXT); shared records (PTR) must never carry it.
+            /// </summary>
+            public void SetCacheFlush() => record.Class = (DnsClass)((ushort)record.Class | MulticastFlag);
+
+            /// <summary>
+            /// Whether two records describe the same name, type and RDATA (ignoring TTL and the
+            /// cache-flush bit). Used for known-answer suppression and duplicate detection.
+            /// </summary>
+            public bool IsSameRecord(ResourceRecord other)
+            {
+                if (record.GetType() != other.GetType() || record.Type != other.Type || record.Name != other.Name)
+                    return false;
+
+                return (record, other) switch
+                {
+                    (PTRRecord a, PTRRecord b)          => a.DomainName == b.DomainName,
+                    (SRVRecord a, SRVRecord b)          => a.Target == b.Target && a.Port == b.Port,
+                    (TXTRecord a, TXTRecord b)          => a.Strings.SequenceEqual(b.Strings),
+                    (AddressRecord a, AddressRecord b)  => a.Address.Equals(b.Address),
+
+                    _ => true
+                };
+            }
         }
 
         extension(Question question)
@@ -61,12 +97,13 @@ namespace Makaretu.Dns
 
         extension(SRVRecord srv)
         {
-            public DomainName ServiceDomainName => new(srv.Name.Labels[1], srv.Name.Labels[2], srv.Name.Labels[3]);
+            public DomainName ServiceDomainName => new ([..srv.Name.Labels.Skip(1)]);
 
             public string ServiceName => srv.Name.Labels[1].Replace("_", "");
             public string ProtocolName => srv.Name.Labels[2].Replace("_", "");
 
             public IPProtocol Protocol => ToProtocol(srv.ProtocolName);
+            public IPPort IPPort => new(srv.Protocol, srv.Port);
 
             public string InstanceName => srv.Name.Labels[0];
             public string HostName => srv.Target.Labels[0];

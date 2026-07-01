@@ -74,9 +74,9 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal int                DemandParallel      { get; set; } = 1;
         #endregion
 
-        #region Network :: AdvertisedOptions 
+        #region Network :: AdvertiseOptions 
         internal AdvertiseType      Advertise               { get; set; } = AdvertiseType.Lazy;
-        internal bool               AdvertiseHosts          { get; set; } = true;
+        internal bool               AdvertiseHosts          { get; set; } = false;
         internal bool               AdvertiseServices       { get; set; } = false;
         internal bool               AdvertiseIfStopped      { get; set; } = true;
         internal bool               AdvertiseUnicast        { get; set; } = false;
@@ -101,6 +101,8 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
         internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
         internal LeaseExpireAction  SleepProxyLeaseExpire   { get; set; } = LeaseExpireAction.None; // shall we wake host, when lease ends?
+
+        internal SleepProxyDiscoveryType SleepProxyDiscovery { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
 
         internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
         internal ushort             SleepProxyPort          { get; set; } = MulticastDNSService.MulticastPort;
@@ -192,6 +194,7 @@ namespace MadWizard.Desomnia.Network.Configuration
             .Concat(EveryHostFilterRule?.HostRange ?? []).Concat(EveryHostFilterRule?.DynamicHostRange ?? [])
             .Concat(ForeignHostFilterRule?.HostRange ?? []).Concat(ForeignHostFilterRule?.DynamicHostRange ?? []);
 
+        /// <returns>All configured simple hosts.</returns>
         public IEnumerable<NetworkHostInfo> Hosts => Host
             .Concat(SleepProxy)
             .Concat(Ranges.SelectMany(range => range.Host)) // all hosts in all host ranges
@@ -206,6 +209,30 @@ namespace MadWizard.Desomnia.Network.Configuration
             .Concat(LocalHost?.VirtualHost ?? [])
             .Concat(VirtualHost).GetEnumerator();
         #endregion
+
+        internal bool ShouldAdvertiseSleepProxy
+        {
+            get
+            {
+                if (WatchMode == WatchMode.Promiscuous)
+                {
+                    if (AutoDetect.HasFlag(AutoDiscoveryType.Host))
+                        return true;
+                    if (AutoDetect.HasFlag(AutoDiscoveryType.Service))
+                        return true;
+
+                    foreach (var host in this.OfType<WatchedHostInfo>())
+                    {
+                        if (host.AutoDetect?.HasFlag(AutoDiscoveryType.Host) ?? false)
+                            return true;
+                        if (host.AutoDetect?.HasFlag(AutoDiscoveryType.Service) ?? false)
+                            return true;
+                    }
+                }
+
+                return false;
+            }
+        }
 
         static NetworkMonitorConfig() // we want to use native types
         {

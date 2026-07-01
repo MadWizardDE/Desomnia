@@ -8,6 +8,7 @@ using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Network.Watch;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
@@ -67,6 +68,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     ctxHost = CreateHost(reg);
 
                     lease.AddInstanceForDisposal(ctxHost);
+                }
+
+                using (Logger.BeginHostScope(ctxHost.Host))
+                {
+                    Logger.LogDebug("Configuring host '{Host}' for sleep proxy handoff:", ctxHost.Host.Name);
                 }
 
                 if (ctxHost.Watch is not RemoteHostWatch remote)
@@ -185,17 +191,18 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         await TryToExpireLeaseGracefully(watch);
                     }
 
-                    Logger.LogDebug("Lease for '{Host}' is going to end; releasing hold resources...", watch.Host.Name);
+                    Logger.LogDebug("Lease for '{Host}' is going to end; releasing held resources...", watch.Host.Name);
 
                     using (await Context.Network.Mutex.LockAsync())
                     {
                         owned.Dispose();
                     }
 
-                    string msg = "Lease for '{Host}' has " 
-                    + (args.HasExpired ? "expired" 
-                        : args.HasFailed  ? "failed" 
-                        : "ended");
+                    string msg = (args.HasFailed ? "Handoff from"  : "Lease for") 
+                        + " '{Host}' has " 
+                        + (args.HasExpired ? "expired" 
+                            : args.HasFailed  ? "failed" 
+                            : "ended");
 
                     if (args.HasFailed && args.Timeout is TimeSpan timeout)
                         msg += $"; host was still alive after {Math.Floor(timeout.TotalSeconds)} seconds";
@@ -205,6 +212,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             };
 
             async Task stop(Event @event) => lease.Stop(SleepProxyLeaseEndReason.HostStarted);
+
+            var stopwatch = Stopwatch.StartNew();
 
             try
             {
@@ -226,10 +235,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 using var scope = Logger.BeginHostScope(watch.Host);
 
-                Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name); 
+                Logger.LogError(ex, "Could not validate handoff from {Host}.", watch.Host.Name);
             }
 
-            lease.Stop(SleepProxyLeaseEndReason.Failed);
+            lease.Stop(SleepProxyLeaseEndReason.Failed, stopwatch.Elapsed);
         }
 
         private async Task TryToExpireLeaseGracefully(RemoteHostWatch watch)

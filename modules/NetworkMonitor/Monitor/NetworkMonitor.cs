@@ -1,6 +1,6 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
+﻿using Autofac.Features.Metadata;
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
-using MadWizard.Desomnia.Network.Neighborhood.Events;
 using MadWizard.Desomnia.Network.Watch;
 using MadWizard.Desomnia.Power.Guard;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,9 @@ namespace MadWizard.Desomnia.Network
         public required NetworkSegment  Network { private get; init; }
         public required NetworkJanitor  Janitor { private get; init; }
 
-        public IEnumerable<INetworkService> Services { private get; init; } = [];
+        public IEnumerable<Meta<INetworkService, INetworkService.Metadata>> Services { private get; init; } = [];
+
+        private IEnumerable<INetworkService> OrderedServices => Services.OrderBy(s => s.Metadata.Order).Select(s => s.Value);
 
         public event EventInvocation? Connected;
         public event EventInvocation? Disconnected;
@@ -44,7 +46,7 @@ namespace MadWizard.Desomnia.Network
         {
             if (transition == PowerTransition.Suspend)
             {
-                foreach (var service in Services)
+                foreach (var service in OrderedServices)
                 {
                     await service.BeforeSuspend();
                 }
@@ -56,19 +58,20 @@ namespace MadWizard.Desomnia.Network
             Device.StartCapture();
             Device.EthernetCaptured += HandlePacket;
 
-            foreach (var service in Services)
+            foreach (var service in OrderedServices)
                 await service.Startup();
 
-            foreach (var watch in this)
-                await watch.StartWatch();
-
             TriggerEvent(nameof(Connected));
-
-            Network.HostRemoved += Network_HostRemoved;
 
             Janitor.StartSweeping();
 
             Logger.LogDebug($"Monitoring of '{Name}' has been started.");
+        }
+
+        internal async Task StartWatch()
+        {
+            foreach (var watch in this)
+                await watch.StartWatch();
         }
 
         internal void ResumeMonitoring()
@@ -77,7 +80,7 @@ namespace MadWizard.Desomnia.Network
 
             Device.StartCapture();
 
-            foreach (var service in Services)
+            foreach (var service in OrderedServices)
                 service.Resume();
         }
 
@@ -85,7 +88,7 @@ namespace MadWizard.Desomnia.Network
         {
             using (Network.Mutex.Lock())
             {
-                foreach (var service in Services)
+                foreach (var service in OrderedServices)
                 {
                     service.ProcessPacket(packet);
                 }
@@ -94,7 +97,7 @@ namespace MadWizard.Desomnia.Network
 
         internal void SuspendMonitoring()
         {
-            foreach (var service in Services)
+            foreach (var service in OrderedServices)
                 service.Suspend();
 
             Device.StopCapture();
@@ -106,12 +109,10 @@ namespace MadWizard.Desomnia.Network
         {
             Janitor.StopSweeping();
 
-            Network.HostRemoved -= Network_HostRemoved;
-
             foreach (var watch in this)
                 await watch.StopWatch(reason == NetworkShutdownReason.ApplicationShutdown);
 
-            foreach (var service in Services)
+            foreach (var service in OrderedServices)
                 await service.Shutdown(reason);
 
             Device.EthernetCaptured -= HandlePacket;
@@ -121,15 +122,5 @@ namespace MadWizard.Desomnia.Network
 
             Logger.LogDebug($"Monitoring of '{Name}' has been stopped.");
         }
-
-        #region Host Events
-        private void Network_HostRemoved(object? sender, NetworkHostEventArgs e) // TODO: Kann das weg?
-        {
-            if (this[e.Host] is NetworkHostWatch watch)
-            {
-                StopTracking(watch);
-            }
-        }
-        #endregion
     }
 }
