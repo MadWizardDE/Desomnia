@@ -11,8 +11,11 @@ namespace MadWizard.Desomnia.Network.Logging
         {
             if (ScopeContext.TryGetProperty("Realm", out var property) && property is string realm)
             {
-                sb.Append("_");
-                sb.Append(realm);
+                if (!ScopeContext.TryGetProperty("Host", out _))
+                {
+                    sb.Append("_");
+                    sb.Append(realm);
+                }
             }
         }
     }

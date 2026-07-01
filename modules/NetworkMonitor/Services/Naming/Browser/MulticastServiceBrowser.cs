@@ -21,7 +21,8 @@ namespace MadWizard.Desomnia.Network.Naming
     /// </summary>
     internal sealed class MulticastServiceBrowser : IMulticastDNSListener, IDisposable
     {
-        private static readonly TimeSpan    MaintenanceInterval = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan    MaintenanceInterval         = TimeSpan.FromSeconds(5);
+        private static readonly int         MaintenanceErrorThreshold   = 5;
 
         private static readonly double      RefreshThreshold = 0.8;
 
@@ -152,55 +153,27 @@ namespace MadWizard.Desomnia.Network.Naming
         {
             using var timer = new PeriodicTimer(MaintenanceInterval);
 
+            bool ShouldDoMaintenance() => _instances.Count > 0 || _requests.Count > 0;
+
             try
             {
-                while (await timer.WaitForNextTickAsync(token))
+                int errors = 0;
+                while (ShouldDoMaintenance() && await timer.WaitForNextTickAsync(token)) using (Network.Mutex.Lock(token))
                 {
-                    using (Network.Mutex.Lock(token))
+                    try
                     {
-                        foreach ((DomainName name, WeakReference<ServiceInstance> weak) in _instances.ToArray())
-                        {
-                            if (!weak.TryGetTarget(out ServiceInstance? instance))
-                            {
-                                _instances.Remove(name, out _); // reference dropped elsewhere -- forget it
-
-                                continue;
-                            }
-
-                            if (instance.HasExpired)
-                            {
-                                Remove(instance, ServiceInstanceRemovedReason.Expired);
-
-                                continue;
-                            }
-
-                            foreach (IPAddress ip in instance.Addresses.ToArray())
-                            {
-                                if (instance[ip].HasExpired)
-                                {
-                                    instance.RemoveAddress(ip, ServiceInstanceRemovedReason.Expired);
-                                }
-                                else if (instance[ip].ElapsedTTL > RefreshThreshold)
-                                {
-                                    switch (ip.AddressFamily)
-                                    {
-                                        case AddressFamily.InterNetwork:
-                                            MulticastDNS.Browse(instance.HostDomainName, DnsType.A);
-                                            break;
-                                        case AddressFamily.InterNetworkV6:
-                                            MulticastDNS.Browse(instance.HostDomainName, DnsType.AAAA);
-                                            break;
-                                    }
-                                }
-                            }
-
-                            if (instance.ElapsedTTL > RefreshThreshold)
-                            {
-                                MulticastDNS.Browse(instance.Name, DnsType.SRV);
-                            }
-                        }
+                        RefreshInstances();
 
                         RequeryRequests();
+
+                        errors = 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        if (errors++ > MaintenanceErrorThreshold)
+                            throw;
+
+                        Logger.LogWarning(ex, "Maintenance skipped");
                     }
                 }
             }
@@ -210,7 +183,56 @@ namespace MadWizard.Desomnia.Network.Naming
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Service browser maintenance stopped unexpectedly");
+                Logger.LogError(ex, "Maintenance stopped");
+            }
+            finally
+            {
+                _maintenance = null;
+            }
+        }
+
+        private void RefreshInstances()
+        {
+            foreach ((DomainName name, WeakReference<ServiceInstance> weak) in _instances.ToArray())
+            {
+                if (!weak.TryGetTarget(out ServiceInstance? instance))
+                {
+                    _instances.Remove(name, out _); // reference dropped elsewhere -- forget it
+
+                    continue;
+                }
+
+                if (instance.HasExpired)
+                {
+                    Remove(instance, ServiceInstanceRemovedReason.Expired);
+
+                    continue;
+                }
+
+                foreach (IPAddress ip in instance.Addresses.ToArray())
+                {
+                    if (instance[ip].HasExpired)
+                    {
+                        instance.RemoveAddress(ip, ServiceInstanceRemovedReason.Expired);
+                    }
+                    else if (instance[ip].ElapsedTTL > RefreshThreshold)
+                    {
+                        switch (ip.AddressFamily)
+                        {
+                            case AddressFamily.InterNetwork:
+                                MulticastDNS.Browse(instance.HostDomainName, DnsType.A);
+                                break;
+                            case AddressFamily.InterNetworkV6:
+                                MulticastDNS.Browse(instance.HostDomainName, DnsType.AAAA);
+                                break;
+                        }
+                    }
+                }
+
+                if (instance.ElapsedTTL > RefreshThreshold)
+                {
+                    MulticastDNS.Browse(instance.DomainName, DnsType.SRV);
+                }
             }
         }
 

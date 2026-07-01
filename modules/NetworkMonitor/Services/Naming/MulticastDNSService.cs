@@ -211,7 +211,6 @@ namespace MadWizard.Desomnia.Network.Naming
         /// </summary>
         internal void Browse(DomainName name, DnsType type = DnsType.PTR, IEnumerable<ResourceRecord>? known = null)
         {
-
             var message = new Message { Id = 0 };
             message.Questions.Add(new Question { Name = name, Type = type, Class = DnsClass.IN });
 
@@ -246,6 +245,8 @@ namespace MadWizard.Desomnia.Network.Naming
 
         private void SendMulticast(Message message)
         {
+            if (!Device.IsCapturing)
+                return;
             if (Device.IPv4Address is not IPAddress source)
                 return;
 

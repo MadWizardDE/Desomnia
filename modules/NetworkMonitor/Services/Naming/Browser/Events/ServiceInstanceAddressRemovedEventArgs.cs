@@ -6,5 +6,6 @@ namespace MadWizard.Desomnia.Network.Naming.Browser.Events
     {
         public ServiceInstanceRemovedReason Reason => reason;
 
+        public bool HasExpired => Reason == ServiceInstanceRemovedReason.Expired;
     }
 }

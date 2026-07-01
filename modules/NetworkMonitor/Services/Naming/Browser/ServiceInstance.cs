@@ -36,9 +36,7 @@ namespace MadWizard.Desomnia.Network.Naming
         {
             get; set
             {
-                field = value;
-
-                Expires = DateTime.Now + TTL;
+                Expires = DateTime.Now + (field = value);
             }
         }
 

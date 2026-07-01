@@ -26,7 +26,7 @@ namespace MadWizard.Desomnia.Network.Context
                     reg.As<IServiceDiscovery>();
                 }
 
-                else if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Lazy))
+                if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Lazy))
                 {
                     // SleepProxyDetector has to be called first, so that the HandoffService can find any proxy
                     reg.As<INetworkService>().WithMetadata<INetworkService.Metadata>(meta => meta.For(m => m.Order, -1));

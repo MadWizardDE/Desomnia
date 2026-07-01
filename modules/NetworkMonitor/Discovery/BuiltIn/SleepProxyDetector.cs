@@ -155,11 +155,11 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
         private void ServiceInstance_AddressRemoved(object? sender, ServiceInstanceAddressRemovedEventArgs args)
         {
             if (sender is ServiceInstance instance && _tracked.TryGetValue(instance, out NetworkHostService tracked))
-                if (tracked.Host.RemoveAddress(args.Address, expired: true))
+                if (tracked.Host.RemoveAddress(args.Address, expired: args.HasExpired))
                 {
                     using var scope = Logger.BeginHostScope(tracked.Host);
 
-                    Logger.LogHostAddressRemoved(tracked.Host, args.Address);
+                    Logger.LogHostAddressRemoved(tracked.Host, args.Address, args.HasExpired);
                 }
         }
 
