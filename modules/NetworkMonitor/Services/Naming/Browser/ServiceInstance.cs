@@ -110,5 +110,19 @@ namespace MadWizard.Desomnia.Network.Naming
             Removed?.Invoke(this, new(reason));
             Removed = null;
         }
+
+        /// <summary>
+        /// Re-anchors every record's lifetime to now, as if it had just been seen. Used after a system
+        /// resume, where the maintenance clock jumped past the TTLs while the process was frozen: the
+        /// records are then re-confirmed on the network instead of being pruned as spuriously expired.
+        /// </summary>
+        internal void ResetTTL()
+        {
+            Expires = DateTime.Now + TTL;
+
+            foreach (IPAddress ip in _addresses.Keys.ToArray())
+                if (_addresses[ip].TTL is TimeSpan ttl)
+                    _addresses[ip] = new(ttl); // resets the address's Expires = now + ttl
+        }
     }
 }

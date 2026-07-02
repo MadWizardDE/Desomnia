@@ -23,8 +23,9 @@ namespace MadWizard.Desomnia.Network.Naming
     {
         private static readonly TimeSpan    MaintenanceInterval         = TimeSpan.FromSeconds(5);
         private static readonly int         MaintenanceErrorThreshold   = 5;
-
-        private static readonly double      RefreshThreshold = 0.8;
+        private static readonly double      RefreshThreshold            = 0.8;
+        /// <summary>A maintenance tick later than this since the previous one signals a resume from suspend.</summary>
+        private static readonly double      ReanchorThreshold           = 3;
 
         public required ILogger<MulticastServiceBrowser> Logger { private get; init; }
 
@@ -153,16 +154,26 @@ namespace MadWizard.Desomnia.Network.Naming
         {
             using var timer = new PeriodicTimer(MaintenanceInterval);
 
-            bool ShouldDoMaintenance() => _instances.Count > 0 || _requests.Count > 0;
+            DateTime lastRun = DateTime.Now;
+
+            bool ShouldDoMaintenance() => !_instances.IsEmpty || _requests.Count > 0;
+
+            // A tick that lands far later than its interval means the machine was suspended
+            // (the process was frozen) and we could not refresh -- re-confirm, don't prune.
+            bool HasSkippedMaintenance() => DateTime.Now - lastRun > MaintenanceInterval * ReanchorThreshold;
 
             try
             {
                 int errors = 0;
+
                 while (ShouldDoMaintenance() && await timer.WaitForNextTickAsync(token)) using (Network.Mutex.Lock(token))
                 {
                     try
                     {
-                        RefreshInstances();
+                        if (HasSkippedMaintenance())
+                            ReanchorInstances();
+                        else
+                            RefreshInstances();
 
                         RequeryRequests();
 
@@ -174,6 +185,10 @@ namespace MadWizard.Desomnia.Network.Naming
                             throw;
 
                         Logger.LogWarning(ex, "Maintenance skipped");
+                    }
+                    finally
+                    {
+                        lastRun = DateTime.Now;
                     }
                 }
             }
@@ -191,17 +206,26 @@ namespace MadWizard.Desomnia.Network.Naming
             }
         }
 
+        private void ReanchorInstances()
+        {
+            foreach (var instance in LiveInstances())
+            {
+                // The machine was suspended past the TTLs without any chance to refresh, so every
+                // record now looks "expired" purely because wall-clock jumped. Re-anchor the lifetimes
+                // and re-confirm on the network rather than pruning records that may still be valid;
+                // genuinely gone ones simply won't answer and lapse a TTL later.
+                instance.ResetTTL();
+
+                MulticastDNS.Browse(instance.DomainName, DnsType.SRV);
+                MulticastDNS.Browse(instance.HostDomainName, DnsType.A);
+                MulticastDNS.Browse(instance.HostDomainName, DnsType.AAAA);
+            }
+        }
+
         private void RefreshInstances()
         {
-            foreach ((DomainName name, WeakReference<ServiceInstance> weak) in _instances.ToArray())
+            foreach (var instance in LiveInstances())
             {
-                if (!weak.TryGetTarget(out ServiceInstance? instance))
-                {
-                    _instances.Remove(name, out _); // reference dropped elsewhere -- forget it
-
-                    continue;
-                }
-
                 if (instance.HasExpired)
                 {
                     Remove(instance, ServiceInstanceRemovedReason.Expired);
@@ -289,12 +313,20 @@ namespace MadWizard.Desomnia.Network.Naming
             return _instances.TryGetValue(name, out WeakReference<ServiceInstance>? weak) && weak.TryGetTarget(out instance);
         }
 
-        private IEnumerable<ServiceInstance> LiveInstances(DomainName? name = null)
+        private IEnumerable<ServiceInstance> LiveInstances(DomainName? serviceDomainName = null)
         {
-            foreach (WeakReference<ServiceInstance> weak in _instances.Values.ToArray())
+            foreach ((DomainName name, WeakReference<ServiceInstance> weak) in _instances.ToArray())
+            {
                 if (weak.TryGetTarget(out ServiceInstance? instance))
-                    if (name == null || instance.ServiceDomainName == name)
+                {
+                    if (name == null || instance.ServiceDomainName == serviceDomainName)
                         yield return instance;
+                }
+                else
+                {
+                    _instances.Remove(name, out _); // reference dropped elsewhere -- forget it
+                }
+            }
         }
 
         public void Dispose()
