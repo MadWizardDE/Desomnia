@@ -9,6 +9,7 @@ using MadWizard.Desomnia.Network.Neighborhood.Services;
 using MadWizard.Desomnia.Network.SleepProxy;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.Net;
 
 namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
@@ -35,7 +36,7 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
         public bool UseFirstSleepProxy { get; set; } = false;
 
-        readonly Dictionary<ServiceInstance, NetworkHostService> _tracked = [];
+        readonly ConcurrentDictionary<ServiceInstance, NetworkHostService> _tracked = [];
 
         readonly CancellationTokenSource _cancellation = new();
 
@@ -53,6 +54,14 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
             Logger.LogDebug("Discovering sleep proxies...");
 
             await DiscoverSleepProxiesWithTimeout(timeout);
+        }
+
+        void INetworkService.Resume()
+        {
+            foreach (var instance in _tracked.Keys.ToArray())
+            {
+                Remove(instance, false);
+            }
         }
 
         private async Task DiscoverSleepProxiesWithTimeout(TimeSpan timeout)
@@ -140,6 +149,25 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
             }
         }
 
+        private void Remove(ServiceInstance instance, bool expired)
+        {
+            if (_tracked.Remove(instance, out NetworkHostService tracked))
+            {
+                instance.AddressAdded -= ServiceInstance_AddressAdded;
+                instance.AddressRemoved -= ServiceInstance_AddressRemoved;
+                instance.Removed -= ServiceInstance_Removed;
+
+                if (tracked.Host.RemoveService(tracked.Service, expired: expired))
+                {
+                    using var scope = Logger.BeginHostScope(tracked.Host);
+
+                    Logger.LogHostServiceRemoved(tracked.Host, tracked.Service, expired);
+                }
+
+                // if the host was created dynamically and is now service-less, it will be reaped later by the NetworkJanitor
+            }
+        }
+
         #region ServiceInstance events
         private void ServiceInstance_AddressAdded(object? sender, ServiceInstanceAddressEventArgs args)
         {
@@ -165,21 +193,10 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
         private void ServiceInstance_Removed(object? sender, ServiceInstanceRemovedEventArgs args)
         {
-            if (sender is not ServiceInstance instance || !_tracked.Remove(instance, out NetworkHostService tracked))
-                return;
-
-            instance.AddressAdded   -= ServiceInstance_AddressAdded;
-            instance.AddressRemoved -= ServiceInstance_AddressRemoved;
-            instance.Removed        -= ServiceInstance_Removed;
-
-            if (tracked.Host.RemoveService(tracked.Service, expired: args.HasExpired))
+            if (sender is ServiceInstance instance)
             {
-                using var scope = Logger.BeginHostScope(tracked.Host);
-
-                Logger.LogHostServiceRemoved(tracked.Host, tracked.Service, args.HasExpired);
+                Remove(instance, args.HasExpired);
             }
-
-            // if the host was created dynamically and is now service-less, it will be reaped later by the NetworkJanitor
         }
         #endregion
 
