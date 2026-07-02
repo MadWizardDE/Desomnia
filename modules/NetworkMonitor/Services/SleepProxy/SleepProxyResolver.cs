@@ -30,21 +30,19 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
         void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
-            foreach (var question in query.Questions.Where(q => q.Type is (DnsType.PTR or DnsType.ANY)))
+            foreach (var question in query.Questions)
             {
                 // Service-type enumeration (RFC 6763 §9): make the sleep-proxy type discoverable to
                 // generic DNS-SD browsers, just as a real Bonjour Sleep Proxy advertises itself.
-                if (question.Name == MakaretuDnsExt.ServiceEnumeration)
+                if (question.Name == MakaretuDnsExt.ServiceEnumeration && question.Type is DnsType.PTR or DnsType.ANY)
                 {
                     query.AnswerWith(MakaretuDnsExt.ServiceEnumeration, service.LocalDomainName);
 
                     continue;
                 }
 
-                if (question.Name == service.LocalDomainName)
-                {
-                    query.AnswerWith(proxy, service, Instance);
-                }
+                // A browse (PTR) for the sleep-proxy type, or a targeted SRV/TXT for our instance.
+                query.AnswerWith(question, proxy, service, Instance);
             }
         }
 

@@ -56,34 +56,73 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
                 TTL = options.ServiceTTL
             });
 
-            Response.AdditionalRecords.Add(new SRVRecord
+            Response.AdditionalRecords.Add(MakeService(host, service, instance, options));
+            Response.AdditionalRecords.Add(MakeText(instance, options));
+
+            AddAddresses(host, options);
+
+            if (options.Delay > Delay)
             {
-                Name = instance,
-                Target = host.LocalDomainName,
-                Port = service.Port,
+                Delay = options.Delay;
+            }
+        }
 
-                TTL = options.HostTTL
-            });
+        /// <summary>
+        /// Answers the records of an advertised service instance that match <paramref name="question"/>:
+        /// the shared PTR for a service-type browse -- with SRV, TXT and address records bundled
+        /// (RFC 6763 §12.1) -- or, for a targeted query, the instance's own SRV (with its addresses
+        /// bundled, §12.2) and TXT. A question that matches none of these names adds nothing.
+        /// </summary>
+        public void AnswerWith(Question question, NetworkHost host, TransportNetworkService service, DomainName? instance = default, AnswerOptions options = default)
+        {
+            instance ??= new([host.Name, .. service.LocalDomainName.Labels]);
 
-            Response.AdditionalRecords.Add(new TXTRecord
+            bool any = question.Type is DnsType.ANY;
+
+            if (question.Name == service.LocalDomainName)
             {
-                Name = instance,
-                Strings = [string.Empty],
+                if (any || question.Type is DnsType.PTR)
+                    AnswerWith(host, service, instance, options);
+            }
+            else if (question.Name == instance)
+            {
+                if (any || question.Type is DnsType.SRV)
+                {
+                    AnswerWith(MakeService(host, service, instance, options), options.Delay);
 
-                TTL = options.HostTTL
-            });
+                    AddAddresses(host, options); // RFC 6763 §12.2: bundle the target's addresses
+                }
 
+                if (any || question.Type is DnsType.TXT)
+                    AnswerWith(MakeText(instance, options), options.Delay);
+            }
+        }
+
+        private static SRVRecord MakeService(NetworkHost host, TransportNetworkService service, DomainName instance, AnswerOptions options) => new()
+        {
+            Name = instance,
+            Target = host.LocalDomainName,
+            Port = service.Port,
+
+            TTL = options.HostTTL
+        };
+
+        private static TXTRecord MakeText(DomainName instance, AnswerOptions options) => new()
+        {
+            Name = instance,
+            Strings = [string.Empty],
+
+            TTL = options.HostTTL
+        };
+
+        private void AddAddresses(NetworkHost host, AnswerOptions options)
+        {
             foreach (IPAddress ip in host.IPAddresses)
             {
                 var record = AddressRecord.Create(host.LocalDomainName, ip);
                 record.TTL = host[ip].TTL ?? options.HostTTL;
 
                 Response.AdditionalRecords.Add(record);
-            }
-
-            if (options.Delay > Delay)
-            {
-                Delay = options.Delay;
             }
         }
 

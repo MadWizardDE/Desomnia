@@ -17,13 +17,15 @@ namespace MadWizard.Desomnia.Network.Naming.Resolver
 
         void IMulticastDNSResolver.Resolve(DNSQuery query)
         {
-            foreach (var question in query.Questions.Where(q => q.Type is (DnsType.PTR or DnsType.ANY)))
+            var advertised = AdvertisedServices.ToArray();
+
+            foreach (var question in query.Questions)
             {
                 // Service-type enumeration (RFC 6763 §9): answer with one PTR per advertised service
                 // *type*, so a browser learns which types exist before enumerating their instances.
-                if (question.Name == MakaretuDnsExt.ServiceEnumeration)
+                if (question.Name == MakaretuDnsExt.ServiceEnumeration && question.Type is DnsType.PTR or DnsType.ANY)
                 {
-                    foreach (var type in AdvertisedServices.Select(s => s.service.LocalDomainName).Distinct())
+                    foreach (var type in advertised.Select(s => s.service.LocalDomainName).Distinct())
                     {
                         query.AnswerWith(MakaretuDnsExt.ServiceEnumeration, type);
                     }
@@ -31,10 +33,10 @@ namespace MadWizard.Desomnia.Network.Naming.Resolver
                     continue;
                 }
 
-                // Per-type browse: answer with the instances of the queried service type.
-                foreach (var (watch, service) in AdvertisedServices.Where(a => a.service.LocalDomainName == question.Name))
+                // A browse (PTR) for a type, or a targeted SRV/TXT for one of its instances.
+                foreach (var (watch, service) in advertised)
                 {
-                    query.AnswerWith(watch.Host, service, options: new(watch.AdvertiseOptions, delay: true));
+                    query.AnswerWith(question, watch.Host, service, options: new(watch.AdvertiseOptions, delay: true));
                 }
             }
         }
