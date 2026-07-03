@@ -97,6 +97,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: SleepProxyOptions
+        internal int                SleepProxyLimit         { get; set; } = 100;
         internal TimeSpan?          SleepProxyLease         { get; set; } = null; // default, if not specified by client
         internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
         internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
@@ -109,6 +110,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {
+            Limit = SleepProxyLimit,
             MinLeaseDuration = SleepProxyLeaseMin,
             DefaultLeaseDuration = SleepProxyLease,
             MaxLeaseDuration = SleepProxyLeaseMax,

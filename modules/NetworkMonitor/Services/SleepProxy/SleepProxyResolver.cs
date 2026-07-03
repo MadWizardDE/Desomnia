@@ -59,10 +59,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         {
             Logger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
 
-            var reg = ((SleepProxyRegistration)update.Request);
+            SleepProxyRegistration? reg = null;
 
             try
             {
+                reg = ((SleepProxyRegistration)update.Request);
+
                 if (Registrar.Register(reg, out var lease))
                 {
                     Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", reg.Name, lease.Duration);
@@ -87,7 +89,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Registration of '{Name}' failed.", reg.Name);
+                Logger.LogError(ex, "Registration of '{Name}' failed.", reg?.Name);
 
                 update.AnswerWithError(ex);
 

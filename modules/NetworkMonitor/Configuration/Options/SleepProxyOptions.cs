@@ -2,6 +2,8 @@
 {
     public readonly struct SleepProxyOptions
     {
+        public int          Limit                   { get; init; }
+
         public TimeSpan     MinLeaseDuration        { get; init; }
         public TimeSpan?    DefaultLeaseDuration    { get; init; }
         public TimeSpan     MaxLeaseDuration        { get; init; }

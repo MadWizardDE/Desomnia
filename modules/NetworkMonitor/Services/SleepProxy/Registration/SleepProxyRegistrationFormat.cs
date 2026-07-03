@@ -16,7 +16,12 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         #region Read from DNS update
         internal static SleepProxyRegistration ParseUpdateMessage(Message message)
         {
-            // TODO Zone = ".local" prüfen
+            // Zone section (RFC 2136): a Sleep Proxy registration is always for the ".local" zone.
+            if (message.Questions.FirstOrDefault(question => question.Type == DnsType.SOA) is not Question zone)
+                throw new FormatException("DNS UPDATE without a zone (SOA) question");
+
+            if (zone.Name != LocalZone)
+                throw new FormatException($"DNS UPDATE for unsupported zone '{zone.Name}'; only '{LocalZone}' is served");
 
             var lease = message.Options.OfType<EdnsLeaseOption>().FirstOrDefault();
             if (message.Options.OfType<EdnsOwnerOption>().FirstOrDefault() is not EdnsOwnerOption owner)

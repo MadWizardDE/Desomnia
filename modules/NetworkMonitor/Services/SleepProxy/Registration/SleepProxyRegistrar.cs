@@ -29,6 +29,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         {
             var duration = options.DetermineLeaseDuration(reg.RequestedLease);
 
+            if (_activeLeases.Count >= options.Limit)
+                throw new InvalidOperationException($"Lease pool ({_activeLeases.Count}) exhausted.");
+
             if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var owned))
             {
                 Logger.LogDebug("Attempt to register '{Name}' [{Sequence}] at {PhysicalAddress} with {ServiceCount} service(s) and {AddressCount} address(es)...",
@@ -107,7 +110,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                     var lease = _activeLeases[reg.PrimaryAddress].Value;
 
-                    if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null)
+                    if (ctxHost.Auto.HasFlag(AutoDiscoveryType.MAC) && ctxHost.Host.PhysicalAddress is null) using (await Context.Network.Mutex.LockAsync())
                     {
                         ctxHost.Host.PhysicalAddress = reg.PrimaryAddress;
 
@@ -116,7 +119,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         Logger.LogHostPhysicalAddressChanged(ctxHost.Host, reg.PrimaryAddress);
                     }
 
-                    foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto)))
+                    foreach (var adr in reg.IPAddresses.Where(adr => adr.Key.AddressFamily.ShouldDiscover(ctxHost.Auto))) using (await Context.Network.Mutex.LockAsync())
                     {
                         if (ctxHost.Host.AddAddress(adr.Key, adr.Value))
                         {
@@ -182,7 +185,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         {
             lease.Ended += async (sender, args) =>
             {
-                if (_activeLeases.Remove(watch.Host.PhysicalAddress!, out var owned))
+                if (_activeLeases.Remove(lease.Registration.PrimaryAddress, out var owned))
                 {
                     using var scope = Logger.BeginHostScope(watch.Host);
 

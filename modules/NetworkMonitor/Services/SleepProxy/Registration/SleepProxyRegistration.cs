@@ -132,10 +132,13 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 && Equals(Hostname, other.Hostname)
                 && Equals(PrimaryAddress, other.PrimaryAddress)
                 && Equals(TargetAddress, other.TargetAddress)
-                && Equals(Password, other.Password)
+                && SamePassword(Password, other.Password)
                 && IPAddresses.Keys.ToHashSet().SetEquals(other.IPAddresses.Keys)
                 && ServiceSignatures().SetEquals(other.ServiceSignatures());
         }
+
+        // The password is a fresh byte[] on every parse, so it must be compared by content, not reference.
+        private static bool SamePassword(byte[]? a, byte[]? b) => a is null ? b is null : b is not null && a.AsSpan().SequenceEqual(b);
 
         private HashSet<string> ServiceSignatures() => [.. Services.Select(s => $"{s.Service.LocalDomainName}|{s.Port}")];
 
