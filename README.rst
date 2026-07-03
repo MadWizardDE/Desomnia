@@ -31,8 +31,10 @@ Desomnia can be deployed in three complementary roles and combined across multip
    Runs on the machine you connect *from*. When you try to open a connection to a sleeping host, Desomnia detects the attempt, sends a Magic Packet, and waits for the host to come back online — while your application notices only a small delay.
 
 3. **Wake-on-LAN proxy** – 🪐 *platform-independent*
-   
+
    Runs on an always-on device (a Raspberry Pi, a NAS, a small server). It watches the network in promiscuous mode and sends Magic Packets on behalf of any client that tries to reach a sleeping host. Nor Servers or clients need any further configuration. The best thing: it does not create bottlenecks in your infrastructure; network traffic is only rerouted and intercepted when absolutely necessary.
+
+   - Acting as a **Sleep Proxy**, this deployment can also speak the standard multicast DNS Sleep Proxy protocol (Apple's *Bonjour Sleep Proxy* / *Wake on Demand*): instead of being configured statically, hosts **register their own services** with the proxy just before they suspend, so it keeps advertising them over mDNS and wakes the host the instant a client tries to connect. This removes the need to describe each sleeping host on the proxy by hand — and interoperates with non-Desomnia clients and proxies alike.
 
 Monitoring
 ----------
@@ -172,7 +174,7 @@ System requirements
 -------------------
 
 - Windows 8 / 10 / 11, Linux, or macOS
-- .NET Runtime 9 / 10, or Docker (Linux only)
+- .NET Runtime 10, or Docker (Linux only)
 - `Npcap <https://npcap.com/>`_ on Windows or `libpcap <https://github.com/the-tcpdump-group/libpcap>`_ on Linux / macOS (optional, required for NetworkMonitor)
 
 ----
