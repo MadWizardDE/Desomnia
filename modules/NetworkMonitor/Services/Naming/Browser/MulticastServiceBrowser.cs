@@ -319,7 +319,7 @@ namespace MadWizard.Desomnia.Network.Naming
             {
                 if (weak.TryGetTarget(out ServiceInstance? instance))
                 {
-                    if (name == null || instance.ServiceDomainName == serviceDomainName)
+                    if (serviceDomainName == null || instance.ServiceDomainName == serviceDomainName)
                         yield return instance;
                 }
                 else
