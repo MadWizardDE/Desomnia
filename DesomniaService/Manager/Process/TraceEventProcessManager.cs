@@ -90,7 +90,15 @@ namespace MadWizard.Desomnia.Process.Manager
                     return null; // Zugriff verweigert
                 }
 
-                return info.InheritedFromUniqueProcessId.ToInt32();
+                using var parent = NativeProcess.GetProcessById(info.InheritedFromUniqueProcessId.ToInt32());
+
+                /// Windows reuses PIDs which can actually lead to a situation
+                /// where two processes are parents of each other.
+                /// We need to check this!
+                if (parent.StartTime > process.StartTime)
+                    return null; // PID has been reused
+
+                return parent.Id;
             }
             catch (SystemException e) when (e is ArgumentException || e is InvalidOperationException)
             {

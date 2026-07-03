@@ -94,7 +94,7 @@ namespace MadWizard.Desomnia.Process.Manager
                 IProcess? parent;
                 if (FindParentProcessId(native) is int pidParent)
                 {
-                    if (_processList.TryGetValue(pidParent, out parent))
+                    if (!_processList.TryGetValue(pidParent, out parent))
                     {
                         parent = TriggerStart(pid: pidParent);
                     }
