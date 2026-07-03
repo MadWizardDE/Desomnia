@@ -67,10 +67,10 @@ knockSecretAuthType
 
 .. include:: /modules/network/attributes/digest.rst
 
-knockEncoding
-+++++++++++++
+knockSecretEncoding
++++++++++++++++++++
 
-:inherited: 
+:inherited:
 :default: ``UTF-8``
 
 This option specifies the encoding to be used to build the ``knockSecret`` and ``knockSecretAuth`` from the configuration file. Possible formats are ``UTF-8`` and ``Base64``.

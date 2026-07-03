@@ -162,7 +162,7 @@ Forward the knock port (UDP 12345 in this example) on your router to the always-
      <RemoteHost name="server"
        onServiceDemand="knock"
        knockMethod="plain" knockPort="12345"
-       knockSecret="changeme" knockEncoding="UTF-8"
+       knockSecret="changeme" knockSecretEncoding="UTF-8"
        IPv4="203.0.113.1">
        <Service name="SSH" port="22" />
      </RemoteHost>

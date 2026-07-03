@@ -46,6 +46,16 @@ wakeRepeat
 
 This option specifies whether to resend the Magic Packet and how long to wait between each attempt, until the configured ``wakeTimeout`` has elapsed.
 
+wakePassword
+++++++++++++
+
+:inherited:
+
+The *SecureOn* password included in the Magic Packet, for adapters that require a password before they will wake the host. As defined by the standard, a SecureOn password is at most 6 bytes long (4- and 6-byte forms are supported). By default the password is read as text; set ``wakePasswordEncoding="base64"`` to supply the raw bytes as Base64 instead.
+
+.. note::
+  This is the same password a host transmits to a :doc:`Sleep Proxy </modules/network/sleepproxy>` during :doc:`handoff </modules/network/handoff>` (as ``handoffPassword``), so that the proxy can wake it later.
+
 wakePing
 ++++++++
 

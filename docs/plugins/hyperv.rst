@@ -29,7 +29,7 @@ The following configuration keeps a self-hosted GitLab VM running only when it i
 
   <SystemMonitor version="1" timeout="2min" onIdle="sleep+1h" onDemand="sleepless">
 
-    <NetworkMonitor network="192.168.178.0/24" autoDetect="MAC|IPv4|IPv6" watchYield="true">
+    <NetworkMonitor network="192.168.178.0/24" autoDetect="MAC|IPv4|IPv6" handoff="UnMagicPacket">
 
       <Service name="SSH" port="22" />
 
@@ -48,9 +48,9 @@ The network activity is checked every two minutes (the global ``timeout``). If n
 
 The physical host follows the same logic at the outer level: it will only suspend if neither the VM nor its own services have seen activity for a full hour.
 
-Yielding
---------
+Handoff
+-------
 
-The attribute ``watchYield="true"`` instructs Desomnia to broadcast a suspension announcement before the physical host goes to sleep, so that another instance running in :doc:`promiscuous mode </modules/network/promiscuous>` on the network can immediately take over responsibility for the configured hosts. See :doc:`/modules/network/yield` for details.
+Setting ``handoff="UnMagicPacket"`` instructs Desomnia to broadcast a suspension announcement before the physical host goes to sleep, so that another instance running in :doc:`promiscuous mode </modules/network/promiscuous>` on the network can immediately take over responsibility for the configured hosts. Alternatively, ``handoff="SleepProxy"`` registers the hosts' services with a standards-based :doc:`Sleep Proxy </modules/network/sleepproxy>`. See :doc:`/modules/network/handoff` for details.
 
 .. _`Hyper-V platform`: https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/get-started/install-hyper-v

@@ -38,20 +38,32 @@ Desomnia provides support for monitoring any number of installed network interfa
       knockSecret="changeme"
       knockSecretAuth="..."
       knockSecretAuthType="SHA256"
-      knockEncoding="UTF-8"
+      knockSecretEncoding="UTF-8"
 
-      pingTimeout="500ms" 
+      pingTimeout="500ms"
       pingFrequency="1min"
-      
+
       wakeType="auto"
       wakePort="9"
       wakeRepeat="2s"
-      wakeTimeout="10s" 
+      wakeTimeout="10s"
+
+      handoff="none"
+      handoffTimeout="5s"
+      handoffRetry="0"
+
+      sleepProxyLease="..."
+      sleepProxyLeaseMin="30min"
+      sleepProxyLeaseMax="365d"
+      sleepProxyLimit="100"
+      sleepProxyLeaseExpire="none"
+      sleepProxyDiscovery="eager"
+      sleepProxyMetrics="best"
+      sleepProxyPort="5353"
 
       watchMode="normal"
-      watchDeviceTimeout="10s"
+      watchTimeout="1min"
       watchUDPPort="9"
-      watchYield="false"
 
       allowWakeOnLAN="MagicPacket"
 
@@ -64,6 +76,7 @@ Desomnia provides support for monitoring any number of installed network interfa
       <LocalHost ... /> <!-- or use it inline -->
       <RemoteHost ... />
       <Router ... />
+      <SleepProxy ... />
 
       <HostRange ... />
       <DynamicHostRange ... />
@@ -72,8 +85,8 @@ Desomnia provides support for monitoring any number of installed network interfa
 
       <HostFilterRule ... />
       <HostRangeFilterRule ... />
+      <EveryHostFilterRule ... />
       <ForeignHostFilterRule ... />
-      <ServiceFilterRules ... />
       <ServiceFilterRule ... />
       <HTTPFilterRule ... />
       <PingFilterRule ... />
@@ -102,7 +115,7 @@ autoDetect
 :inherited: 
 :default: ``nothing``
 
-Desomnia can try to automatically discover the shape of your network. The values ``MAC``, ``IPv4``, ``IPv6`` and ``Services`` are inherited by all the configured hosts, while ``Router`` and ``SleepProxy`` tell Desomnia to discover the respective network entities. You can freely combine all the different values with the pipe operator. The outcome of the discovery process will vary according to the installed plugins and the possibilities of your individual network.
+Desomnia can try to automatically discover the shape of your network. The values ``MAC``, ``IPv4``, ``IPv6`` and ``Service`` are inherited by all the configured hosts, while ``Router``, ``SleepProxy`` and ``Host`` tell Desomnia to discover the respective network entities. You can freely combine all the different values with the pipe operator. The outcome of the discovery process will vary according to the installed plugins and the possibilities of your individual network.
 
 The following entities are available for auto-configuration:
 
@@ -128,9 +141,8 @@ watchTimeout
 +++++++++++++
 
 :⏱️ duration:
-:default: ``1min``
 
-The packet capture device can sometimes become unresponsive. If you select this option, the Network Monitor will restart if no packets have been captured for the specified duration.
+The packet capture device can sometimes become unresponsive. If you set this option, the Network Monitor will restart if no packets have been captured for the specified duration. There is no default — the capture watchdog is disabled unless you configure a duration here.
 
 .. include:: ./options/knock.rst
 
@@ -164,18 +176,92 @@ Desomnia typically uses an `EtherType <https://en.wikipedia.org/wiki/EtherType>`
 
 Typical port numbers used for this are ``7`` (Echo) or ``9`` (Discard).
 
-watchYield
-++++++++++
+handoff
++++++++
 
-:default: ``false``
+:inherited:
+:default: ``none``
 
-Setting this option instructs Desomnia to notify the other nodes on the network before suspending the system. Since there is no standard way to communicate this in a computer network, various techniques will be used:
+Controls how this host announces its suspension so that another node can take over its presence on the network. Combine the values with the pipe operator: ``UnMagicPacket`` broadcasts a suspension announcement for peer Desomnia proxies; ``SleepProxy`` registers the host's services with a :doc:`Sleep Proxy <sleepproxy>`; ``Mandatory`` prevents a Desomnia-initiated suspend if the handoff fails; ``IPv4``/``IPv6`` restrict handoff to one address family. See :doc:`handoff` for the full description.
 
-- For now Desomnia will send a special "Unmagic Packet" as an ethernet broadcast, which contains it's own MAC address as sender and target. Other instances of Desomnia (presumable running in promiscuous mode) can detect this and potentially take over the local IP addresses, to ensure that the next request will wake up the local host immediately, without waiting for the IP caches of the other network nodes to expire.
+handoffTimeout
+++++++++++++++
 
-.. admonition:: Work in progress
+:inherited:
+:default: ``5s``
 
-  Later, Desomnia will be able to register the local services it is watching with a Sleep Proxy on the network. The Proxy will then be responsible for advertising their presence without interruption and for waking up the local host again if any remote host tries to access them.
+The time allowed for a handoff to be confirmed — bounding how long a suspend is delayed on the departing host, and how long a proxy waits before probing whether the host has really gone.
+
+handoffRetry
+++++++++++++
+
+:inherited:
+:default: ``0``
+
+How many additional handoff attempts (departing host) or reachability re-checks (receiving proxy) are made before a handoff is considered failed.
+
+handoffPassword
++++++++++++++++
+
+:inherited:
+
+The *SecureOn* Wake-on-LAN password (at most 6 bytes) transmitted during Sleep Proxy handoff, so that a proxy can wake the host later. Set ``handoffPasswordEncoding="base64"`` to supply the raw bytes as Base64.
+
+sleepProxyLease
++++++++++++++++
+
+:default: ``sleepProxyLeaseMax``
+
+The lease duration granted when a client registers without requesting one of its own. On a host that registers with a proxy itself, this is instead the desired lease duration transmitted at registration time.
+
+sleepProxyLeaseMin
+++++++++++++++++++
+
+:default: ``30min``
+
+The shortest lease the proxy will grant. Shorter requests are rounded up.
+
+sleepProxyLeaseMax
+++++++++++++++++++
+
+:default: ``365d``
+
+The longest lease the proxy will grant. Longer requests are capped.
+
+sleepProxyLimit
++++++++++++++++
+
+:default: ``100``
+
+The maximum number of simultaneous leases. Once the pool is exhausted, further registrations are refused until a lease ends.
+
+sleepProxyLeaseExpire
++++++++++++++++++++++
+
+:default: ``none``
+
+What the proxy does when a lease expires without the host returning on its own. ``none`` releases the lease; ``wake`` sends a Magic Packet to wake the host first.
+
+sleepProxyDiscovery
++++++++++++++++++++
+
+:default: ``eager``
+
+When a host looks for a proxy to register with. ``eager`` discovers a proxy up front and keeps the registration current; ``lazy`` defers discovery until the host is about to suspend.
+
+sleepProxyMetrics
++++++++++++++++++
+
+:default: ``best``
+
+The metric this proxy advertises, so that clients can prefer the most suitable one. Accepts ``best``, ``average``, ``worst`` or the explicit four-field form ``intent-portability-marginalPower-totalPower``.
+
+sleepProxyPort
+++++++++++++++
+
+:default: ``5353``
+
+The UDP port the Sleep Proxy service listens on. The default is the standard multicast DNS port.
 
 .. _allow-wake-on-lan:
 
@@ -542,7 +628,7 @@ For remote hosts you can configure these additional properties:
       knockSecret="changeme"
       knockSecretAuth="..."
       knockSecretAuthType="SHA256"
-      knockEncoding="UTF-8"
+      knockSecretEncoding="UTF-8"
 
       pingTimeout="500ms" 
       pingFrequency="1min"
@@ -597,11 +683,10 @@ A router shares the same attributes as any other host on the network, but has th
 
    <Router name="fritz.box" IPv4="192.168.178.1" ...
      allowWake="false"
-     allowWakeByRemote="false"
+     allowWakeByProxy="false"
      allowWakeOnLAN="true"
 
-     vpnTimeout="500ms"
-     vpnFrequency="1min">
+     vpnTimeout="500ms">
 
      <VPNClient name="WireGuard VPN" IPv4="192.168.178.201" ... />
 
@@ -637,14 +722,9 @@ vpnTimeout
 
 Specifies the timeout after it should be assumed that no VPN clients are connected. If no VPN clients are configured, this attribute has no effect.
 
-vpnFrequency
-++++++++++++
-
-Specifies the interval at which the presence of VPN clients should be checked. This is an optional feature, so there is no default value. If no VPN clients are configured, this attribute has no effect.
-
 .. admonition:: Work in progress
 
-  Periodic checking of VPN clients is currently not implemented, which is why this attribute has no effect. Meanwhile please use ``vpnTimeout`` instead.
+  Periodic re-checking of VPN client presence on a fixed interval is not implemented yet. For now, ``vpnTimeout`` is the only VPN timing control.
 
 VPNClient
 +++++++++
@@ -654,6 +734,31 @@ VPN clients can only be configured in the context of a router. Apart from that, 
 .. caution::
   
   Depending on the type of VPN server you have, it probably won't be possible to resolve VPN clients by name, which is why you should provide a static IP mapping, in order to successfully check the reachability of the client. For more information about :doc:`vpn`, read the corresponding wiki page.
+
+SleepProxy
+----------
+
+Declares a known :doc:`Sleep Proxy <sleepproxy>` on the network, that this host can register its services with before it suspends. Alternatively, a proxy can be located automatically with ``autoDetect="SleepProxy"``. Apart from the additional attributes below, a ``<SleepProxy>`` is configured like any other ``<Host>`` (``name``, ``hostName``, ``IPv4``, ``IPv6``, …):
+
+.. code:: xml
+
+   <SleepProxy name="proxy" IPv4="192.168.1.2"
+     port="5353"
+     metrics="best" />
+
+port
+++++
+
+:default: ``5353``
+
+The UDP port the Sleep Proxy service is reachable on. The default is the standard multicast DNS port.
+
+metrics
++++++++
+
+:default: ``best``
+
+The metric used to prefer this proxy over others, when several are known. Accepts the shorthands ``best``, ``average`` or ``worst``, or the explicit four-field form ``intent-portability-marginalPower-totalPower``. See :doc:`sleepproxy` for the meaning of the individual fields.
 
 HostFilterRule
 --------------
@@ -702,36 +807,51 @@ This is the logical name of the host range, to be referenced by this filter. In 
 
 .. include:: ./attributes/range.rst
 
+EveryHostFilterRule
+-------------------
+
+The ``<EveryHostFilterRule>`` applies to **every** host on the contextual network interface. It has no attributes besides the mandatory ``type``, but — unlike the plain filter rules — it may contain network entities (``<Host>``, ``<HostRange>`` and ``<DynamicHostRange>``) directly, in addition to ``<HostFilterRule>`` and ``<HostRangeFilterRule>``:
+
+.. code-block:: xml
+  :emphasize-lines: 6-8
+
+  <EveryHostFilterRule type="MustNot">
+
+    <HostFilterRule ... />
+    <HostRangeFilterRule ... />
+
+    <Host name="printer" ... />              <!-- shortcut -->
+    <HostRange name="iot" ... />             <!-- shortcut -->
+    <DynamicHostRange name="dynamic" ... />  <!-- shortcut -->
+
+  </EveryHostFilterRule>
+
+.. include:: /attributes/filtertype.rst
+
+.. note::
+
+  You are usually not allowed to put network entities directly inside a filter. As a convenience, a ``<Host>``, ``<HostRange>`` or ``<DynamicHostRange>`` placed directly inside an ``<EveryHostFilterRule>`` (or a ``<ForeignHostFilterRule>``) is treated as if it were declared separately and then referenced from within the rule via the matching ``<HostFilterRule>`` / ``<HostRangeFilterRule>``. In any case, you must always specify a ``name`` for the embedded entity.
+
 ForeignHostFilterRule
 ---------------------
 
-The ``<ForeignHostFilterRule>`` does not have any attributes, besides the mandatory ``type``, because it derives its configuration from the contextual network interface and matches with all hosts, that are not part of the local subnet:
+The ``<ForeignHostFilterRule>`` behaves exactly like an ``<EveryHostFilterRule>``, except that it derives its configuration from the contextual network interface and matches only those hosts that are **not** part of the local subnet:
 
 .. code-block:: xml
-  :emphasize-lines: 6
+  :emphasize-lines: 6-8
 
   <ForeignHostFilterRule type="MustNot">
 
     <HostFilterRule ... />
     <HostRangeFilterRule ... />
 
+    <Host name="printer" ... />              <!-- shortcut -->
+    <HostRange name="iot" ... />             <!-- shortcut -->
     <DynamicHostRange name="dynamic" ... /> <!-- this is a shortcut -->
 
   </ForeignHostFilterRule>
 
 .. include:: /attributes/filtertype.rst
-
-.. note::
-
-  You are usually not allowed to put network entities directly inside a filter. However, since this is such a common use case, you can put a ``<DynamicHostRange>`` directly inside the ``<ForeignHostFilterRule>``. This is considered to be as if declared seperately and then referenced from inside the ``<ForeignHostFilterRule>`` via a ``<HostRangeFilterRule>``. In any case, you must always specify a name for the ``<DynamicHostRange>``.
-
-  .. code:: xml
-
-    <DynamicHostRange name="dynamic" ... />
-
-    <ForeignHostFilterRule>
-      <HostRangeFilterRule name="dynamic" ... />
-    </ForeignHostFilterRule>
 
 ServiceFilterRule
 -----------------
@@ -866,7 +986,9 @@ When you configure a ``<Service>`` you can configure all the attributes of a ``<
     knockSecret="changeme"
     knockSecretAuth="..."
     knockSecretAuthType="SHA256"
-    knockEncoding="UTF-8"
+    knockSecretEncoding="UTF-8"
+
+    handoff="true"
 
     onDemand="knock"
     onIdle="?">
@@ -881,11 +1003,16 @@ serviceName
 
 :default: the logical **name**, but all lowercase
 
-.. admonition:: Work in progress
-
-  Here you will be able to define a custom service name, that will be advertised with mDNS in a later version. Ideally this name should match with it's counterpart in the `Service Name and Transport Protocol Port Number Registry <https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml>`__, managed by IANA. If you don't configure this property, the name will be derived from the basic name property, but with all letters lowercase.
+A custom service name, used when the service is advertised over mDNS (for example while the host is asleep and its presence is held by a :doc:`Sleep Proxy <sleepproxy>`). Ideally this name should match its counterpart in the `Service Name and Transport Protocol Port Number Registry <https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml>`__, managed by IANA. If you don't configure this property, the name will be derived from the basic name property, but with all letters lowercase.
 
 .. include:: ./attributes/traffic.rst
+
+handoff
++++++++
+
+:default: ``true``
+
+Whether this service is included when the host hands off its watched services to a :doc:`Sleep Proxy <sleepproxy>` before suspending. Set ``handoff="false"`` to keep an individual service from being registered with the proxy while still watching it locally. See :doc:`handoff` for the host-level ``handoff`` attribute that enables the mechanism in the first place.
 
 .. include:: ./options/knock.rst
 

@@ -9,7 +9,7 @@ At its most basic, the Network Monitor runs in **normal mode**: it watches the o
 
 Address mapping — knowing which MAC belongs to which IP — can be supplied statically in the configuration, or resolved automatically from your router's DNS and from traffic Desomnia observes on the wire. The :doc:`auto-configuration <auto>` page explains how to enable this. IPv6 addresses are supported alongside IPv4 and behave in the same way; the :doc:`IPv6 <ipv6>` page covers the cases where explicit configuration is needed.
 
-In promiscuous mode, Desomnia may need to :doc:`claim a sleeping host's addresses <yield>` so that connection attempts are routed to the proxy rather than dropped. When a host is about to suspend, it can announce this via an *UnMagic Packet*, allowing the proxy to take over its addresses proactively rather than waiting for the first failed connection attempt.
+In promiscuous mode, Desomnia may need to :doc:`claim a sleeping host's addresses <handoff>` so that connection attempts are routed to the proxy rather than dropped. When a host is about to suspend, it can hand off its presence — either via an *UnMagic Packet* to a peer Desomnia proxy, or by registering its services with a standards-based :doc:`Sleep Proxy <sleepproxy>` — allowing the proxy to take over proactively rather than waiting for the first failed connection attempt.
 
 For hosts reached through a router — including those accessed over a VPN — the :doc:`router configuration <router>` page explains how to declare the gateway and control which forwarded traffic is permitted to trigger wake-ups. :doc:`VPN support <vpn>` covers the different VPN network models (Layer 2 bridged, Layer 3 proxy ARP, Layer 3 masquerading) and what each means for how Desomnia identifies individual remote clients. Common router families have their own sub-pages under :doc:`router configuration <router>`.
 
@@ -30,6 +30,8 @@ For environments with virtual machines, the :doc:`virtual machines <virtual>` pa
    router
    vpn
    wol
-   yield
+   handoff
+   sleepproxy
+   mdns
    troubleshooting
 

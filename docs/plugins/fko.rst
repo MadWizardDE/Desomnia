@@ -44,7 +44,7 @@ When Desomnia is also the knock sender, the same keys are supplied as flat attri
    <RemoteHost name="home-server"
      onServiceDemand="knock"
      knockMethod="fko" knockPort="62201"
-     knockEncoding="Base64"
+     knockSecretEncoding="Base64"
      knockSecret="1RNh13FmfBTiMT+/VPEMVXUnRXtg+2/nbVVY+O4ENcs="
      knockSecretAuth="1k00+6JhD4LIKAqkVtLN6FCEHZxQamCbGqD+vyCmPjTzALzLLxatBB1tCYdDe4flf+xIqlwP6JpVHwggEk0jqA=="
      knockSecretAuthType="SHA256"

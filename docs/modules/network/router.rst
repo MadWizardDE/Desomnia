@@ -40,7 +40,7 @@ The ``vpnTimeout`` attribute specifies how long to wait for a ping response. On 
 
 .. admonition:: Work in progress
 
-   The ``vpnFrequency`` attribute (documented in the :doc:`configuration reference <config>`) is not yet implemented — periodic re-checking of VPN client presence has no effect in the current version. Use ``vpnTimeout`` exclusively for now.
+   Periodic re-checking of VPN client presence on a fixed interval is not implemented yet. Use ``vpnTimeout`` exclusively for now.
 
 .. note::
 

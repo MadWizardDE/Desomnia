@@ -58,6 +58,9 @@ As in client mode, the ``<NetworkMonitor>`` element without an ``interface`` or 
 .. note::
    In promiscuous mode, Desomnia observes traffic from every device on the network. Without any filters, it will react to **any** connection attempt directed at ``"server"`` — including traffic from your router, smart home devices, or the proxy device itself. The sections below explain how to bring this under control.
 
+.. tip::
+   This guide configures each target host — its MAC address, IP addresses, and services — statically on the proxy. If the hosts you want to wake also run Desomnia (or any standards-compliant Sleep Proxy client), you can avoid most of that. With :doc:`/modules/network/sleepproxy` enabled, a host **registers its own services** with the proxy just before it suspends, and the proxy learns everything it needs from that registration. Setting ``autoDetect="Host|Service"`` on the ``<NetworkMonitor>`` even lets the proxy create the host definitions on the fly, so a large part of the static configuration below becomes unnecessary. See :doc:`/modules/network/handoff` for how a host hands off before sleeping.
+
 Verifying it works
 ------------------
 
