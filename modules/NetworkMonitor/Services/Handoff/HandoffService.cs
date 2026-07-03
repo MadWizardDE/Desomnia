@@ -60,10 +60,10 @@ namespace MadWizard.Desomnia.Network.Handoff
             }
             catch (Exception ex)
             {
-                Logger.Log(watch.HandoffOptions.IsRequired ? LogLevel.Error : LogLevel.Warning,
+                Logger.Log(watch.HandoffOptions.IsMandatory ? LogLevel.Error : LogLevel.Warning,
                     ex, "Could not handoff watch for '{Host}'", watch.Host.Name);
 
-                if (watch.HandoffOptions.IsRequired)
+                if (watch.HandoffOptions.IsMandatory)
                 {
                     throw;
                 }

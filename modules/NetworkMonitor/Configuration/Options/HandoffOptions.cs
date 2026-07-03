@@ -14,7 +14,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
 
         public readonly byte[]?     Password        { get; init; }
 
-        public bool IsRequired => Type.HasFlag(HandoffType.Required);
+        public bool IsMandatory => Type.HasFlag(HandoffType.Mandatory);
 
         public static implicit operator IPAddressSelectionOptions(HandoffOptions options)
         {
@@ -35,7 +35,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
         SleepProxy      = 1 << 1,
         UnMagicPacket   = 1 << 2,
 
-        Required        = 1 << 10,
+        Mandatory       = 1 << 10,
 
         // IP protocol preference
 
