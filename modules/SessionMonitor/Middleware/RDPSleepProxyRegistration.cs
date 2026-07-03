@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Session
                     reg.Services.Add(new ProxyServiceInfo(watch.AdvertiseOptions)
                     {
                         Name = "RDP",
-                        ServiceName = "ms-wbt-server",
+                        ServiceName = "rdp", // use "ms-wbt-server" ??
 
                         Protocol = IPProtocol.TCP,
                         Port = 3389,
