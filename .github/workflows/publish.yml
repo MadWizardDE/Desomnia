@@ -394,7 +394,7 @@ jobs:
     
     steps:
       - name: Update Homebrew formula
-        uses: dawidd6/action-homebrew-bump-formula@v7
+        uses: dawidd6/action-homebrew-bump-formula@v8
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           tap: mad0x20wizard/homebrew-tools
