@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.NetworkSession
                     reg.Services.Add(new ProxyServiceInfo(watch.AdvertiseOptions)
                     {
                         Name = "SMB",
-                        ServiceName = "microsoft-ds",
+                        ServiceName = "smb",
 
                         Protocol = IPProtocol.TCP,
                         Port = 445,
