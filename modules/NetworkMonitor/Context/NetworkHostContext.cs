@@ -32,6 +32,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).AsSelf();
+
                 var reg = builder.RegisterType<NetworkHost>().As<NetworkHost>()
                     .OnActivated(args => ConfigureHost(args, config))
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
@@ -47,6 +49,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).AsSelf();
+
                 builder.RegisterType<NetworkRouter>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .WithParameter(NetworkHostsParameter.FindBy([.. config.VPNClient.Select(h => h.Name)]))
@@ -62,6 +66,8 @@ namespace MadWizard.Desomnia.Network.Context
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).AsSelf();
+
                 builder.RegisterType<LocalHost>().As<NetworkHost>()
                     .OnActivated(args => ConfigureLocalHost(args, config))
                     .SingleInstance()
@@ -90,6 +96,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).As<WatchedHostInfo>().AsSelf();
+
                 builder.RegisterType<VirtualNetworkHost>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .WithParameter(new LocalHostParameter<NetworkHost>())
@@ -121,6 +129,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).As<WatchedHostInfo>().As<RemoteHostInfo>().AsSelf();
+
                 var reg = builder.RegisterType<NetworkHost>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .OnActivated(args => ConfigureHost(args, config))
@@ -152,6 +162,8 @@ namespace MadWizard.Desomnia.Network.Context
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
+                builder.RegisterInstance(config).As<WatchedHostInfo>().As<RemoteHostInfo>().AsSelf();
+
                 builder.RegisterType<VirtualNetworkHost>().As<NetworkHost>()
                     .WithParameter(new TypedParameter(typeof(string), config.Name))
                     .WithParameter(new NetworkHostParameter<NetworkHost>(configPhysical.Name))

@@ -3,6 +3,7 @@ using Autofac.Core.Resolving.Pipeline;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Configuration.Services;
 
 namespace MadWizard.Desomnia.Network.Middleware
 {
@@ -12,80 +13,58 @@ namespace MadWizard.Desomnia.Network.Middleware
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
-            if (context.FirstParameterOfType<LocalHostInfo>() is LocalHostInfo configLocalHost)
+            if (context.FirstParameterOfType<WatchedServiceInfo>() is WatchedServiceInfo serviceInfo)
             {
-                ApplyDefaultAdvertiseOptions(configLocalHost);
-            }
+                if (context.ResolveOptional<LocalHostInfo>() is LocalHostInfo localHostInfo)
+                {
+                    ApplyDefaultAdvertiseOptions(serviceInfo, localHostInfo.MakeAdvertiseOptions(config));
+                }
 
-            if (context.FirstParameterOfType<WatchedHostInfo>() is WatchedHostInfo configHost)
-            {
-                ApplyDefaultActions(configHost);
-                ApplyDefaultAdvertiseOptions(configHost);
-            }
+                if (context.ResolveOptional<WatchedHostInfo>() is WatchedHostInfo watchedHostInfo)
+                {
+                    ApplyDefaultAdvertiseOptions(serviceInfo, watchedHostInfo.MakeAdvertiseOptions(config));
 
-            if (context.FirstParameterOfType<RemoteHostInfo>() is RemoteHostInfo configRemote)
-            {
-                ApplyDefaultKnockOptions(configRemote);
+                    ApplyDefaultActions(serviceInfo, watchedHostInfo);
+                }
+
+                if (context.ResolveOptional<RemoteHostInfo>() is RemoteHostInfo remoteHostInfo)
+                {
+                    ApplyDefaultKnockOptions(serviceInfo, remoteHostInfo);
+                }
             }
 
             next(context);
         }
 
-        private void ApplyDefaultActions(WatchedHostInfo config)
+        private static void ApplyDefaultActions(WatchedServiceInfo serviceInfo, WatchedHostInfo config)
         {
-            foreach (var service in config.Services)
-            {
-                service.OnDemand ??= config.OnServiceDemand;
-            }
+            serviceInfo.OnDemand ??= config.OnServiceDemand;
         }
 
-        private void ApplyDefaultAdvertiseOptions(LocalHostInfo configLocalHost)
+        private static void ApplyDefaultAdvertiseOptions(WatchedServiceInfo serviceInfo, AdvertiseOptions options)
         {
-            var options = configLocalHost.MakeAdvertiseOptions(config);
+            serviceInfo.Advertise ??= options.Type;
+            serviceInfo.AdvertiseTimeout ??= options.Timeout;
+            serviceInfo.AdvertiseHostTTL ??= options.HostTTL;
+            serviceInfo.AdvertiseServiceTTL ??= options.ServiceTTL;
 
-            foreach (var service in configLocalHost.Services)
-            {
-                service.Advertise ??= options.Type;
-                service.AdvertiseTimeout ??= options.Timeout;
-                service.AdvertiseHostTTL ??= options.HostTTL;
-                service.AdvertiseServiceTTL ??= options.ServiceTTL;
-
-                service.Advertise &= ~AdvertiseType.Host; // remove host flag
-            }
+            serviceInfo.Advertise &= ~AdvertiseType.Host; // remove host flag
         }
 
-        private void ApplyDefaultAdvertiseOptions(WatchedHostInfo configHost)
+        private void ApplyDefaultKnockOptions(WatchedServiceInfo serviceInfo, RemoteHostInfo configHost)
         {
-            var options = configHost.MakeAdvertiseOptions(config);
+            serviceInfo.KnockMethod             ??= configHost.KnockMethod          ?? config.KnockMethod;
+            serviceInfo.KnockProtocol           ??= configHost.KnockProtocol        ?? config.KnockProtocol;
+            serviceInfo.KnockPort               ??= configHost.KnockPort            ?? config.KnockPort;
+            serviceInfo.KnockDelay              ??= configHost.KnockDelay           ?? config.KnockDelay;
+            serviceInfo.KnockRepeat             ??= configHost.KnockRepeat          ?? config.KnockRepeat;
 
-            foreach (var service in configHost.Services)
-            {
-                service.Advertise               ??= options.Type;
-                service.AdvertiseTimeout        ??= options.Timeout;
-                service.AdvertiseHostTTL        ??= options.HostTTL;
-                service.AdvertiseServiceTTL     ??= options.ServiceTTL;
+            serviceInfo.KnockTimeout            ??= configHost.KnockTimeout         ?? config.KnockTimeout;
 
-                service.Advertise &= ~AdvertiseType.Host; // remove host flag
-            }
-        }
-
-        private void ApplyDefaultKnockOptions(RemoteHostInfo configHost)
-        {
-            foreach (var service in configHost.Services)
-            {
-                service.KnockMethod             ??= configHost.KnockMethod          ?? config.KnockMethod;
-                service.KnockProtocol           ??= configHost.KnockProtocol        ?? config.KnockProtocol;
-                service.KnockPort               ??= configHost.KnockPort            ?? config.KnockPort;
-
-                service.KnockDelay              ??= configHost.KnockDelay           ?? config.KnockDelay;
-                service.KnockRepeat             ??= configHost.KnockRepeat          ?? config.KnockRepeat;
-                service.KnockTimeout            ??= configHost.KnockTimeout         ?? config.KnockTimeout;
-
-                service.KnockSecret             ??= configHost.KnockSecret          ?? config.KnockSecret;
-                service.KnockSecretAuth         ??= configHost.KnockSecretAuth      ?? config.KnockSecretAuth;
-                service.KnockSecretAuthType     ??= configHost.KnockSecretAuthType  ?? config.KnockSecretAuthType;
-                service.KnockSecretEncoding     ??= configHost.KnockSecretEncoding  ?? config.KnockSecretEncoding;
-            }
+            serviceInfo.KnockSecret             ??= configHost.KnockSecret          ?? config.KnockSecret;
+            serviceInfo.KnockSecretAuth         ??= configHost.KnockSecretAuth      ?? config.KnockSecretAuth;
+            serviceInfo.KnockSecretAuthType     ??= configHost.KnockSecretAuthType  ?? config.KnockSecretAuthType;
+            serviceInfo.KnockSecretEncoding     ??= configHost.KnockSecretEncoding  ?? config.KnockSecretEncoding;
         }
     }
 }

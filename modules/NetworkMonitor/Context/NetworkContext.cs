@@ -115,11 +115,11 @@ namespace MadWizard.Desomnia.Network.Context
                 // Child Contexts
                 builder.RegisterType<NetworkHostContext>()
                     .WithParameter(TypedParameter.From(config))
-                    .ConfigurePipeline(p => p.Use(new DefaultNetworkServiceOptions(config)))
                     .InstancePerDependency()
                     .ExternallyOwned()
                     .AsSelf();
                 builder.RegisterType<NetworkServiceContext>()
+                    .ConfigurePipeline(p => p.Use(new DefaultNetworkServiceOptions(config)))
                     .InstancePerDependency()
                     .ExternallyOwned()
                     .AsSelf();
