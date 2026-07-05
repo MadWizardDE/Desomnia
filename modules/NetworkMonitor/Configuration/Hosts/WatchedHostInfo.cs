@@ -28,7 +28,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
 
         #region                     AdvertiseOptions
         internal AdvertiseType?     Advertise               { get; set; }
-        internal bool?              AdvertiseHostname       { get; set; }
+        internal bool?              AdvertiseHost           { get; set; }
         internal bool?              AdvertiseServices       { get; set; }
 
         internal TimeSpan?          AdvertiseTimeout        { get; set; }
@@ -39,8 +39,8 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         public virtual AdvertiseOptions MakeAdvertiseOptions(NetworkMonitorConfig network) => new()
         {
             Type        = (Advertise            ?? network.Advertise)
-                        | (AdvertiseHostname    ?? network.AdvertiseHosts       ? AdvertiseType.Host    : 0)
-                        | (AdvertiseServices    ?? network.AdvertiseServices    ? AdvertiseType.Service : 0),
+                        | (AdvertiseHost        ?? network.AdvertiseHosts       ?? false    ? AdvertiseType.Host    : 0)
+                        | (AdvertiseServices    ?? network.AdvertiseServices    ?? false    ? AdvertiseType.Service : 0),
 
             Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
 

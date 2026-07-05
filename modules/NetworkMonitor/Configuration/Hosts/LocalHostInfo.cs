@@ -36,7 +36,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         {
             Type        = AdvertiseType.Never
 
-                        | (AdvertiseServices    ?? network.AdvertiseServices ? AdvertiseType.Service : 0),
+                        | (AdvertiseServices    ?? network.AdvertiseServices ?? false ? AdvertiseType.Service : 0),
 
             Timeout     = AdvertiseTimeout      ?? network.AdvertiseTimeout,
 

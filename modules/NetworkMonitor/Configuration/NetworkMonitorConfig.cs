@@ -76,8 +76,8 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: AdvertiseOptions 
         internal AdvertiseType      Advertise               { get; set; } = AdvertiseType.Lazy;
-        internal bool               AdvertiseHosts          { get; set; } = false;
-        internal bool               AdvertiseServices       { get; set; } = false;
+        internal bool?              AdvertiseHosts          { get; set; }
+        internal bool?              AdvertiseServices       { get; set; }
         internal bool               AdvertiseIfStopped      { get; set; } = true;
         internal bool               AdvertiseUnicast        { get; set; } = false;
 
