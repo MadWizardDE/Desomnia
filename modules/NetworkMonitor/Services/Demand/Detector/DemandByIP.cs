@@ -11,15 +11,15 @@ namespace MadWizard.Desomnia.Network.Demand.Detector
         {
             if ((packet.Type == EthernetType.IPv4 || packet.Type == EthernetType.IPv6) && packet.PayloadPacket is IPPacket ip)
                 if (false
-                    || ip.Protocol == ProtocolType.Tcp && ip.PayloadPacket is TcpPacket tcp
-                        && !tcp.Reset
-                    || ip.Protocol == ProtocolType.Udp // all UDP packets
+                    || ip.Protocol == ProtocolType.Tcp && ip.PayloadPacket is TcpPacket tcp && !tcp.Reset
+                    || ip.Protocol == ProtocolType.Udp && ip.PayloadPacket is UdpPacket // all UDP packets
+
                     // PINGv4
                     || ip.Protocol == ProtocolType.Icmp && ip.PayloadPacket is IcmpV4Packet icmpv4
-                        && icmpv4.TypeCode == IcmpV4TypeCode.EchoRequest
+                        && icmpv4.TypeCode  == IcmpV4TypeCode.EchoRequest
                     // PINGv6
                     || ip.Protocol == ProtocolType.IcmpV6 && ip.PayloadPacket is IcmpV6Packet icmpv6
-                        && icmpv6.Type == IcmpV6Type.EchoRequest) 
+                        && icmpv6.Type      == IcmpV6Type.EchoRequest) 
                 {
                     if (Network[ip.DestinationAddress] is NetworkHost host)
                     {
