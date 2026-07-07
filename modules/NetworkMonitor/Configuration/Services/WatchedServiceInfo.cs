@@ -95,7 +95,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
 
         public static implicit operator ServiceFilterRuleInfo(WatchedServiceInfo info) => info.ToFilterRule();
 
-        protected virtual ServiceFilterRuleInfo ToFilterRule()
+        public virtual ServiceFilterRuleInfo ToFilterRule()
         {
             return new ServiceFilterRuleInfo
             {

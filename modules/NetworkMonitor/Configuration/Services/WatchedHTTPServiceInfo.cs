@@ -15,7 +15,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
 
         public IList<HTTPRequestFilterRuleInfo>? RequestFilterRule { get; set; }
 
-        protected override ServiceFilterRuleInfo ToFilterRule()
+        public override ServiceFilterRuleInfo ToFilterRule()
         {
             return new HTTPFilterRuleInfo
             {
