@@ -139,6 +139,8 @@ namespace MadWizard.Desomnia.Network.Context
 
                 RegisterFilters(builder, config);
 
+                RegisterTrafficFilter(builder, new ICMPEchoTrafficType()); // ping-based aliveness checks need the echo replies
+
                 builder.RegisterType<RemoteHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
@@ -146,7 +148,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeHandoffOptions(configNetwork)))
-                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = Auto.HasFlag(AutoDiscoveryType.Service) }))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions(Auto)))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();
@@ -173,6 +175,8 @@ namespace MadWizard.Desomnia.Network.Context
 
                 RegisterFilters(builder, config);
 
+                RegisterTrafficFilter(builder, new ICMPEchoTrafficType()); // ping-based aliveness checks need the echo replies
+
                 builder.RegisterType<RemoteVirtualHostWatch>().As<NetworkHostWatch>()
                     .WithParameter(NetworkHostWatchParameter<RemoteHostWatch>.FindByHostName(configPhysical.Name))
                     .WithParameter(TypedParameter.From(config.MakeAdvertiseOptions(configNetwork)))
@@ -180,7 +184,7 @@ namespace MadWizard.Desomnia.Network.Context
                     .WithParameter(TypedParameter.From(config.MakeDemandOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakePingOptions(configNetwork)))
                     .WithParameter(TypedParameter.From(config.MakeWakeOptions(configNetwork)))
-                    .WithParameter(TypedParameter.From(new PacketFilterOptions { BlockByDefault = Auto.HasFlag(AutoDiscoveryType.Service) }))
+                    .WithParameter(TypedParameter.From(new PacketFilterOptions(Auto)))
                     .OnActivated(args => ConfigureWatch(args, config))
                     .SingleInstance()
                     .AsSelf();

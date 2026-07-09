@@ -89,7 +89,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Registration of '{Name}' failed.", reg?.Name);
+                Logger.LogError(ex, "Registration of '{Name}' failed.", reg?.Name ?? "?");
 
                 update.AnswerWithError(ex);
 

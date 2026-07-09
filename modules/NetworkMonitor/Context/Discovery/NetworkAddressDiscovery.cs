@@ -13,7 +13,7 @@ namespace MadWizard.Desomnia.Network.Context
 {
     public partial class NetworkContext
     {
-        private static void RegisterAddressDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
+        private void RegisterAddressDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
         {
             // MAC-Discovery
             builder.RegisterType<ARPPhysicalAddressDetector>()
@@ -39,11 +39,15 @@ namespace MadWizard.Desomnia.Network.Context
                 .SingleInstance()
                 .AsSelf();
 
+            // The detector passively confirms wakes from DHCP BootRequests (client port 68 -> server port 67),
+            // so this traffic has to be captured.
             builder.RegisterType<DHCPRequestDetector>()
                 .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
                 .AsImplementedInterfaces()
                 .SingleInstance()
                 .AsSelf();
+
+            RegisterTrafficFilter(builder, new UDPTrafficType(67));
         }
 
         internal async Task DiscoverAddresses()

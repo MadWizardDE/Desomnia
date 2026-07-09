@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Network.Filter
                         return true;
                     }
 
-                    if (rule.Type == FilterRuleType.Must || rule.Type == FilterRuleType.May)
+                    if (rule.Type == FilterRuleType.Must)
                     {
                         options.BlockByDefault = false; // no need to find a match anymore
                     }

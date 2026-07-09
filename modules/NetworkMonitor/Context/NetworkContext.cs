@@ -137,6 +137,7 @@ namespace MadWizard.Desomnia.Network.Context
                 if (config.UseBPF)
                 {
                     builder.RegisterType<BerkeleyPacketFilter>()
+                        .WithMetadata<INetworkService.Metadata>(meta => meta.For(m => m.Order, 1))
                         .AsImplementedInterfaces()
                         .InstancePerNetwork()
                         .AsSelf();

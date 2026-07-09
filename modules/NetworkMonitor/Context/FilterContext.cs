@@ -22,8 +22,6 @@ namespace MadWizard.Desomnia.Network.Context
 
         private readonly ConcurrentBag<HostFilterRuleInfo> _dynamicHostFilters = [];
 
-        private readonly ConcurrentDictionary<NetworkService, TrafficFilterRequest> _dynamicTrafficFilters = [];
-
         //public required Lazy<IEnumerable<PacketFilterRule>> Rules { internal get; init; }
 
         protected FilterContext(ILifetimeScope parent, string? tagName = null)
@@ -139,6 +137,12 @@ namespace MadWizard.Desomnia.Network.Context
 
         protected void RegisterServiceFilter(ContainerBuilder builder, ServiceFilterRuleInfo filter)
         {
+            /*
+             * A rule's traffic shape is only a capture requirement if the rule can actually wake the host:
+             * Must-rules can; MustNot-rules never define needed traffic (their veto is applied in user space).
+             */
+            bool needsTraffic = filter.Type == FilterRuleType.Must;
+
             if (filter.Protocol.HasFlag(IPProtocol.TCP))
             {
                 var register = filter switch
@@ -156,10 +160,12 @@ namespace MadWizard.Desomnia.Network.Context
                     .SingleInstance()
                     .AsSelf();
 
-                RegisterTrafficFilter(builder, new TCPTrafficType(filter.Port, _needsTCPData));
+                if (needsTraffic)
+                    RegisterTrafficFilter(builder, new TCPTrafficType(filter.Port, _needsTCPData));
 
                 RememberDynamicHostFilters(filter);
             }
+
             if (filter.Protocol.HasFlag(IPProtocol.UDP))
             {
                 var register = builder.RegisterType<UDPServiceFilterRule>().As<PacketFilterRule>()
@@ -169,7 +175,8 @@ namespace MadWizard.Desomnia.Network.Context
                     .SingleInstance()
                     .AsSelf();
 
-                RegisterTrafficFilter(builder, new UDPTrafficType(filter.Port));
+                if (needsTraffic)
+                    RegisterTrafficFilter(builder, new UDPTrafficType(filter.Port));
 
                 RememberDynamicHostFilters(filter);
             }
@@ -188,7 +195,7 @@ namespace MadWizard.Desomnia.Network.Context
                             .SingleInstance()
                             .AsSelf();
 
-                        RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
+                        RegisterTrafficFilter(builder, new TCPTrafficType(port, _needsTCPData));
 
                         break;
 
@@ -199,7 +206,7 @@ namespace MadWizard.Desomnia.Network.Context
                             .SingleInstance()
                             .AsSelf();
 
-                        RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
+                        RegisterTrafficFilter(builder, new UDPTrafficType(port));
 
                         break;
 
@@ -213,7 +220,8 @@ namespace MadWizard.Desomnia.Network.Context
         {
             if (filter is not null)
             {
-                RegisterTrafficFilter(builder, new ICMPEchoTrafficType());
+                if (filter.Type == FilterRuleType.Must)
+                    RegisterTrafficFilter(builder, new ICMPEchoTrafficType());
 
                 var register = builder.RegisterType<PingFilterRule>().As<PacketFilterRule>()
                     .WithParameter(TypedParameter.From(filter.Type))
@@ -244,44 +252,6 @@ namespace MadWizard.Desomnia.Network.Context
                 {
                     yield return filter.Name;
                 }
-            }
-        }
-
-        protected void AddDynamicTrafficFilters(NetworkHost host, NetworkService service)
-        {
-            switch (service)
-            {
-                case TransportNetworkService transport:
-                    HashSet<ITrafficType> types = [];
-
-                    if (host.IPv4Addresses.Any())
-                        types.Add(new IPv4TrafficType());
-                    if (host.IPv6Addresses.Any())
-                        types.Add(new IPv6TrafficType());
-
-                    foreach (var srv in transport.Ports)
-                    {
-                        ITrafficType type = srv.Protocol switch
-                        {
-                            IPProtocol.TCP => new TCPTrafficType(srv.Port, _needsTCPData),
-                            IPProtocol.UDP => new UDPTrafficType(srv.Port),
-                            _ => throw new NotImplementedException(),
-                        };
-
-                        types.Add(type);
-                    }
-
-                    _dynamicTrafficFilters[service] = Scope.UseTrafficType([.. types]);
-
-                    break;
-            }
-        }
-
-        protected void RemoveDynamicTrafficFilters(NetworkHost host, NetworkService service)
-        {
-            if (_dynamicTrafficFilters.TryRemove(service, out var request))
-            {
-                request.Dispose();
             }
         }
     }

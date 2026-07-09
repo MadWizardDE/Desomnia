@@ -21,7 +21,7 @@ namespace MadWizard.Desomnia.Network.Traefik.Filter
                         return true;
                     }
 
-                    if (rule.Type == FilterRuleType.Must || rule.Type == FilterRuleType.May)
+                    if (rule.Type == FilterRuleType.Must)
                     {
                         needMatch = false; // no need to find a match anymore
                     }

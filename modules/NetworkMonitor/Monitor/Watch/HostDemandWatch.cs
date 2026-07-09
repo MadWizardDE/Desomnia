@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Filter;
+using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -32,7 +33,30 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public required Lazy<IPacketFilter>     Filter              { internal get; init; }
 
-        public required PacketFilterOptions     FilterOptions       { internal get; init; }
+        /// <summary>The configured baseline, as decided when the watch was constructed.</summary>
+        public required PacketFilterOptions     DefaultFilterOptions { internal get; init; }
+
+        /// <summary>
+        /// The effective filter options, determined dynamically: filter rules and service watches
+        /// can appear and disappear at runtime, so they cannot be decided statically.
+        /// Queried by the BPF engine to detect placeholder hosts still awaiting their services.
+        /// </summary>
+        public PacketFilterOptions FilterOptions
+        {
+            get
+            {
+                var options = DefaultFilterOptions;
+
+                bool services = this.OfType<ServiceFilterWatch>().Any();
+
+                options.BlockByDefault |= services || Filter.Value.Rules.Any(rule => rule.Type == FilterRuleType.Must);
+                options.NeedsIPTraffic |= services || Filter.Value.Rules.Any(rule => rule is IPFilterRule);
+
+                options.AwaitServices &= !services; // no longer a placeholder once services registered
+
+                return options;
+            }
+        }
 
         readonly ConcurrentDictionary<object, DemandRequest> _ongoingRequests = [];
 
@@ -159,19 +183,17 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public bool Verify(EthernetPacket packet)
         {
-            var options = this.FilterOptions;
-
-            if (this.OfType<ServiceFilterWatch>() is var serviceFilter && serviceFilter.Any())
+            /*
+             * Packets accepted by a service watch are judged by that service's own filter, starting
+             * from the configured baseline. Everything else runs against the effective options,
+             * which already account for present service watches and Must-rules (see FilterOptions).
+             */
+            foreach (var serviceWatch in this.OfType<ServiceFilterWatch>().Where(w => w.Service.Accepts(packet)))
             {
-                foreach (var serviceWatch in serviceFilter.Where(w => w.Service.Accepts(packet)))
-                {
-                    return !serviceWatch.Filter.Value.ShouldFilter(packet, options);
-                }
-
-                options.BlockByDefault = options.NeedsIPTraffic = true;
+                return !serviceWatch.Filter.Value.ShouldFilter(packet, DefaultFilterOptions);
             }
 
-            return !Filter.Value.ShouldFilter(packet, options);
+            return !Filter.Value.ShouldFilter(packet, FilterOptions);
         }
 
         internal protected virtual async Task<PhysicalAddress?> RequestIPUnicastTrafficTo(IPAddress ip)

@@ -17,7 +17,7 @@ namespace MadWizard.Desomnia.Network.Monitor.Filter.Rules
                 {
                     if (rule.Type == FilterRuleType.MustNot)
                         return false;
-                    if (rule.Type == FilterRuleType.Must || rule.Type == FilterRuleType.May)
+                    if (rule.Type == FilterRuleType.Must)
                         needMatch = false; // no need to find a match anymore
                 }
             }

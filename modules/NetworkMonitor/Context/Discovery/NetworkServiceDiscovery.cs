@@ -5,6 +5,7 @@ using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Discovery;
 using MadWizard.Desomnia.Network.Discovery.BuiltIn;
+using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
 using Microsoft.Extensions.Logging;
 
@@ -98,6 +99,13 @@ namespace MadWizard.Desomnia.Network.Context
             }
 
             Watch?.StartTracking(ctx.Watch);
+
+            /*
+             * The service's traffic shapes were already registered while its scope was built,
+             * i.e. before the watch was tracked. Now that the service can influence the host's
+             * block-by-default state, the capture filter has to be re-evaluated.
+             */
+            Scope.ResolveOptional<BerkeleyPacketFilter>()?.Refresh();
 
             ctx.Scope.CurrentScopeEnding += (sender, args) =>
             {

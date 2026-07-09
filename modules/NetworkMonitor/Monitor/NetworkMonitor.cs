@@ -97,7 +97,7 @@ namespace MadWizard.Desomnia.Network
 
         internal void SuspendMonitoring()
         {
-            foreach (var service in OrderedServices)
+            foreach (var service in OrderedServices.Reverse())
                 service.Suspend();
 
             Device.StopCapture();
@@ -112,7 +112,7 @@ namespace MadWizard.Desomnia.Network
             foreach (var watch in this)
                 await watch.StopWatch(reason == NetworkShutdownReason.ApplicationShutdown);
 
-            foreach (var service in OrderedServices)
+            foreach (var service in OrderedServices.Reverse())
                 await service.Shutdown(reason);
 
             Device.EthernetCaptured -= HandlePacket;

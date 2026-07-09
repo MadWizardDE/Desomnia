@@ -28,30 +28,9 @@ namespace MadWizard.Desomnia.Network
         {
             get => Device.Filter;
 
-            set
-            {
-                if (Device.Filter != value)
-                {
-                    var runtime = Device.Started;
-
-                    if (runtime)
-                    {
-                        Logger.LogDebug("BPF rule = '{expr}'", value);
-
-                        //Device.OnCaptureStopped -= Device_OnCaptureStopped;
-                        //Device.StopCapture();
-                    }
-
-                    Device.Filter = value;
-
-                    if (runtime)
-                    {
-                        //Device.StartCapture();
-                        //Device.OnCaptureStopped += Device_OnCaptureStopped;
-                    }
-                }
-            }
+            set => Device.Filter = value;
         }
+
         public IEnumerable<IDevicePacketFilter> Filters { private get; init; } = [];
 
         public PhysicalAddress PhysicalAddress => Interface.GetPhysicalAddress() ?? PhysicalAddress.None;
