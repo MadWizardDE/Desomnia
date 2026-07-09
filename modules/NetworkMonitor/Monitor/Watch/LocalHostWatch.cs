@@ -1,5 +1,6 @@
 ﻿using MadWizard.Desomnia.Network.Address;
 using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Naming;
 using MadWizard.Desomnia.Network.Naming.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.SleepProxy;
@@ -7,7 +8,6 @@ using MadWizard.Desomnia.Network.SleepProxy.Registration;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -24,7 +24,8 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public override bool IsOnline => true; // the local proxy is always available
 
-        public required AddressMappingService AddressMapping { protected get; init; }
+        public required AddressMappingService   AddressMapping  { protected get; init; }
+        public required MulticastDNSService     MulticastDNS    { private get; init; }
 
         public required Func<LocalHostWatch, SleepProxyRegistration> CreateSleepProxyRegistration { private get; init; }
 
@@ -47,32 +48,14 @@ namespace MadWizard.Desomnia.Network.Watch
 
             if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
             {
-                if (SelectSleepProxy(out var proxy, out var service))
-                {
-                    var reg = CreateSleepProxyRegistration(this);
+                var reg = CreateSleepProxyRegistration(this);
 
-                    if (reg.IPAddresses.Count  == 0)
-                        throw new Exception($"Sleep proxy registration has no IP address.");
+                if (reg.IPAddresses.Count  == 0)
+                    throw new Exception($"Sleep proxy registration has no IP address.");
 
-                    var tries = 0;
-                    while (true) try
-                    {
-                        await RegisterWithSleepProxy(proxy, service, reg); break;
-                    }
-                    catch
-                    {
-                        if (tries++ < HandoffOptions.Retry)
-                            continue;
+                await RegisterWithBestSleepProxy(reg);
 
-                        throw;
-                    }
-
-                    SleepProxyRegistrationCycle++;
-                }
-                else
-                {
-                    throw new Exception("No sleep proxy available.");
-                }
+                SleepProxyRegistrationCycle++;
             }
 
             _handoffDone = true;
@@ -84,34 +67,54 @@ namespace MadWizard.Desomnia.Network.Watch
             {
                 _handoffDone = false;
 
+                if (HandoffOptions.Type.HasFlag(HandoffType.SleepProxy))
+                {
+                    // The proxy advertises our records until it sees our Owner option on the wire;
+                    // the already-incremented registration cycle marks a new sleep/wake epoch,
+                    // so the lease is released immediately.
+                    await MulticastDNS.AnnounceOwner(Host, SleepProxyRegistrationCycle);
+                }
+
                 Logger.LogDebug("Reclaimed watch for '{Host}'", Host.Name);
             }
         }
 
         #region SleepProxy
-        private bool SelectSleepProxy([NotNullWhen(true)] out NetworkHost? proxy, [NotNullWhen(true)] out SleepProxyService? service)
+        /// <summary>All sleep proxies currently known on the network, best metrics first.</summary>
+        private IEnumerable<NetworkHostService> SelectSleepProxies() =>
+            from host in Network
+            from service in host.Services.OfType<SleepProxyService>()
+            orderby service.Metrics
+            select new NetworkHostService(host, service);
+
+        private async Task RegisterWithBestSleepProxy(SleepProxyRegistration reg)
         {
-            proxy = null; service = null;
-            List<(NetworkHost, SleepProxyService)> availableProxies = [];
-            foreach (var host in Network) foreach (var sleep in host.Services.OfType<SleepProxyService>())
-                availableProxies.Add((host, sleep));
-
-            if (availableProxies.Count > 0)
+            for (var tries = 0; ; tries++) // one retry spans a whole sweep over the available proxies
             {
-                availableProxies.Sort((a, b) =>
+                Exception? failure = null;
+
+                foreach (var (proxy, service) in SelectSleepProxies())
                 {
-                    var ma = a.Item2.Metrics;
-                    var mb = b.Item2.Metrics;
+                    try
+                    {
+                        await RegisterWithSleepProxy(proxy, (SleepProxyService)service, reg);
 
-                    return ma.CompareTo(mb);
-                });
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogWarning(ex, "Could not register '{Host}' with sleep proxy '{Proxy}'.", Host.Name, proxy.Name);
 
-                (proxy, service) = availableProxies[0];
+                        failure = ex;
+                    }
+                }
 
-                return true;
+                if (failure is null)
+                    throw new Exception("No sleep proxy available.");
+
+                if (tries >= HandoffOptions.Retry)
+                    throw failure;
             }
-
-            return false;
         }
 
         private async Task RegisterWithSleepProxy(NetworkHost proxy, SleepProxyService service, SleepProxyRegistration reg)

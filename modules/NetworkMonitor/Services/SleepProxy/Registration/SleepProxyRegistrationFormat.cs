@@ -16,18 +16,32 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         #region Read from DNS update
         internal static SleepProxyRegistration ParseUpdateMessage(Message message)
         {
-            // Zone section (RFC 2136): a Sleep Proxy registration is always for the ".local" zone.
-            if (message.Questions.FirstOrDefault(question => question.Type == DnsType.SOA) is not Question zone)
-                throw new FormatException("DNS UPDATE without a zone (SOA) question");
-
-            if (zone.Name != LocalZone)
+            // Zone section (RFC 2136): when present, it must name the ".local" zone. Apple's client
+            // sends its registrations without any zone section, so a missing one is accepted.
+            if (message.Questions.FirstOrDefault(question => question.Type == DnsType.SOA) is Question zone && zone.Name != LocalZone)
                 throw new FormatException($"DNS UPDATE for unsupported zone '{zone.Name}'; only '{LocalZone}' is served");
 
-            var lease = message.Options.OfType<EdnsLeaseOption>().FirstOrDefault();
             if (message.Options.OfType<EdnsOwnerOption>().FirstOrDefault() is not EdnsOwnerOption owner)
                 throw new FormatException("DNS UPDATE without an EDNS0 Owner option");
+            if (message.Options.OfType<EdnsLeaseOption>().FirstOrDefault() is not EdnsLeaseOption lease)
+                throw new FormatException("DNS UPDATE without an EDNS0 Lease option");
 
-            ValidateNames(message.AuthorityRecords, out string name, out string hostname);
+            string hostname = DetermineHostname(message.AuthorityRecords);
+
+            var services = ReadServices(message.AuthorityRecords, message.Options).ToList();
+
+            // The instance labels may differ per service (DNS-SD allows it, and Apple devices use
+            // derived names for some services): the host is named after the most common label,
+            // falling back to its host name; only the deviating services keep their own instance name.
+            string name = services
+                .GroupBy(service => service.InstanceName!)
+                .OrderByDescending(group => group.Count())
+                .Select(group => group.Key)
+                .FirstOrDefault() ?? hostname;
+
+            foreach (var service in services)
+                if (service.InstanceName == name)
+                    service.InstanceName = null;
 
             var reg = new SleepProxyRegistration(name, hostname, owner, lease);
 
@@ -41,12 +55,16 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             if (reg.IPAddresses.Count == 0)
                 throw new FormatException("DNS UPDATE without any address record");
 
-            reg.Services.AddRange(ReadServices(message.AuthorityRecords, message.Options));
+            reg.Services.AddRange(services);
 
             return reg;
         }
 
-        static void ValidateNames(IEnumerable<ResourceRecord> records, out string name, out string hostname)
+        /// <summary>
+        /// The host name all address-bearing records (A/AAAA, SRV targets, reverse PTRs) must agree
+        /// on -- unlike the service instance labels, a registration has exactly one host name.
+        /// </summary>
+        static string DetermineHostname(IEnumerable<ResourceRecord> records)
         {
             static void Validate(ref string name, string str)
             {
@@ -59,8 +77,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 }
             }
 
-            name = string.Empty;
-            hostname = string.Empty;
+            var hostname = string.Empty;
             foreach (var record in records)
             {
                 switch (record)
@@ -69,12 +86,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         Validate(ref hostname, ptr.HostName);
                         break;
 
-                    case PTRRecord ptr:
-                        Validate(ref name, ptr.InstanceName);
-                        break;
-
                     case SRVRecord srv:
-                        Validate(ref name, srv.InstanceName);
                         Validate(ref hostname, srv.HostName);
                         break;
 
@@ -84,10 +96,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 }
             }
 
-            if (name == string.Empty)
-                throw new FormatException("Could not determine instance name");
             if (hostname == string.Empty)
                 throw new FormatException("Could not determine host name");
+
+            return hostname;
         }
 
         internal static ProxyServiceInfo ParsePTR(PTRRecord ptr)
@@ -98,6 +110,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 Name = serviceName, // TODO: Derive better service name?
                 ServiceName = serviceName,
+                InstanceName = ptr.InstanceName,
 
                 Protocol = ptr.Protocol,
 
@@ -107,45 +120,47 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records, IEnumerable<EdnsOption> options)
         {
-            var services = records.OfType<PTRRecord>().Where(ptr => !ptr.IsReverseMapping).Select(ParsePTR).ToDictionary(info => info.Service.LocalDomainName);
+            // Keyed by the full instance name, so multiple instances of the same type stay apart.
+            Dictionary<DomainName, ProxyServiceInfo> services = [];
 
-            try
+            foreach (var ptr in records.OfType<PTRRecord>().Where(ptr => ptr.IsServicePointer))
+                services[ptr.DomainName] = ParsePTR(ptr);
+
+            // SRV/TXT records without a matching service PTR are skipped rather than rejected:
+            // Apple's client registers e.g. a "<name>._device-info._tcp.local" TXT with no PTR.
+            foreach (var record in records)
             {
-                foreach (var record in records)
+                switch (record)
                 {
-                    switch (record)
-                    {
-                        case SRVRecord srv when services[srv.ServiceDomainName] is var service:
-                            if (service.Protocol != srv.Protocol)
-                                throw new FormatException($"Protocol mismatch @ '{srv.ServiceName}': {service.Protocol} != {srv.Protocol}");
-                            service.Port = srv.Port;
-                            service.Priority = srv.Priority;
-                            service.Weight = srv.Weight;
-                            service.AdvertiseHostTTL = srv.TTL;
-                            break;
+                    case SRVRecord srv when services.TryGetValue(srv.Name, out var service):
+                        if (service.Protocol != srv.Protocol)
+                            throw new FormatException($"Protocol mismatch @ '{srv.ServiceName}': {service.Protocol} != {srv.Protocol}");
+                        service.Port = srv.Port;
+                        service.Priority = srv.Priority;
+                        service.Weight = srv.Weight;
+                        service.AdvertiseHostTTL = srv.TTL;
+                        break;
 
-                        case TXTRecord txt when services[txt.ServiceDomainName] is var service:
-                            foreach (var pair in txt.KeyValuePairs)
+                    case TXTRecord txt when services.TryGetValue(txt.Name, out var service):
+                        foreach (var pair in txt.KeyValuePairs)
+                        {
+                            switch (pair.Key.ToLower())
                             {
-                                switch (pair.Key.ToLower())
-                                {
-                                    case "name":
-                                        service.Name = pair.Value;
-                                        break;
-                                }
+                                case "name":
+                                    service.Name = pair.Value;
+                                    break;
                             }
-                            break;
-                    }
-                }
-
-                foreach (var option in options.OfType<EdnsServiceOption>())
-                {
-                    ApplyServiceOption(services[option.ServiceDomainName], option);
+                        }
+                        break;
                 }
             }
-            catch (KeyNotFoundException ex)
+
+            foreach (var option in options.OfType<EdnsServiceOption>())
             {
-                throw new FormatException("Missing PTR record for service", ex);
+                var service = services.Values.FirstOrDefault(s => s.Service.LocalDomainName == option.ServiceDomainName)
+                    ?? throw new FormatException($"Missing PTR record for service '{option.ServiceDomainName}'");
+
+                ApplyServiceOption(service, option);
             }
 
             return services.Values;
@@ -196,25 +211,31 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             // Address records (A / AAAA), each with its reverse-mapping PTR. Apple's SPS only
             // proxies address resolution (ARP/NDP) for addresses it learned from a reverse PTR;
             // the A/AAAA record alone is advertised but never defended on the link.
+            // Unique records (everything but the shared service PTR) carry the unique-RRSet bit,
+            // like Apple's client sets it: the SPS registers them as unique -- conflict-checked
+            // (a hijacked name wakes us) and answered with cache-flush.
             foreach (var (ip, options) in reg.IPAddresses)
             {
                 var record = AddressRecord.Create(host, ip);
                 record.TTL = options.TTL ?? HostRecordTTL;
+                record.SetCacheFlush();
                 message.AuthorityRecords.Add(record);
 
-                message.AuthorityRecords.Add(new PTRRecord
+                var reverse = new PTRRecord
                 {
                     Name = ip.ArpaDomainName,
                     DomainName = host,
                     TTL = options.TTL ?? HostRecordTTL,
-                });
+                };
+                reverse.SetCacheFlush();
+                message.AuthorityRecords.Add(reverse);
             }
 
             // Service records: PTR (service type -> instance) + SRV (instance -> host:port) + TXT.
             foreach (var info in reg.Services)
             {
                 DomainName serviceType = info.Service.LocalDomainName;          // _svc._proto.local
-                DomainName instance = new([reg.Name, .. serviceType.Labels]);   // <name>._svc._proto.local
+                DomainName instance = new([info.InstanceName ?? reg.Name, .. serviceType.Labels]);   // <name>._svc._proto.local
 
                 message.AuthorityRecords.Add(new PTRRecord
                 {
@@ -223,7 +244,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     TTL = info.AdvertiseServiceTTL ?? ServiceRecordTTL,
                 });
 
-                message.AuthorityRecords.Add(new SRVRecord
+                var srv = new SRVRecord
                 {
                     Name = instance,
                     Target = host,
@@ -231,13 +252,29 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     Priority = info.Priority,
                     Weight = info.Weight,
                     TTL = info.AdvertiseHostTTL ?? HostRecordTTL,
-                });
+                };
+                srv.SetCacheFlush();
+                message.AuthorityRecords.Add(srv);
 
-                message.AuthorityRecords.Add(new TXTRecord
+                var txt = new TXTRecord
                 {
                     Name = instance,
                     Strings = [.. ExtractServiceProperties(info).Select(entry => $"{entry.Key}={entry.Value}")],
                     TTL = info.AdvertiseHostTTL ?? HostRecordTTL,
+                };
+                txt.SetCacheFlush();
+                message.AuthorityRecords.Add(txt);
+            }
+
+            // DNS-SD service-type enumeration (RFC 6763 §9): one shared PTR per advertised type,
+            // so the proxy can also answer "which service types exist" browses on our behalf.
+            foreach (var serviceType in reg.Services.Select(info => info.Service.LocalDomainName).Distinct())
+            {
+                message.AuthorityRecords.Add(new PTRRecord
+                {
+                    Name = MakaretuDnsExt.ServiceEnumeration,
+                    DomainName = serviceType,
+                    TTL = ServiceRecordTTL,
                 });
             }
 

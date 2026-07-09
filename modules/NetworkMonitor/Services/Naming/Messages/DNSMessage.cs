@@ -46,7 +46,7 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
 
         public void AnswerWith(NetworkHost host, TransportNetworkService service, DomainName? instance = default, AnswerOptions options = default)
         {
-            instance ??= new([host.Name, .. service.LocalDomainName.Labels]);
+            instance ??= new([service.InstanceName ?? host.Name, .. service.LocalDomainName.Labels]);
 
             Response.Answers.Add(new PTRRecord
             {
@@ -75,7 +75,7 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
         /// </summary>
         public void AnswerWith(Question question, NetworkHost host, TransportNetworkService service, DomainName? instance = default, AnswerOptions options = default)
         {
-            instance ??= new([host.Name, .. service.LocalDomainName.Labels]);
+            instance ??= new([service.InstanceName ?? host.Name, .. service.LocalDomainName.Labels]);
 
             bool any = question.Type is DnsType.ANY;
 

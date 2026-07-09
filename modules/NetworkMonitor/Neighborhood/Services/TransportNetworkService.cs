@@ -21,6 +21,13 @@ namespace MadWizard.Desomnia.Network.Neighborhood.Services
         /// <summary>The DNS-SD service type of a service, e.g. "_ssh._tcp.local"; <c>null</c> if it has no service name set.</summary>
         public DomainName LocalDomainName => field ??= new DomainName($"_{ServiceName}", $"_{port.Protocol.ToString().ToLower()}", "local");
 
+        /// <summary>
+        /// Optional DNS-SD instance label this service is advertised under when it differs from the
+        /// host's name -- e.g. taken over from a Sleep Proxy registration whose services carried
+        /// their own instance names. <c>null</c> means the host's name is used.
+        /// </summary>
+        public string? InstanceName { get; set; }
+
         public IPPort Port => port;
 
         protected internal virtual IEnumerable<IPPort> Ports

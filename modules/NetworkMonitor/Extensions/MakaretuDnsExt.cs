@@ -36,7 +36,8 @@ namespace Makaretu.Dns
         {
             /// <summary>
             /// Sets the mDNS cache-flush bit on this record's CLASS (RFC 6762 §10.2). Only valid on
-            /// <em>unique</em> records (A/AAAA/SRV/TXT); shared records (PTR) must never carry it.
+            /// <em>unique</em> records (A/AAAA/SRV/TXT, reverse-mapping PTRs); shared records
+            /// (service PTRs) must never carry it.
             /// </summary>
             public void SetCacheFlush() => record.Class = (DnsClass)((ushort)record.Class | MulticastFlag);
 
@@ -100,6 +101,14 @@ namespace Makaretu.Dns
             /// <c>ip6.arpa</c>, RFC 1035 §3.5 / RFC 3596 §2.5) rather than a service type to an instance.
             /// </summary>
             public bool IsReverseMapping => ptr.Name.Labels is [.., "in-addr" or "ip6", "arpa"];
+
+            /// <summary>
+            /// Whether this PTR points a DNS-SD service type (<c>_svc._tcp|_udp.local</c>) to one of its
+            /// instances. Only these describe a proxied service: registrations may also carry reverse
+            /// mappings, the service-type enumeration (<c>_services._dns-sd._udp.local</c>) and subtype
+            /// pointers (<c>…._sub._svc._tcp.local</c>).
+            /// </summary>
+            public bool IsServicePointer => ptr.Name.Labels is [['_', ..], "_tcp" or "_udp", "local"];
 
             /// <summary>The host name label of a reverse-mapping PTR, whose RDATA is <c>host.local</c>.</summary>
             public string HostName => ptr.DomainName.Labels[0];

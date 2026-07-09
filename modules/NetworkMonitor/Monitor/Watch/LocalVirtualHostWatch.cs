@@ -73,9 +73,11 @@ namespace MadWizard.Desomnia.Network.Watch
             }
         }
 
-        protected internal override async Task ReclaimWatch()
+        protected internal override async Task ReclaimWatch() => await ReclaimWatch(false);
+
+        private async Task ReclaimWatch(bool force)
         {
-            if (AdvertiseOptions.Type == AdvertiseType.Never && !IsOnline)
+            if (!force && AdvertiseOptions.Type == AdvertiseType.Never && !IsOnline)
                 return;
 
             if (!IsOnline)
@@ -92,6 +94,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
             await base.ReclaimWatch();
         }
+
 
         protected override Task TriggerEventAsync(Event @event)
         {
@@ -152,10 +155,7 @@ namespace MadWizard.Desomnia.Network.Watch
         {
             if (gracefully)
             {
-                if (!IsOnline && AdvertiseOptions.Type == AdvertiseType.Never && _handoffDone)
-                {
-                    await ReclaimAddresses(Host.SelectIPAddressesBy(HandoffOptions));
-                }
+                await ReclaimWatch(true);
             }
         }
 

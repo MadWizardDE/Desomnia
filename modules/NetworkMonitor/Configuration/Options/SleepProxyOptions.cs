@@ -5,21 +5,18 @@
         public int          Limit                   { get; init; }
 
         public TimeSpan     MinLeaseDuration        { get; init; }
-        public TimeSpan?    DefaultLeaseDuration    { get; init; }
         public TimeSpan     MaxLeaseDuration        { get; init; }
 
         public LeaseExpireAction ExpireLease        { get; init; }
 
-        public TimeSpan DetermineLeaseDuration(TimeSpan? requestedDuration, TimeSpan? defaultDuration = null)
+        public TimeSpan DetermineLeaseDuration(TimeSpan requestedDuration)
         {
             if (requestedDuration < MinLeaseDuration)
                 return MinLeaseDuration;
             else if (requestedDuration > MaxLeaseDuration)
                 return MaxLeaseDuration;
-            else if (requestedDuration is TimeSpan duration)
-                return duration;
-
-            return defaultDuration ?? DefaultLeaseDuration ?? MaxLeaseDuration;
+            else
+                return requestedDuration;
         }
     }
 

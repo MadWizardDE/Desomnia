@@ -26,9 +26,16 @@ namespace MadWizard.Desomnia.Network.Context
                     .SingleInstance()
                     .AsSelf();
 
+                // Named property injection: the service now has two settable string properties,
+                // and a TypedParameter would indiscriminately fill both.
                 if (info.ServiceName is string name)
                 {
-                    service.WithProperty(TypedParameter.From(info.ServiceName));
+                    service.WithProperty(nameof(TransportNetworkService.ServiceName), name);
+                }
+
+                if (info.InstanceName is string instance)
+                {
+                    service.WithProperty(nameof(TransportNetworkService.InstanceName), instance);
                 }
 
                 var watch = builder.RegisterType<ServiceFilterWatch>().As<NetworkServiceWatch>()

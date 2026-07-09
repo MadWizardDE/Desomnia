@@ -1,5 +1,7 @@
 using ConcurrentCollections;
 using MadWizard.Desomnia.Network.Naming.Messages;
+using MadWizard.Desomnia.Network.Naming.Options;
+using MadWizard.Desomnia.Network.Neighborhood;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -28,7 +30,7 @@ namespace MadWizard.Desomnia.Network.Naming
         void ProcessResponse(Message message);
     }
 
-    internal class MulticastDNSService() : DNSService(MulticastPort, "mdns")
+    public class MulticastDNSService() : DNSService(MulticastPort, "mdns")
     {
         /// <summary>The well-known multicast DNS port (RFC 6762).</summary>
         internal static readonly ushort     MulticastPort           = 5353;
@@ -58,7 +60,16 @@ namespace MadWizard.Desomnia.Network.Naming
         /// Announce ourselves on start (RFC 6762 §8.3) so caches learn of the proxy without waiting for
         /// a browse. Decoupled from the startup sequence -- the proxy's presence must not delay it.
         /// </summary>
-        public override async Task Startup()
+        public override async Task Startup() => AnnounceServices();
+
+        /// <summary>
+        /// Re-announce after the local host resumes from suspend: a sleep proxy we handed off to
+        /// deregisters our records silently (no goodbyes), so caches keep whatever they hold until
+        /// TTL -- a fresh cache-flush announcement puts us back in charge of them.
+        /// </summary>
+        public override void Resume() => AnnounceServices();
+
+        private void AnnounceServices()
         {
             try
             {
@@ -73,7 +84,7 @@ namespace MadWizard.Desomnia.Network.Naming
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Failed to announce services on startup");
+                Logger.LogError(ex, "Failed to announce services");
             }
         }
 
@@ -220,6 +231,41 @@ namespace MadWizard.Desomnia.Network.Naming
             }
 
             SendMulticast(message);
+        }
+
+        /// <summary>
+        /// Multicasts a probe-shaped query for <paramref name="host"/>'s own name carrying the EDNS0
+        /// Owner option (draft-cheshire-edns0-owner-option): tells any sleep proxy still holding a
+        /// registration for this owner that it is awake again, so the proxy releases *all* its proxied
+        /// records at once -- the takedown keys on the option's MAC alone, so the query carries no records.
+        /// <paramref name="sequence"/> must differ from the registered epoch for an immediate release
+        /// (an equal one is honored only once the registration is a minute old).
+        /// </summary>
+        public async Task AnnounceOwner(NetworkHost host, byte sequence)
+        {
+            if (host.PhysicalAddress is not PhysicalAddress primary)
+                throw new NotSupportedException($"Host {host.Name} has no MAC address configured.");
+
+            var message = new Message { Id = 0 };
+
+            message.Questions.Add(new Question { Name = host.LocalDomainName, Type = DnsType.ANY, Class = DnsClass.IN });
+
+            message.AdditionalRecords.Add(new OPTRecord
+            {
+                Options = [new EdnsOwnerOption
+                {
+                    Sequence = sequence,
+                    PrimaryMac = primary,
+                    WakeupMac = (host as VirtualNetworkHost)?.PhysicalHost.PhysicalAddress,
+                }]
+            });
+
+            for (int i = 0; i < AnnouncementCount; i++)
+            {
+                SendMulticast(message);
+
+                await Task.Delay(AnnouncementInterval);
+            }
         }
 
         /// <summary>

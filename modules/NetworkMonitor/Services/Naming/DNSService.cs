@@ -7,13 +7,15 @@ using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
-    internal abstract class DNSService(ushort port, string? realm = null) : INetworkService
+    public abstract class DNSService(ushort port, string? realm = null) : INetworkService
     {
         public required ILogger<DNSService> WireLogger { private get; init; }
 
         public required NetworkDevice Device { protected get; init; }
 
         public virtual async Task Startup() { }
+
+        public virtual void Resume() { }
 
         void INetworkService.ProcessPacket(EthernetPacket packet)
         {

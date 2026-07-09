@@ -89,7 +89,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: HandoffOptions
         internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
-        internal TimeSpan?          HandoffDuration         { get; set; }
+        internal TimeSpan           HandoffDuration         { get; set; } = TimeSpan.FromDays(1);
         internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
         internal int                HandoffRetry            { get; set; } = 0;
 
@@ -99,10 +99,9 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: SleepProxyOptions
         internal int                SleepProxyLimit         { get; set; } = 100;
-        internal TimeSpan?          SleepProxyLease         { get; set; } = null; // default, if not specified by client
         internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
         internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
-        internal LeaseExpireAction  SleepProxyLeaseExpire   { get; set; } = LeaseExpireAction.None; // shall we wake host, when lease ends?
+        internal LeaseExpireAction  SleepProxyLeaseExpire   { get; set; } = LeaseExpireAction.Wake; // shall we wake host, when lease ends?
 
         internal SleepProxyDiscoveryType SleepProxyDiscovery { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
 
@@ -113,7 +112,6 @@ namespace MadWizard.Desomnia.Network.Configuration
         {
             Limit = SleepProxyLimit,
             MinLeaseDuration = SleepProxyLeaseMin,
-            DefaultLeaseDuration = SleepProxyLease,
             MaxLeaseDuration = SleepProxyLeaseMax,
             ExpireLease = SleepProxyLeaseExpire,
         };

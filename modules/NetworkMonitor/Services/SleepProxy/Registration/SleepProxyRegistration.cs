@@ -27,7 +27,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         public byte[]?          Password        { get; init; }
 
         /// <summary>Optional lease duration, from EDS0 Lease option </summary>
-        public TimeSpan?        RequestedLease  { get; init; }
+        public TimeSpan         RequestedLease  { get; init; }
 
         // extracted from records:
 
@@ -62,7 +62,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             Sequence = sequence;
         }
 
-        public SleepProxyRegistration(string name, string hostname, EdnsOwnerOption owner, EdnsLeaseOption? lease)
+        public SleepProxyRegistration(string name, string hostname, EdnsOwnerOption owner, EdnsLeaseOption lease)
         {
             Name = name;
             Hostname = hostname;
@@ -74,7 +74,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             TargetAddress = owner.WakeupMac;
             Password = owner.Password;
 
-            RequestedLease = lease?.Duration;
+            RequestedLease = lease.Duration;
         }
 
         internal IEnumerable<EdnsOption> Options
@@ -140,7 +140,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
         // The password is a fresh byte[] on every parse, so it must be compared by content, not reference.
         private static bool SamePassword(byte[]? a, byte[]? b) => a is null ? b is null : b is not null && a.AsSpan().SequenceEqual(b);
 
-        private HashSet<string> ServiceSignatures() => [.. Services.Select(s => $"{s.Service.LocalDomainName}|{s.Port}")];
+        private HashSet<string> ServiceSignatures() => [.. Services.Select(s => $"{s.InstanceName}|{s.Service.LocalDomainName}|{s.Port}")];
 
         public static explicit operator SleepProxyRegistration(Message message) => SleepProxyRegistrationFormat.ParseUpdateMessage(message);
         public static explicit operator Message(SleepProxyRegistration reg)     => SleepProxyRegistrationFormat.BuildUpdateMessage(reg);

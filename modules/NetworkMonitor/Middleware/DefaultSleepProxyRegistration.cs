@@ -35,6 +35,7 @@ namespace MadWizard.Desomnia.Network.Middleware
                         {
                             Name = service.Name,
                             ServiceName = service.ServiceName,
+                            InstanceName = service.InstanceName,
 
                             Protocol = service.Port.Protocol,
                             Port = service.Port,
