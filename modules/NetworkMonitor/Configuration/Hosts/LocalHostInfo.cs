@@ -47,6 +47,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
 
         #region             HandoffOptions
         HandoffType?        Handoff                 { get; set; }
+        TimeSpan?           HandoffDuration         { get; set; }
         TimeSpan?           HandoffTimeout          { get; set; }
         int?                HandoffRetry            { get; set; }
 
@@ -64,7 +65,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
             return new()
             {
                 Type = Handoff ?? network.Handoff,
-                Duration = network.SleepProxyLease,
+                Duration = HandoffDuration ?? network.HandoffDuration,
                 Timeout = HandoffTimeout ?? network.HandoffTimeout,
                 Retry = HandoffRetry ?? network.HandoffRetry,
 

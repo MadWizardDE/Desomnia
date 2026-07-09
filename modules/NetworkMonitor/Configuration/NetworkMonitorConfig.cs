@@ -89,6 +89,7 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         #region Network :: HandoffOptions
         internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
+        internal TimeSpan?          HandoffDuration         { get; set; }
         internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
         internal int                HandoffRetry            { get; set; } = 0;
 
