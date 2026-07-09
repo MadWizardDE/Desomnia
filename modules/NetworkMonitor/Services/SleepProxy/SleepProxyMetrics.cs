@@ -6,7 +6,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     /// <summary>
     /// The four-part ranking metric a Sleep Proxy advertises at the start of its DNS-SD instance label
     /// ("AA-BB-CC-DD", from Apple's mDNSResponder). Clients prefer the proxy with the <em>lowest</em>
-    /// metric, compared field by field.
+    /// metric, compared field by field. The label may carry an optional feature-flag suffix
+    /// ("AA-BB-CC-DD.F"), where bit 1 signals TCP Keepalive support.
     /// </summary>
     [TypeConverter(typeof(SleepProxyMetricsConverter))]
     internal readonly struct SleepProxyMetrics : IComparable<SleepProxyMetrics>
@@ -27,13 +28,40 @@ namespace MadWizard.Desomnia.Network.SleepProxy
                     && byte.TryParse(parts[0], out byte intent)
                     && byte.TryParse(parts[1], out byte portability)
                     && byte.TryParse(parts[2], out byte marginalPower)
-                    && byte.TryParse(parts[3], out byte totalPower))
+                    && TryParseTotalPower(parts[3], out byte totalPower, out bool tcpKeepAlive))
                 {
-                    return new SleepProxyMetrics(intent, portability, marginalPower, totalPower);
+                    return new SleepProxyMetrics(intent, portability, marginalPower, totalPower)
+                    {
+                        TCPKeepAlive = tcpKeepAlive
+                    };
                 }
             }
 
             throw new FormatException($"Invalid sleep proxy instance name: '{instanceName}'");
+        }
+
+        /// <summary>Splits an optional feature-flag suffix off the last metric field, e.g. "63.1".</summary>
+        private static bool TryParseTotalPower(string part, out byte totalPower, out bool tcpKeepAlive)
+        {
+            tcpKeepAlive = false;
+
+            string[] parts = part.Split('.');
+
+            if (parts.Length == 2)
+            {
+                if (!byte.TryParse(parts[1], out byte features))
+                {
+                    totalPower = 0; return false;
+                }
+
+                tcpKeepAlive = (features & 1) != 0;
+            }
+            else if (parts.Length != 1)
+            {
+                totalPower = 0; return false;
+            }
+
+            return byte.TryParse(parts[0], out totalPower);
         }
 
         public SleepProxyMetrics(byte intent, byte portability, byte marginalPower, byte totalPower)
@@ -53,6 +81,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         /// <summary>Overall power draw of the host.</summary>
         public byte TotalPower      { get; init; }
 
+        /// <summary>Whether the proxy supports maintaining TCP connections for its clients
+        /// (feature flag ".1"). Not part of the ranking metric.</summary>
+        public bool TCPKeepAlive    { get; init; }
+
         public int CompareTo(SleepProxyMetrics other)
         {
             int result = Intent.CompareTo(other.Intent);
@@ -67,8 +99,8 @@ namespace MadWizard.Desomnia.Network.SleepProxy
             return TotalPower.CompareTo(other.TotalPower);
         }
 
-        /// <summary>Builds the metric label, e.g. "90-40-70-70".</summary>
-        public override string ToString() => $"{Intent}-{Portability}-{MarginalPower}-{TotalPower}";
+        /// <summary>Builds the metric label, e.g. "90-40-70-70" — or "90-40-70-70.1" with TCP Keepalive.</summary>
+        public override string ToString() => $"{Intent}-{Portability}-{MarginalPower}-{TotalPower}{(TCPKeepAlive ? ".1" : "")}";
     }
 
     // Sleep Proxy Server Property Encoding
@@ -86,6 +118,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     // BB = Portability
     // CC = Marginal Power
     // DD = Total Power
+    //
+    // Apple's mDNSResponder may append a feature-flag field to the last metric, separated
+    // by a dot ("AA-BB-CC-DD.F Name"). Currently the only defined flag is bit 1
+    // (kSPSFeatureTCPKeepAlive), indicating the proxy can maintain TCP connections
+    // on behalf of its sleeping clients.
     //
     //
     // ** Intent Metric **
