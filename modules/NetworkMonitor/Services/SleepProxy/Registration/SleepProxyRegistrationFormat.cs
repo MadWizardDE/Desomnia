@@ -65,6 +65,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             {
                 switch (record)
                 {
+                    case PTRRecord ptr when ptr.IsReverseMapping:
+                        Validate(ref hostname, ptr.HostName);
+                        break;
+
                     case PTRRecord ptr:
                         Validate(ref name, ptr.InstanceName);
                         break;
@@ -103,7 +107,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         static IEnumerable<ProxyServiceInfo> ReadServices(IEnumerable<ResourceRecord> records, IEnumerable<EdnsOption> options)
         {
-            var services = records.OfType<PTRRecord>().Select(ParsePTR).ToDictionary(info => info.Service.LocalDomainName);
+            var services = records.OfType<PTRRecord>().Where(ptr => !ptr.IsReverseMapping).Select(ParsePTR).ToDictionary(info => info.Service.LocalDomainName);
 
             try
             {
@@ -189,12 +193,21 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
             DomainName host = new([reg.Hostname, .. LocalZone.Labels]);         // host.local
 
-            // Address records (A / AAAA).
+            // Address records (A / AAAA), each with its reverse-mapping PTR. Apple's SPS only
+            // proxies address resolution (ARP/NDP) for addresses it learned from a reverse PTR;
+            // the A/AAAA record alone is advertised but never defended on the link.
             foreach (var (ip, options) in reg.IPAddresses)
             {
                 var record = AddressRecord.Create(host, ip);
                 record.TTL = options.TTL ?? HostRecordTTL;
                 message.AuthorityRecords.Add(record);
+
+                message.AuthorityRecords.Add(new PTRRecord
+                {
+                    Name = ip.ArpaDomainName,
+                    DomainName = host,
+                    TTL = options.TTL ?? HostRecordTTL,
+                });
             }
 
             // Service records: PTR (service type -> instance) + SRV (instance -> host:port) + TXT.

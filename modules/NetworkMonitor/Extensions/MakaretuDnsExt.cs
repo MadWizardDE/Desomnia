@@ -1,5 +1,6 @@
 using NetTools;
 using System.Net;
+using System.Net.Sockets;
 
 namespace Makaretu.Dns
 {
@@ -93,6 +94,26 @@ namespace Makaretu.Dns
             public IPProtocol Protocol => ToProtocol(ptr.ProtocolName);
 
             public string InstanceName => ptr.DomainName.Labels[0];
+
+            /// <summary>
+            /// Whether this PTR maps an address back to a host name (a name under <c>in-addr.arpa</c> /
+            /// <c>ip6.arpa</c>, RFC 1035 §3.5 / RFC 3596 §2.5) rather than a service type to an instance.
+            /// </summary>
+            public bool IsReverseMapping => ptr.Name.Labels is [.., "in-addr" or "ip6", "arpa"];
+
+            /// <summary>The host name label of a reverse-mapping PTR, whose RDATA is <c>host.local</c>.</summary>
+            public string HostName => ptr.DomainName.Labels[0];
+        }
+
+        extension(IPAddress address)
+        {
+            /// <summary>
+            /// The reverse-mapping name for this address, e.g. 192.168.128.78 → <c>78.128.168.192.in-addr.arpa</c>
+            /// or the nibble form under <c>ip6.arpa</c> for IPv6.
+            /// </summary>
+            public DomainName ArpaDomainName => address.AddressFamily == AddressFamily.InterNetworkV6
+                ? new([.. address.GetAddressBytes().Reverse().SelectMany(b => new[] { (b & 0xF).ToString("x"), (b >> 4).ToString("x") }), "ip6", "arpa"])
+                : new([.. address.GetAddressBytes().Reverse().Select(b => b.ToString()), "in-addr", "arpa"]);
         }
 
         extension(SRVRecord srv)
