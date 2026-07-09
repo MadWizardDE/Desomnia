@@ -17,7 +17,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
     /// </summary>
     public class SleepProxyRegistration
     {
-        public byte             Version         { get; init; } = 1;
+        public byte             Version         { get; init; } = 0;
         /// <summary>The Owner option's sequence number (the host increments it on each registration).</summary>
         public byte             Sequence        { get; init; } = 0;
 
