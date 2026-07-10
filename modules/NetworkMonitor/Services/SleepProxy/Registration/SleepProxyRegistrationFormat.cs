@@ -211,7 +211,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             // Address records (A / AAAA), each with its reverse-mapping PTR. Apple's SPS only
             // proxies address resolution (ARP/NDP) for addresses it learned from a reverse PTR;
             // the A/AAAA record alone is advertised but never defended on the link.
-            // Unique records (everything but the shared service PTR) carry the unique-RRSet bit,
+            // Unique records (everything but the shared PTRs) carry the unique-RRSet bit,
             // like Apple's client sets it: the SPS registers them as unique -- conflict-checked
             // (a hijacked name wakes us) and answered with cache-flush.
             foreach (var (ip, options) in reg.IPAddresses)
@@ -278,7 +278,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                 });
             }
 
-            // OPT with the Owner option (how to wake us) and the requested lease.
+            // OPT with the Owner option (how to wake us), the requested lease and the filter rules.
             message.AdditionalRecords.Add(new OPTRecord()
             {
                 Options = [.. reg.Options]

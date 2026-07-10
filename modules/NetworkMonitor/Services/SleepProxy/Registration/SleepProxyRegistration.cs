@@ -90,10 +90,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                     Password = Password,
                 };
 
-                if (RequestedLease is TimeSpan lease)
-                {
-                    yield return new EdnsLeaseOption { Duration = lease };
-                }
+                yield return new EdnsLeaseOption { Duration = RequestedLease };
 
                 foreach (var service in Services)
                 {
