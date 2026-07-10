@@ -98,6 +98,26 @@ namespace PacketDotNet
 
         public static bool IsIPUnicast(this Packet? packet) => IsIPUnicast(packet, out var _, out var _);
 
+        /// <summary>
+        /// Whether this packet is a fragment of a larger IP datagram. Fragments cannot be interpreted
+        /// off the wire -- only the first carries the transport header -- so pcap-based consumers must
+        /// drop them; the OS socket inlet receives such datagrams kernel-reassembled instead.
+        /// </summary>
+        public static bool IsIPFragment(this Packet? packet)
+        {
+            switch (packet?.Extract<IPPacket>())
+            {
+                case IPv4Packet v4:
+                    return v4.FragmentOffset > 0 || (v4.FragmentFlags & 0x1) != 0; // offset or MF flag
+
+                case IPv6Packet v6:
+                    return v6.ExtensionHeaders.Any(header => header is IPv6FragmentationExtensionHeader);
+
+                default:
+                    return false;
+            }
+        }
+
         public static bool IsAddressResolution(this Packet? packet)
         {
             if (packet?.Extract<ArpPacket>() is not null)
