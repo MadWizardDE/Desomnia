@@ -1,36 +1,29 @@
-﻿using MadWizard.Desomnia.Network.Naming.Options;
+using MadWizard.Desomnia.Network.Datagram;
+using MadWizard.Desomnia.Network.Naming.Options;
 using Makaretu.Dns;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
-    public abstract class DNSService(ushort port, string? realm = null) : INetworkService
+    public abstract class DNSService(ushort port, string? realm = null) : DatagramService(port, realm)
     {
-        public required ILogger<DNSService> WireLogger { private get; init; }
-
-        public required NetworkDevice Device { protected get; init; }
-
-        public virtual async Task Startup() { }
-
-        public virtual void Resume() { }
-
-        void INetworkService.ProcessPacket(EthernetPacket packet)
+        protected override void ProcessDatagram(DatagramPacket datagram)
         {
-            using var scope = WireLogger.BeginRealmScope(realm);
+            try
+            {
+                var message = (Message)new Message().Read(datagram.Payload);
 
-            if (packet.SourceHardwareAddress.Equals(Device.PhysicalAddress))
-                return; // don't even think about this
-
-            if (!TryReadMessage(packet, out Message? message))
-                return;
-
-            ProcessMessage(packet, message);
+                ProcessMessage(datagram, message);
+            }
+            catch (Exception ex)
+            {
+                WireLogger.LogTrace(ex, "Failed to parse a datagram on port {Port} as a DNS message.", Port);
+            }
         }
 
-        protected virtual void ProcessMessage(EthernetPacket packet, Message message)
+        protected virtual void ProcessMessage(DatagramPacket source, Message message)
         {
             try
             {
@@ -39,12 +32,12 @@ namespace MadWizard.Desomnia.Network.Naming
                     switch (message.Opcode)
                     {
                         case MessageOperation.Query:
-                            DNSQuery query = new(packet, message);
+                            DNSQuery query = new(source, message);
                             ProcessQuery(query);
                             break;
 
                         case MessageOperation.Update:
-                            DNSUpdate update = new(packet, message);
+                            DNSUpdate update = new(source, message);
                             ProcessUpdate(update);
                             break;
                     }
@@ -56,7 +49,7 @@ namespace MadWizard.Desomnia.Network.Naming
             }
             catch (Exception ex)
             {
-                WireLogger.LogTrace(ex, "Failed to process a DNS message on port {Port} [{ID}]", port, message.Id);
+                WireLogger.LogTrace(ex, "Failed to process a DNS message on port {Port} [{ID}]", Port, message.Id);
             }
         }
 
@@ -65,48 +58,26 @@ namespace MadWizard.Desomnia.Network.Naming
         protected virtual void ProcessResponse(Message message) { }
 
         /// <summary>
-        /// Parses <paramref name="packet"/> as a multicast DNS message (query or received).
-        /// </summary>
-        /// <returns><c>true</c> when the packet carries a parseable DNS message on the mDNS port.</returns>
-        private bool TryReadMessage(EthernetPacket packet, [NotNullWhen(true)] out Message? message)
-        {
-            message = null;
-
-            if (packet.Extract<UdpPacket>() is UdpPacket udp && udp.DestinationPort == port && udp.PayloadData.Length > 0)
-            {
-                try
-                {
-                    message = (Message)(new Message().Read(udp.PayloadData));
-
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    WireLogger.LogTrace(ex, "Failed to parse a packet on port {Port} as a DNS message.", port);
-
-                    return false;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Sends the accumulated answers for <paramref name="query"/> back to the link. The reply is multicast
-        /// to the all-mDNS group; but when the query may be answered by sendUnicast (every question has the QU bit
-        /// set) or a debugger is attached, it is sent straight back to the querier instead.
+        /// Sends the accumulated answers for <paramref name="query"/> back to the link -- out the
+        /// same inlet the query came in: via the OS socket, or as a crafted frame. A crafted reply
+        /// is multicast to the all-mDNS group; but when the query may be answered by sendUnicast
+        /// (every question has the QU bit set) or a debugger is attached, it is sent straight back
+        /// to the querier instead.
         /// </summary>
         protected void RespondTo(DNSQuery query)
         {
-            using var scope = WireLogger.BeginRealmScope(realm);
+            using var scope = WireLogger.BeginRealmScope(Realm);
 
             try
             {
+                if (query.Packet.TryRespond(query.Response.ToByteArray()))
+                    return;
+
                 IPPacket ip = query.SourceIPAddress.AddressFamily == AddressFamily.InterNetwork
                     ? new IPv4Packet(query.TargetIPAddress, query.SourceIPAddress) { TimeToLive = 255 }
                     : new IPv6Packet(query.TargetIPAddress, query.SourceIPAddress) { HopLimit = 255 };
 
-                ip.PayloadPacket = new UdpPacket(port, query.SourcePort)
+                ip.PayloadPacket = new UdpPacket(Port, query.SourcePort)
                 {
                     PayloadData = query.Response.ToByteArray()
                 };
@@ -120,7 +91,7 @@ namespace MadWizard.Desomnia.Network.Naming
             }
             catch (Exception ex)
             {
-                WireLogger.LogTrace(ex, "Failed to send a DNS response from port {Port} [{ID}]", port, query.Request.Id);
+                WireLogger.LogTrace(ex, "Failed to send a DNS response from port {Port} [{ID}]", Port, query.Request.Id);
             }
         }
 
@@ -129,8 +100,6 @@ namespace MadWizard.Desomnia.Network.Naming
             Device.SendPacket(packet, true);
         }
 
-        public virtual async Task Shutdown(NetworkShutdownReason reason) { }
-
         /// <summary>Register the sleep-proxy EDNS0 options codes used by the Bonjour Sleep Proxy registration that Makaretu doesn't know about.</summary>
         static DNSService()
         {
@@ -138,6 +107,7 @@ namespace MadWizard.Desomnia.Network.Naming
             EdnsOptionRegistry.Register<EdnsOwnerOption>();
 
             EdnsOptionRegistry.Register<EdnsServiceFilterOption>();
+            EdnsOptionRegistry.Register<EdnsPagingOption>();
         }
     }
 }

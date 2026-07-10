@@ -28,6 +28,7 @@ namespace MadWizard.Desomnia.Network.Watch
         public required MulticastDNSService     MulticastDNS    { private get; init; }
 
         public required Func<LocalHostWatch, SleepProxyRegistration> CreateSleepProxyRegistration { private get; init; }
+        public required Func<SleepProxyRegistration, ushort, SleepProxyRegistrationMessageBurst> CreateMessageBurst { private get; init; }
 
         protected override bool ShouldStartRequest(EthernetPacket packet)
         {
@@ -89,11 +90,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
         private async Task RegisterWithBestSleepProxy(SleepProxyRegistration reg)
         {
-            for (var tries = 0; ; tries++) // one retry spans a whole sweep over the available proxies
-            {
-                Exception? failure = null;
+            Exception? failure = null;
 
-                foreach (var (proxy, service) in SelectSleepProxies())
+            foreach (var (proxy, service) in SelectSleepProxies())
+            {
+                // exhaust the retries against each proxy before escalating to the next one
+                for (var tries = 0; tries <= HandoffOptions.Retry; tries++)
                 {
                     try
                     {
@@ -108,13 +110,9 @@ namespace MadWizard.Desomnia.Network.Watch
                         failure = ex;
                     }
                 }
-
-                if (failure is null)
-                    throw new Exception("No sleep proxy available.");
-
-                if (tries >= HandoffOptions.Retry)
-                    throw failure;
             }
+
+            throw failure ?? new Exception("No sleep proxy available.");
         }
 
         private async Task RegisterWithSleepProxy(NetworkHost proxy, SleepProxyService service, SleepProxyRegistration reg)
@@ -122,13 +120,16 @@ namespace MadWizard.Desomnia.Network.Watch
             if (!proxy.IPAddresses.Any())
                 throw new NotSupportedException($"Sleep proxy '{proxy.Name}' has no IP address.");
 
-            Message dnsRequest = (Message)reg;
+            // A registration exceeding the configured MTU travels as a burst of messages sharing one
+            // id, fired back-to-back (like Apple's client) and acknowledged with a single response;
+            // without an MTU, an oversized update is left to IP fragmentation.
+            var burst = CreateMessageBurst(reg, HandoffOptions.MTU ?? 0);
 
             try
             {
                 using var cancel = new CancellationTokenSource(HandoffOptions.Timeout);
 
-                byte[] payload = dnsRequest.ToByteArray();
+                List<byte[]> payloads = [.. burst.Select(message => message.ToByteArray())];
 
                 // Send the identical registration to every known address of the proxy and race them: a single
                 // address can fail fast (e.g. no route to an IPv6), so we take the first *successful* response.
@@ -138,9 +139,12 @@ namespace MadWizard.Desomnia.Network.Watch
 
                     using var client = new UdpClient(ip.AddressFamily);
 
-                    Logger.LogTrace("Try to register '{Host}' with sleep proxy '{Proxy}' via {Endpoint}", Host.Name, proxy.Name, endpoint);
+                    Logger.LogTrace("Try to register '{Host}' with sleep proxy '{Proxy}' via {Endpoint} × {Count}", Host.Name, proxy.Name, endpoint, payloads.Count);
 
-                    await client.SendAsync(payload, endpoint, cancel.Token);
+                    foreach (var payload in payloads)
+                    {
+                        await client.SendAsync(payload, endpoint, cancel.Token);
+                    }
 
                     return await client.ReceiveAsync(cancel.Token);
                 });
@@ -153,7 +157,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
                 var dnsResponse = (Message)new Message().Read(response.Buffer);
 
-                if (dnsResponse.Id != dnsRequest.Id)
+                if (dnsResponse.Id != burst.Id)
                     throw new FormatException($"Sleep proxy '{proxy.Name}' replied with a mismatched message id.");
                 if (dnsResponse.Status != MessageStatus.NoError)
                     throw new InvalidOperationException($"Sleep proxy '{proxy.Name}' rejected the registration: {dnsResponse.Status}.");

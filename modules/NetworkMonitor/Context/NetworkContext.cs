@@ -4,6 +4,7 @@ using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context.Parameters;
 using MadWizard.Desomnia.Network.Context.Watch;
+using MadWizard.Desomnia.Network.Datagram;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Filter.Rules;
 using MadWizard.Desomnia.Network.Knocking;
@@ -193,6 +194,11 @@ namespace MadWizard.Desomnia.Network.Context
                     .InstancePerDependency()
                     .AsSelf();
 
+                builder.RegisterType<SleepProxyRegistrationMessageBurst>()
+                    .ConfigurePipeline(p => p.Use(new MTUSleepProxyMessageSplitter()))
+                    .InstancePerDependency()
+                    .AsSelf();
+
                 if (config.WatchMode == WatchMode.Promiscuous)
                 {
                     builder.RegisterType<PromiscuousModeMutex>()
@@ -203,7 +209,17 @@ namespace MadWizard.Desomnia.Network.Context
 
                     if (config.ShouldAdvertiseSleepProxy)
                     {
-                        var service = new SleepProxyService(Config.SleepProxyPort)
+                        // The sleep proxy also receives its registrations through an OS socket
+                        // (kernel-reassembled datagrams). Its port is reserved up-front -- the SRV
+                        // record and the BPF whitelist need it -- and a configured port may coexist
+                        // with other binders on the OS; the resolver is linked to the socket at
+                        // construction via its registration metadata, and the socket closes with
+                        // its last user.
+                        bool sharedPort = Config.SleepProxyPort is not null;
+
+                        ushort port = parent.Resolve<UDPSocketService>().Reserve(Config.SleepProxyPort, sharedPort);
+
+                        var service = new SleepProxyService(port)
                         {
                             Metrics = Config.SleepProxyMetrics
                         };
@@ -223,6 +239,10 @@ namespace MadWizard.Desomnia.Network.Context
                         builder.RegisterType<SleepProxyResolver>()
                             .WithParameter(new LocalHostParameter<NetworkHost>())
                             .WithParameter(TypedParameter.From(service))
+                            .WithMetadata<DatagramService.SocketMetadata>(meta => meta
+                                .For(m => m.Port, port)
+                                .For(m => m.Shared, sharedPort))
+                            .ConfigurePipeline(p => p.Use(new DatagramSocketLink()))
                             .AsImplementedInterfaces()
                             .SingleInstance();
                     }

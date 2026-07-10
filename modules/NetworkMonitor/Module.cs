@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Address;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Context;
+using MadWizard.Desomnia.Network.Datagram;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Demand.Detector;
 using MadWizard.Desomnia.Network.Discovery;
@@ -96,6 +97,13 @@ namespace MadWizard.Desomnia.Network
                 builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
 
                 // Network Services //
+
+                // The application-wide keeper of OS-level UDP sockets: DatagramServices registered
+                // with SocketMetadata are linked to it at construction (see DefaultDatagramSocket),
+                // and their socket closes again with its last user.
+                builder.RegisterType<UDPSocketService>()
+                    .SingleInstance()
+                    .AsSelf();
 
                 // Safeguard around the platform neighbour cache: track installed mappings, suppress
                 // deletes of entries already removed, and purge any leftovers when the network

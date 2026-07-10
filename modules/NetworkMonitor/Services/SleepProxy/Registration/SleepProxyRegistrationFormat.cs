@@ -279,9 +279,11 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             }
 
             // OPT with the Owner option (how to wake us), the requested lease and the filter rules.
+            // The paging option (1 / 1) tells the receiver right away that no more messages follow;
+            // the MTU splitter re-stamps it when the registration has to travel as a burst.
             message.AdditionalRecords.Add(new OPTRecord()
             {
-                Options = [.. reg.Options]
+                Options = [.. reg.Options, new EdnsPagingOption()]
             });
 
             return message;

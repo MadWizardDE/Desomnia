@@ -1,23 +1,29 @@
-﻿using MadWizard.Desomnia.Network.Naming.Messages;
+﻿using MadWizard.Desomnia.Network.Datagram;
+using MadWizard.Desomnia.Network.Naming.Messages;
 using Makaretu.Dns;
-using PacketDotNet;
 using System.Net;
 using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
-    public class DNSQuery(EthernetPacket packet, Message message) : DNSMessage
+    public class DNSQuery(DatagramPacket packet, Message message) : DNSMessage
     {
-        public PhysicalAddress  SourcePhysicalAddress   => field ??= packet.FindSourcePhysicalAddress() ?? throw new ArgumentException("Source MAC missing");
-        public IPAddress        SourceIPAddress         => field ??= packet.FindSourceIPAddress()       ?? throw new ArgumentException("Source IP missing");
-        public IPAddress        TargetIPAddress         => field ??= packet.FindTargetIPAddress()       ?? throw new ArgumentException("Target IP missing");
-        public ushort           SourcePort              => packet.Extract<UdpPacket>()?.SourcePort      ?? throw new ArgumentException("Source port missing");
+        /// <summary>The datagram this query arrived as -- and the route its response takes back.</summary>
+        internal DatagramPacket Packet => packet;
 
-        public IPEndPoint       SourceEndpoint          => field ??= new UDPEndPoint(SourceIPAddress, SourcePort);
+        public PhysicalAddress  SourcePhysicalAddress   => packet.SourcePhysicalAddress ?? throw new ArgumentException("Source MAC missing");
+        public IPAddress        SourceIPAddress         => packet.Source.Address;
+        public IPAddress        TargetIPAddress         => packet.Target.Address;
+        public ushort           SourcePort              => (ushort)packet.Source.Port;
+
+        public IPEndPoint       SourceEndpoint          => packet.Source;
 
         public IEnumerable<Question> Questions => message.Questions;
 
         internal Message Request => message;
+
+        /// <summary>The size of the request on the wire, in bytes (its UDP payload).</summary>
+        internal int MessageLength => packet.Payload.Length;
 
         /// <summary>
         /// Whether this query came from a legacy one-shot resolver (an ephemeral source port rather than

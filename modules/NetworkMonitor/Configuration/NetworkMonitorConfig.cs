@@ -7,7 +7,6 @@ using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
 using MadWizard.Desomnia.Network.Manager;
-using MadWizard.Desomnia.Network.Naming;
 using MadWizard.Desomnia.Network.SleepProxy;
 using System.ComponentModel;
 using System.Net;
@@ -107,7 +106,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal SleepProxyDiscoveryType SleepProxyDiscovery { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
 
         internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
-        internal ushort             SleepProxyPort          { get; set; } = MulticastDNSService.MulticastPort;
+        internal ushort?            SleepProxyPort          { get; set; } // default = use a ephemeral port
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {

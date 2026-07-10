@@ -1,12 +1,12 @@
-﻿using MadWizard.Desomnia.Network.Naming.Options;
+﻿using MadWizard.Desomnia.Network.Datagram;
+using MadWizard.Desomnia.Network.Naming.Options;
 using Makaretu.Dns;
-using PacketDotNet;
 
 namespace MadWizard.Desomnia.Network.Naming
 {
     public class DNSUpdate : DNSQuery
     {
-        internal DNSUpdate(EthernetPacket eth, Message message) : base(eth, message)
+        internal DNSUpdate(DatagramPacket packet, Message message) : base(packet, message)
         {
             Response = new Message { Id = message.Id, QR = true, Opcode = MessageOperation.Update };
         }

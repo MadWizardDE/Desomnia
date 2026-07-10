@@ -14,7 +14,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
     /// the proxy service itself (<c>_sleep-proxy._udp.local</c>) and the services that watched hosts
     /// have asked us to advertise on their behalf while they are asleep / unreachable.
     /// </summary>
-    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : GuardedDNSService(service.Port), IMulticastDNSResolver
+    internal class SleepProxyResolver(NetworkHost proxy, SleepProxyService service) : SleepProxyRegistrationBuffer(service.Port), IMulticastDNSResolver
     {
         public required ILogger<SleepProxyResolver> Logger { private get; init; }
 
@@ -52,19 +52,15 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         }
 
         /// <summary>
-        /// Handles a Sleep Proxy registration: a DNS UPDATE whose OPT record carries an EDNS0 Owner option.
-        /// The records to defend are in the UPDATE (authority) section; the wake info is in the Owner option.
+        /// Handles a Sleep Proxy registration: a DNS UPDATE whose OPT record carries an EDNS0 Owner
+        /// option. The records to defend are in the UPDATE (authority) section; the wake info is in
+        /// the Owner option. The <see cref="SleepProxyRegistrationBuffer"/> base has already collected and
+        /// merged the (possibly multi-message) registration at this point.
         /// </summary>
-        protected override void ProcessUpdate(DNSUpdate update)
+        protected override void ProcessRegistration(DNSUpdate update, SleepProxyRegistration reg)
         {
-            Logger.LogTrace("Received a dynamic DNS update from {Endpoint}", update.SourceEndpoint);
-
-            SleepProxyRegistration? reg = null;
-
             try
             {
-                reg = ((SleepProxyRegistration)update.Request);
-
                 if (Registrar.Register(reg, out var lease))
                 {
                     Logger.LogDebug("Registration of '{Name}' successful; granting lease: {Duration}", reg.Name, lease.Duration);
@@ -89,7 +85,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Registration of '{Name}' failed.", reg?.Name ?? "?");
+                Logger.LogError(ex, "Registration of '{Name}' failed.", reg.Name);
 
                 update.AnswerWithError(ex);
 
