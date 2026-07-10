@@ -50,6 +50,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         TimeSpan?           HandoffDuration         { get; set; }
         TimeSpan?           HandoffTimeout          { get; set; }
         int?                HandoffRetry            { get; set; }
+        ushort?             HandoffMTU              { get; set; }
 
         string?             HandoffPassword         { get; set; }
         byte[]?             HandoffPasswordBytes    { get; set; }
@@ -68,6 +69,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
                 Duration = HandoffDuration ?? network.HandoffDuration,
                 Timeout = HandoffTimeout ?? network.HandoffTimeout,
                 Retry = HandoffRetry ?? network.HandoffRetry,
+                MTU = HandoffMTU ?? network.HandoffMTU,
 
                 Password = HandoffPasswordBytes
             };

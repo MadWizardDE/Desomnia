@@ -12,6 +12,12 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
         public readonly TimeSpan    Timeout         { get; init; }
         public readonly int         Retry           { get; init; }
 
+        /// <summary>
+        /// Wire size a single registration message may grow to before it is split into a burst
+        /// of update messages; null disables splitting, leaving oversized updates to IP fragmentation.
+        /// </summary>
+        public readonly ushort?     MTU             { get; init; }
+
         public readonly byte[]?     Password        { get; init; }
 
         public bool IsMandatory => Type.HasFlag(HandoffType.Mandatory);
