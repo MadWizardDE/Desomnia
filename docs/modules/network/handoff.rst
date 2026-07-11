@@ -58,7 +58,7 @@ handoffDuration
 :inherited:
 :default: ``1d``
 
-The lease duration requested when registering with a :doc:`Sleep Proxy <sleepproxy>`. The proxy clamps the request into the range it is willing to grant — a Desomnia proxy according to its ``sleepProxyLeaseMin``/``sleepProxyLeaseMax``, an Apple proxy to at most 24 hours. Together with the proxy's :ref:`expiry behaviour <sleepproxy-expire>` this bounds how long the host can stay asleep before it is woken to renew its network presence.
+The lease duration requested when registering with a :doc:`Sleep Proxy <sleepproxy>`. The proxy clamps the request into the range it is willing to grant — a Desomnia proxy according to its ``sleepProxyLeaseDurationMin``/``sleepProxyLeaseDurationMax``, an Apple proxy to at most 24 hours. Together with the proxy's :ref:`expiry behaviour <sleepproxy-expire>` this bounds how long the host can stay asleep before it is woken to renew its network presence.
 
 handoffMTU
 ++++++++++
@@ -96,7 +96,7 @@ The UnMagic Packet is a Desomnia-to-Desomnia signal. For interoperability with t
 This has two advantages over the UnMagic Packet:
 
 - The proxy does not need the sleeping host's services configured statically — it learns them from the registration. This removes the need to maintain a matching host definition on the proxy side.
-- Any standards-compliant Sleep Proxy client — not only Desomnia — can register with a Desomnia proxy, and Desomnia can register with a non-Desomnia proxy, including Apple's (an Apple TV, HomePod or AirPort base station). The compatibility details and known caveats of registering with an Apple proxy — most importantly that :doc:`wake filter rules </guides/filtering/service>` cannot be enforced there — are described :ref:`on the Sleep Proxy page <sleepproxy-apple>`.
+- Any standards-compliant Sleep Proxy client — not only Desomnia — can register with a Desomnia proxy, and Desomnia can register with a non-Desomnia proxy, including Apple's (an Apple TV, HomePod or AirPort base station). The compatibility details and known caveats of registering with an Apple proxy — most importantly that :doc:`wake filter rules </guides/filtering/service>` cannot be enforced there — are described on the :doc:`Apple Compatibility <sleepproxy/apple>` page.
 
 The registration carries the host's addresses (including the reverse mappings a proxy needs to answer ARP/NDP on its behalf), its watched services with their instance names, SRV priorities/weights and TXT attributes, the requested lease (``handoffDuration``), and the optional *SecureOn* password. Individual services can be excluded from the handoff with ``handoff="false"`` on the ``<Service>`` element. When several proxies are available, Desomnia works through them from best to worst advertised metric (see ``sleepProxyMetrics``), exhausting ``handoffRetry`` against each before moving on.
 

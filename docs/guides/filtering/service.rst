@@ -71,6 +71,13 @@ When all your rules use ``type="Must"``, the ``<Service>`` shorthand is equivale
 
 Each ``<Service>`` element is equivalent to a ``<ServiceFilterRule>`` with ``type="Must"``.
 
-.. admonition:: Work in progress
+Beyond the shorter notation, a ``<Service>`` is a full service *definition* rather than a bare filter rule: Desomnia can advertise it via :doc:`multicast DNS </modules/network/mdns>` (Bonjour) while the host is asleep. Clients that rely on service discovery — such as macOS, printers, or media players — then keep finding the service, and the connection attempt that follows wakes the host. This is the same mechanism as Apple's *Sleep Proxy* protocol, which Desomnia :doc:`fully implements </modules/network/sleepproxy>`.
 
-   In a future version of Desomnia, declared services will be advertised via mDNS while the host is suspended, enabling full compatibility with Apple's *Sleep Proxy* protocol. Currently the main benefit of ``<Service>`` over ``<ServiceFilterRule>`` is the shorter notation.
+The following configuration options control this behaviour:
+
+``advertiseServices``
+  Enables mDNS advertising of the declared services of a sleeping host. Advertising is **off by default**; set ``advertiseServices="true"`` on the ``<NetworkMonitor>`` to enable it for all hosts, or on an individual host to enable (or suppress) it selectively.
+``serviceName``
+  The DNS-SD service type a ``<Service>`` is advertised as — for example ``serviceName="smb"`` yields ``_smb._tcp``. If omitted, the lowercase ``name`` is used. Ideally this matches the IANA-registered service name.
+``handoff``
+  If the watched host itself runs Desomnia, it can instead :doc:`register its services with the proxy </modules/network/handoff>` just before it suspends (``handoff="SleepProxy"`` on the host), making the static declarations on the proxy unnecessary. Individual services are excluded from that registration with ``handoff="false"`` on the ``<Service>`` element.

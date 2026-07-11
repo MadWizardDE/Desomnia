@@ -10,32 +10,43 @@ Berkeley Packet Filter
 
 :OS: 🪟 *Windows* 🐧 *Linux* 🍎 *macOS*
 
-The most significant performance optimisation in the NetworkMonitor is its use of `Berkeley Packet Filter <https://en.wikipedia.org/wiki/Berkeley_Packet_Filter>`__ (BPF) rules. BPF allows Desomnia to declare its filtering criteria directly inside the kernel's packet capture module, so that packets it does not need are discarded before they are ever copied to user space. Only packets that pass the filter are handed to the application.
+The most significant performance optimisation in the NetworkMonitor is its use of `Berkeley Packet Filter <https://en.wikipedia.org/wiki/Berkeley_Packet_Filter>`__ (BPF) rules. Rather than examining every packet in user space, Desomnia declares its filtering criteria directly inside the kernel's capture module, so that packets it does not need are discarded before they are ever copied to user space.
 
-This matters because copying packets from kernel space to user space has a cost regardless of whether the application ultimately uses them. By keeping the filter as tight as possible, Desomnia avoids imposing any overhead from traffic it has no interest in.
+Desomnia builds this filter as a **positive whitelist**: it gathers the exact traffic each watched host and service depends on — the connection attempts that should trigger a wake, together with the address-resolution (ARP/NDP), Wake-on-LAN and ping traffic it needs to act on — and captures only that. Everything else is dropped in the kernel, so traffic Desomnia has no interest in imposes no overhead regardless of its volume. Copying packets from kernel to user space has a cost whether or not the application ends up using them; keeping the filter tight is what avoids that cost.
 
 TCP services
 ++++++++++++
 
-When only TCP-based services are configured, the BPF filter is at its most efficient. Desomnia needs to see only two categories of traffic:
+TCP is where the filter is most efficient. Every new TCP connection begins with a distinct **SYN** packet, so to notice a connection attempt Desomnia only needs to capture the SYNs directed at a watched service — the rest of the stream (payload, acknowledgements, retransmissions) is dropped in the kernel. A large file transfer over a watched TCP port therefore generates no load on Desomnia regardless of its size; only its opening packet is ever seen.
 
-- **TCP SYN packets** — the opening handshake of every new TCP connection, which signals a connection attempt to a watched host
-- **ARP and NDP packets** — address resolution broadcasts, used to detect when a host comes online or to claim addresses on behalf of sleeping hosts
-
-All other TCP traffic — payload, acknowledgements, retransmissions — is dropped in the kernel before it reaches Desomnia. A large file transfer over TCP, for example, generates no load on Desomnia regardless of its size.
+Each watched TCP service contributes its port to the whitelist, so the capture is restricted to exactly the ports in your configuration — subject to the :ref:`condition below <performance-unconditional>`.
 
 UDP services
 ++++++++++++
 
-UDP presents a different challenge. Unlike TCP, which uses a distinct handshake packet to signal a new connection, UDP has no connection concept — every packet is independent and the operating system cannot distinguish a connection attempt from a payload packet. When any UDP service is configured, the BPF filter must therefore pass all UDP traffic for inspection in user space.
+UDP has no handshake: every datagram is independent, and no distinct packet marks the start of a "connection". Desomnia therefore treats *any* datagram arriving at a watched UDP port as a connection attempt. The kernel filter, however, is still restricted **by port** — only datagrams to the UDP ports you have configured are captured, exactly as for TCP, and unrelated UDP traffic on other ports is discarded in the kernel. (Earlier versions could only capture *all* UDP traffic once any UDP service was configured; per-port UDP filtering is now the default.)
 
-Currently, Desomnia applies the UDP exception at the protocol level: if any UDP service is configured, all UDP traffic is captured regardless of port. Port-level BPF filtering for UDP is planned for a future release.
+The one thing to watch for is high-throughput traffic **on a watched port**: because every datagram there is passed up as a potential trigger, configuring a watched service on a port that also carries bulk UDP — video streaming, real-time feeds — can raise CPU usage. Keep watched UDP services off such ports; UDP on any other port costs nothing.
 
-In practice this is rarely a concern, since most UDP protocols used for service monitoring have modest traffic volumes. However, configuring a watched service on a port that carries high-throughput UDP traffic — such as video streaming or real-time data feeds — can cause a noticeable increase in CPU usage. If you observe elevated CPU load and have UDP services configured, this is the likely cause. The only mitigation at present is to avoid configuring UDP services on high-throughput ports.
+.. _performance-unconditional:
+
+Hosts watched without service filters
++++++++++++++++++++++++++++++++++++++
+
+Per-port precision — for both TCP and UDP — holds only while every watched host has at least one **Must** service filter: a ``<ServiceFilterRule type="Must">`` or the equivalent ``<Service>`` shorthand. Such a filter tells Desomnia the host should be woken only for specific ports, and those ports are all it needs to capture.
+
+A host configured **without** any Must filter is watched *unconditionally* — it should wake on any connection attempt at all, so Desomnia has no choice but to capture that host's full demand baseline: every TCP SYN and all UDP traffic. Because the kernel filter is a single expression shared by the whole capture, one such host widens it for **every** host on the same address family — the per-port TCP and UDP restrictions dissolve, and the capture falls back to "any TCP SYN plus all UDP".
+
+To keep the capture strictly port-scoped, give every watched host a Must service filter. Leaving a host unconditional remains perfectly valid; it simply trades kernel-side precision for the ability to wake on anything.
+
+Filter complexity limits
+++++++++++++++++++++++++
+
+A compiled BPF program has a finite instruction budget, and a whitelist enumerating very many ports can exceed what libpcap will accept. Desomnia handles this automatically: it generates the filter from most precise to most general and installs the first variant the kernel accepts. If the fully port-precise filter is too large it drops TCP port precision, then UDP port precision, then falls back to capturing whole TCP streams, and — only as a last resort — installs no kernel filter at all and filters entirely in user space, logging a warning. Large configurations therefore degrade gracefully instead of failing outright; a warning in the log is the signal that the filter had to be coarsened.
 
 Local resource management
---------------------------
+-------------------------
 
-A second situation where BPF optimisation does not apply is local resource management. When a network host is configured as a watched resource for sleep management — meaning Desomnia monitors its traffic to contribute to the system idle state — every packet to and from that host must be counted. Selective filtering is not possible in this case, and BPF filtering is effectively disabled for traffic involving that host.
+There is one case where Desomnia deliberately keeps more than the opening packet. When a host is watched as a local resource for :doc:`sleep management </guides/sleep>` — Desomnia measuring its traffic to decide whether the system is idle — throughput can only be judged from the data itself, not from connection attempts. For such a host the SYN-only optimisation is lifted on its watched TCP services and the **full data stream** is captured so that bytes can be counted.
 
-At present, local resource management targets are limited to Windows hosts. If this feature is extended to other platforms in the future, the same considerations will apply.
+This does not disable the filter: the capture is still a positive whitelist scoped to the host's configured service ports (a local resource host always carries at least one Must service filter), and all other traffic is dropped in the kernel as usual. Only the payload of the watched services is added back.

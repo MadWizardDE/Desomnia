@@ -54,9 +54,9 @@ Desomnia provides support for monitoring any number of installed network interfa
       handoffDuration="1d"
       handoffMTU="..."
 
-      sleepProxyLeaseMin="30min"
-      sleepProxyLeaseMax="365d"
-      sleepProxyLimit="100"
+      sleepProxyLeaseDurationMin="30min"
+      sleepProxyLeaseDurationMax="365d"
+      sleepProxyLeaseLimit="100"
       sleepProxyLeaseExpire="wake"
       sleepProxyDiscovery="eager"
       sleepProxyMetrics="best"
@@ -222,54 +222,12 @@ handoffPassword
 
 The *SecureOn* Wake-on-LAN password (at most 6 bytes) transmitted during Sleep Proxy handoff, so that a proxy can wake the host later. Set ``handoffPasswordEncoding="base64"`` to supply the raw bytes as Base64.
 
-sleepProxyLeaseMin
-++++++++++++++++++
+.. _sleepproxy-expire:
 
-:default: ``30min``
-
-The shortest lease the proxy will grant. Shorter requests are rounded up.
-
-sleepProxyLeaseMax
-++++++++++++++++++
-
-:default: ``365d``
-
-The longest lease the proxy will grant. Longer requests are capped.
-
-sleepProxyLimit
-+++++++++++++++
-
-:default: ``100``
-
-The maximum number of simultaneous leases. Once the pool is exhausted, further registrations are refused until a lease ends.
-
-sleepProxyLeaseExpire
-+++++++++++++++++++++
-
-:default: ``wake``
-
-What the proxy does when a lease expires without the host returning on its own. ``none`` releases the lease; ``wake`` sends a Magic Packet to wake the host first.
-
-sleepProxyDiscovery
-+++++++++++++++++++
-
-:default: ``eager``
-
-When a host looks for a proxy to register with. ``eager`` discovers a proxy up front and keeps the registration current; ``lazy`` defers discovery until the host is about to suspend.
-
-sleepProxyMetrics
-+++++++++++++++++
-
-:default: ``best``
-
-The metric this proxy advertises, so that clients can prefer the most suitable one. Accepts ``best``, ``average``, ``worst`` or the explicit four-field form ``intent-portability-marginalPower-totalPower``.
-
-sleepProxyPort
-++++++++++++++
-
-:default: *(unset — an ephemeral port)*
-
-The UDP port the Sleep Proxy service listens on. Clients discover it through the proxy's DNS-SD advertisement, so it normally does not need to be fixed; set it for a predictable endpoint (for example for firewall rules).
+.. include:: ./options/sleepproxy/lease.rst
+.. include:: ./options/sleepproxy/discovery.rst
+.. include:: ./options/sleepproxy/metrics.rst
+.. include:: ./options/sleepproxy/port.rst
 
 .. _allow-wake-on-lan:
 
