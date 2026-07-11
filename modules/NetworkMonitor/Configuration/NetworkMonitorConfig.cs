@@ -42,10 +42,10 @@ namespace MadWizard.Desomnia.Network.Configuration
 
         // Options
         #region Network :: AutoDiscoveryOptions
-        public AutoDiscoveryType    AutoDetect              { get; set; } = AutoDiscoveryType.Nothing;
-        internal TimeSpan           AutoTimeout             { get; set; } = TimeSpan.FromSeconds(2);
-        internal TimeSpan?          AutoRefresh             { get; set; }
-        internal bool               AutoParallel            { get; set; } = true;
+        public AutoDiscoveryType    AutoDetect                  { get; set; } = AutoDiscoveryType.Nothing;
+        internal TimeSpan           AutoTimeout                 { get; set; } = TimeSpan.FromSeconds(2);
+        internal TimeSpan?          AutoRefresh                 { get; set; }
+        internal bool               AutoParallel                { get; set; } = true;
 
         public DiscoveryOptions MakeAutoDiscoveryOptions() => new()
         {
@@ -56,8 +56,8 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: SweepOptions
-        private TimeSpan            SweepFrequency      { get; set; } = TimeSpan.FromMinutes(1);
-        private TimeSpan            SweepDelay          { get; set; } = TimeSpan.FromMinutes(5);
+        private TimeSpan            SweepFrequency              { get; set; } = TimeSpan.FromMinutes(1);
+        private TimeSpan            SweepDelay                  { get; set; } = TimeSpan.FromMinutes(5);
 
         public SweepOptions MakeSweepOptions() => new()
         {
@@ -67,70 +67,70 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: DemandOptions 
-        internal DemandSource       DemandSource        { get; set; } = DemandSource.Host;
-        internal TimeSpan           DemandTimeout       { get; set; } = TimeSpan.FromSeconds(5);
-        internal bool               DemandForward       { get; set; } = true;
-        internal int                DemandParallel      { get; set; } = 1;
+        internal DemandSource       DemandSource            { get; set; } = DemandSource.Host;
+        internal TimeSpan           DemandTimeout           { get; set; } = TimeSpan.FromSeconds(5);
+        internal bool               DemandForward           { get; set; } = true;
+        internal int                DemandParallel          { get; set; } = 1;
         #endregion
 
         #region Network :: AdvertiseOptions 
-        internal AdvertiseType      Advertise               { get; set; } = AdvertiseType.Lazy;
-        internal bool?              AdvertiseHosts          { get; set; }
-        internal bool?              AdvertiseServices       { get; set; }
-        internal bool               AdvertiseIfStopped      { get; set; } = true;
-        internal bool               AdvertiseUnicast        { get; set; } = false;
+        internal AdvertiseType      Advertise                   { get; set; } = AdvertiseType.Lazy;
+        internal bool?              AdvertiseHosts              { get; set; }
+        internal bool?              AdvertiseServices           { get; set; }
+        internal bool               AdvertiseIfStopped          { get; set; } = true;
+        internal bool               AdvertiseUnicast            { get; set; } = false;
 
-        internal TimeSpan           AdvertiseTimeout        { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+        internal TimeSpan           AdvertiseTimeout            { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
 
-        internal TimeSpan?          AdvertiseHostTTL        { get; set; }
-        internal TimeSpan?          AdvertiseServiceTTL     { get; set; }
+        internal TimeSpan?          AdvertiseHostTTL            { get; set; }
+        internal TimeSpan?          AdvertiseServiceTTL         { get; set; }
         #endregion
 
         #region Network :: HandoffOptions
-        internal HandoffType        Handoff                 { get; set; } = HandoffType.None;
-        internal TimeSpan           HandoffDuration         { get; set; } = TimeSpan.FromDays(1);
-        internal TimeSpan           HandoffTimeout          { get; set; } = TimeSpan.FromSeconds(5);
-        internal int                HandoffRetry            { get; set; } = 0;
-        internal ushort?            HandoffMTU              { get; set; }
+        internal HandoffType        Handoff                     { get; set; } = HandoffType.None;
+        internal TimeSpan           HandoffDuration             { get; set; } = TimeSpan.FromDays(1);
+        internal TimeSpan           HandoffTimeout              { get; set; } = TimeSpan.FromSeconds(5);
+        internal int                HandoffRetry                { get; set; } = 0;
+        internal ushort?            HandoffMTU                  { get; set; }
 
-        internal string?            HandoffPassword         { get; set; }
-        internal Encoding           HandoffPasswordEncoding { get; set; } = Encoding.ASCII;
+        internal string?            HandoffPassword             { get; set; }
+        internal Encoding           HandoffPasswordEncoding     { get; set; } = Encoding.ASCII;
         #endregion
 
         #region Network :: SleepProxyOptions
-        internal int                SleepProxyLimit         { get; set; } = 100;
-        internal TimeSpan           SleepProxyLeaseMin      { get; set; } = TimeSpan.FromMinutes(30);
-        internal TimeSpan           SleepProxyLeaseMax      { get; set; } = TimeSpan.FromDays(365);
-        internal LeaseExpireAction  SleepProxyLeaseExpire   { get; set; } = LeaseExpireAction.Wake; // shall we wake host, when lease ends?
+        internal int                SleepProxyLeaseLimit        { get; set; } = 100;
+        internal TimeSpan           SleepProxyLeaseDurationMin  { get; set; } = TimeSpan.FromMinutes(30);
+        internal TimeSpan           SleepProxyLeaseDurationMax  { get; set; } = TimeSpan.FromDays(365);
+        internal LeaseExpireAction  SleepProxyLeaseExpire       { get; set; } = LeaseExpireAction.Wake; // shall we wake host, when lease ends?
 
-        internal SleepProxyDiscoveryType SleepProxyDiscovery { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
+        internal SleepProxyDiscoveryType SleepProxyDiscovery    { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
 
-        internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
-        internal ushort?            SleepProxyPort          { get; set; } // null = use an ephemeral port
+        internal SleepProxyMetrics  SleepProxyMetrics           { get; set; } = SleepProxyMetrics.Best;
+        internal ushort?            SleepProxyPort              { get; set; } // null = use an ephemeral port
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {
-            Limit = SleepProxyLimit,
-            MinLeaseDuration = SleepProxyLeaseMin,
-            MaxLeaseDuration = SleepProxyLeaseMax,
-            ExpireLease = SleepProxyLeaseExpire,
+            LeaseLimit = SleepProxyLeaseLimit,
+            LeaseDurationMin = SleepProxyLeaseDurationMin,
+            LeaseDurationMax = SleepProxyLeaseDurationMax,
+            LeaseExpire = SleepProxyLeaseExpire,
         };
         #endregion
 
         #region Network :: KnockOptions
-        internal string             KnockMethod             { get; set; } = "plain";
+        internal string             KnockMethod                 { get; set; } = "plain";
 
-        internal ushort             KnockPort               { get; set; } = 62201;
-        internal IPProtocol         KnockProtocol           { get; set; } = IPProtocol.UDP;
+        internal ushort             KnockPort                   { get; set; } = 62201;
+        internal IPProtocol         KnockProtocol               { get; set; } = IPProtocol.UDP;
 
-        internal TimeSpan           KnockDelay              { get; set; } = TimeSpan.FromSeconds(0.5);
-        internal TimeSpan?          KnockRepeat             { get; set; }
-        internal TimeSpan           KnockTimeout            { get; set; } = TimeSpan.FromSeconds(10);
+        internal TimeSpan           KnockDelay                  { get; set; } = TimeSpan.FromSeconds(0.5);
+        internal TimeSpan?          KnockRepeat                 { get; set; }
+        internal TimeSpan           KnockTimeout                { get; set; } = TimeSpan.FromSeconds(10);
         // Network ::               KnockSecret
-        internal string?            KnockSecret             { get; set; }
-        internal string?            KnockSecretAuth         { get; set; }
-        internal DigestType         KnockSecretAuthType     { get; set; } = default;
-        internal Encoding           KnockSecretEncoding     { get; set; } = Encoding.UTF8;
+        internal string?            KnockSecret                 { get; set; }
+        internal string?            KnockSecretAuth             { get; set; }
+        internal DigestType         KnockSecretAuthType         { get; set; } = default;
+        internal Encoding           KnockSecretEncoding         { get; set; } = Encoding.UTF8;
         #endregion
 
         #region Network :: PingOptions
@@ -139,19 +139,19 @@ namespace MadWizard.Desomnia.Network.Configuration
         #endregion
 
         #region Network :: WakeOptions
-        internal WakeType           WakeType                { get; set; } = WakeType.Auto;
-        internal ushort             WakePort                { get; set; } = 9;
-        internal string?            WakePassword            { get; set; }
-        internal Encoding           WakePasswordEncoding    { get; set; } = Encoding.ASCII;
-        internal TimeSpan           WakeTimeout             { get; set; } = TimeSpan.FromSeconds(15);
-        internal TimeSpan?          WakeRepeat              { get; set; }
-        internal bool               WakePing                { get; set; } = false;
+        internal WakeType           WakeType                    { get; set; } = WakeType.Auto;
+        internal ushort             WakePort                    { get; set; } = 9;
+        internal string?            WakePassword                { get; set; }
+        internal Encoding           WakePasswordEncoding        { get; set; } = Encoding.ASCII;
+        internal TimeSpan           WakeTimeout                 { get; set; } = TimeSpan.FromSeconds(15);
+        internal TimeSpan?          WakeRepeat                  { get; set; }
+        internal bool               WakePing                    { get; set; } = false;
         #endregion
 
         #region Network :: WatchOptions
-        internal WatchMode          WatchMode               { get; set; } = WatchMode.Normal;
-        internal TimeSpan?          WatchTimeout            { get; set; } = null; // capturing should be stable now
-        internal ushort?            WatchUDPPort            { get; set; } = null;
+        internal WatchMode          WatchMode                   { get; set; } = WatchMode.Normal;
+        internal TimeSpan?          WatchTimeout                { get; set; } = null; // capturing should be stable now
+        internal ushort?            WatchUDPPort                { get; set; } = null;
 
         public WatchOptions MakeWatchOptions() => new()
         {

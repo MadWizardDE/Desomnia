@@ -2,19 +2,19 @@
 {
     public readonly struct SleepProxyOptions
     {
-        public int          Limit                   { get; init; }
+        public int          LeaseLimit              { get; init; }
 
-        public TimeSpan     MinLeaseDuration        { get; init; }
-        public TimeSpan     MaxLeaseDuration        { get; init; }
+        public TimeSpan     LeaseDurationMin        { get; init; }
+        public TimeSpan     LeaseDurationMax        { get; init; }
 
-        public LeaseExpireAction ExpireLease        { get; init; }
+        public LeaseExpireAction LeaseExpire        { get; init; }
 
-        public TimeSpan DetermineLeaseDuration(TimeSpan requestedDuration)
+        public TimeSpan ClampLeaseDuration(TimeSpan requestedDuration)
         {
-            if (requestedDuration < MinLeaseDuration)
-                return MinLeaseDuration;
-            else if (requestedDuration > MaxLeaseDuration)
-                return MaxLeaseDuration;
+            if (requestedDuration < LeaseDurationMin)
+                return LeaseDurationMin;
+            else if (requestedDuration > LeaseDurationMax)
+                return LeaseDurationMax;
             else
                 return requestedDuration;
         }
