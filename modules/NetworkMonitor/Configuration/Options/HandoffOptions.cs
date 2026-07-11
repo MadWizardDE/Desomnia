@@ -47,5 +47,9 @@ namespace MadWizard.Desomnia.Network.Configuration.Options
 
         IPv4            = 1 << 15,
         IPv6            = 1 << 16,
+
+        // Transport protocol features
+
+        TCPKeepAlive    = 1 << 20 // TODO: for future improvement with Apple SPS
     }
 }
