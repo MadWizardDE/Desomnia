@@ -51,15 +51,16 @@ Desomnia provides support for monitoring any number of installed network interfa
       handoff="none"
       handoffTimeout="5s"
       handoffRetry="0"
+      handoffDuration="1d"
+      handoffMTU="..."
 
-      sleepProxyLease="..."
       sleepProxyLeaseMin="30min"
       sleepProxyLeaseMax="365d"
       sleepProxyLimit="100"
-      sleepProxyLeaseExpire="none"
+      sleepProxyLeaseExpire="wake"
       sleepProxyDiscovery="eager"
       sleepProxyMetrics="best"
-      sleepProxyPort="5353"
+      sleepProxyPort="..."
 
       watchMode="normal"
       watchTimeout="1min"
@@ -200,19 +201,26 @@ handoffRetry
 
 How many additional handoff attempts (departing host) or reachability re-checks (receiving proxy) are made before a handoff is considered failed.
 
+handoffDuration
++++++++++++++++
+
+:default: ``1d``
+
+The lease duration requested when registering with a Sleep Proxy. The proxy clamps the request into the range it is willing to grant (an Apple proxy to at most 24 hours).
+
+handoffMTU
+++++++++++
+
+:default: *(unset)*
+
+The largest wire size, in bytes, of a single registration message. Larger registrations are split into a burst of messages; when unset, they travel as one datagram and rely on IP fragmentation if oversized.
+
 handoffPassword
 +++++++++++++++
 
 :inherited:
 
 The *SecureOn* Wake-on-LAN password (at most 6 bytes) transmitted during Sleep Proxy handoff, so that a proxy can wake the host later. Set ``handoffPasswordEncoding="base64"`` to supply the raw bytes as Base64.
-
-sleepProxyLease
-+++++++++++++++
-
-:default: ``sleepProxyLeaseMax``
-
-The lease duration granted when a client registers without requesting one of its own. On a host that registers with a proxy itself, this is instead the desired lease duration transmitted at registration time.
 
 sleepProxyLeaseMin
 ++++++++++++++++++
@@ -238,7 +246,7 @@ The maximum number of simultaneous leases. Once the pool is exhausted, further r
 sleepProxyLeaseExpire
 +++++++++++++++++++++
 
-:default: ``none``
+:default: ``wake``
 
 What the proxy does when a lease expires without the host returning on its own. ``none`` releases the lease; ``wake`` sends a Magic Packet to wake the host first.
 
@@ -259,9 +267,9 @@ The metric this proxy advertises, so that clients can prefer the most suitable o
 sleepProxyPort
 ++++++++++++++
 
-:default: ``5353``
+:default: *(unset — an ephemeral port)*
 
-The UDP port the Sleep Proxy service listens on. The default is the standard multicast DNS port.
+The UDP port the Sleep Proxy service listens on. Clients discover it through the proxy's DNS-SD advertisement, so it normally does not need to be fixed; set it for a predictable endpoint (for example for firewall rules).
 
 .. _allow-wake-on-lan:
 

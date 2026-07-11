@@ -50,7 +50,23 @@ handoffRetry
 :inherited:
 :default: ``0``
 
-How many additional attempts are made before a handoff is considered failed. It applies to both ends of the exchange: on the departing host, how many times the handoff is retried before giving up; on the receiving proxy, how many times reachability is re-checked before accepting that the host has really gone. After each ``handoffTimeout`` interval the step is repeated up to this many times. Increase it on networks where suspend takes longer to settle.
+How many additional attempts are made before a handoff is considered failed. It applies to both ends of the exchange: on the departing host, how many times a registration with a Sleep Proxy is retried — the retries are exhausted against each candidate proxy before the next-best one is tried, and the handoff only fails once every discovered proxy has been exhausted; on the receiving proxy, how many times reachability is re-checked before accepting that the host has really gone. After each ``handoffTimeout`` interval the step is repeated up to this many times. Increase it on networks where suspend takes longer to settle.
+
+handoffDuration
++++++++++++++++
+
+:inherited:
+:default: ``1d``
+
+The lease duration requested when registering with a :doc:`Sleep Proxy <sleepproxy>`. The proxy clamps the request into the range it is willing to grant — a Desomnia proxy according to its ``sleepProxyLeaseMin``/``sleepProxyLeaseMax``, an Apple proxy to at most 24 hours. Together with the proxy's :ref:`expiry behaviour <sleepproxy-expire>` this bounds how long the host can stay asleep before it is woken to renew its network presence.
+
+handoffMTU
+++++++++++
+
+:inherited:
+:default: *(unset)*
+
+The largest wire size, in bytes, a single registration message may have. A registration exceeding it — for example one carrying many services — is split into a burst of smaller messages that the proxy reassembles into one registration; Apple's own client splits at ``1440``, which is a good value here as well. When unset, the registration is always sent as a single datagram and, if it exceeds the network's packet size, left to IP fragmentation. That is perfectly viable on a switched local network — a Desomnia proxy accepts fragmented registrations up to the UDP maximum of 64 KiB, Apple proxies up to roughly 9 KB — but set an MTU if fragmented UDP is filtered somewhere on the path.
 
 handoffPassword
 +++++++++++++++
@@ -69,6 +85,24 @@ When a host running Desomnia as a local resource manager suspends with ``handoff
 Desomnia running in proxy mode on another device detects this by checking whether the Wake-on-LAN target MAC matches the Ethernet source address of the incoming packet.
 
 Upon receiving an UnMagic Packet, the proxy does not immediately claim the address. It waits for ``handoffTimeout``, then performs a reachability check against all last-known IP addresses of the departing host via ARP/NDP broadcast (repeating up to ``handoffRetry`` times). Only if none respond does it consider the host offline and execute the eager address claim — overwriting the cached ARP/NDP entries on other devices so that subsequent connection attempts are routed to the proxy instead.
+
+.. _handoff-sleepproxy:
+
+Sleep Proxy handoff
+-------------------
+
+The UnMagic Packet is a Desomnia-to-Desomnia signal. For interoperability with the wider ecosystem, Desomnia also implements the multicast DNS **Sleep Proxy** protocol originally developed by Apple. Instead of merely announcing "I am leaving", a departing host with ``handoff="SleepProxy"`` **registers its services** with a Sleep Proxy on the network before suspending. The proxy then advertises those services via mDNS on the host's behalf and wakes the host again the moment a remote client tries to reach one of them.
+
+This has two advantages over the UnMagic Packet:
+
+- The proxy does not need the sleeping host's services configured statically — it learns them from the registration. This removes the need to maintain a matching host definition on the proxy side.
+- Any standards-compliant Sleep Proxy client — not only Desomnia — can register with a Desomnia proxy, and Desomnia can register with a non-Desomnia proxy, including Apple's (an Apple TV, HomePod or AirPort base station). The compatibility details and known caveats of registering with an Apple proxy — most importantly that :doc:`wake filter rules </guides/filtering/service>` cannot be enforced there — are described :ref:`on the Sleep Proxy page <sleepproxy-apple>`.
+
+The registration carries the host's addresses (including the reverse mappings a proxy needs to answer ARP/NDP on its behalf), its watched services with their instance names, SRV priorities/weights and TXT attributes, the requested lease (``handoffDuration``), and the optional *SecureOn* password. Individual services can be excluded from the handoff with ``handoff="false"`` on the ``<Service>`` element. When several proxies are available, Desomnia works through them from best to worst advertised metric (see ``sleepProxyMetrics``), exhausting ``handoffRetry`` against each before moving on.
+
+When the host resumes, it announces its return on the link — the standardised signal that makes any compliant proxy, Desomnia or Apple, release the registration immediately and stop advertising on the host's behalf. No stale records linger, and the next suspend simply registers afresh.
+
+The registering side is configured here with ``handoff="SleepProxy"``; the accepting side is covered in full on the :doc:`Sleep Proxy <sleepproxy>` page, including lease durations, waking on demand, and the dynamic creation of host and service definitions from incoming registrations. The two pages describe the two ends of the same exchange.
 
 Address claiming on the proxy
 -----------------------------
@@ -90,17 +124,3 @@ By default Desomnia claims a remote host's addresses whenever it is found to be 
    <RemoteHost name="workstation" MAC="00:1A:2B:3C:4D:5E" advertise="eager" advertiseIfStopped="false">
      <Service name="RDP" port="3389" />
    </RemoteHost>
-
-.. _handoff-sleepproxy:
-
-Sleep Proxy handoff
--------------------
-
-The UnMagic Packet is a Desomnia-to-Desomnia signal. For interoperability with the wider ecosystem, Desomnia also implements the multicast DNS **Sleep Proxy** protocol originally developed by Apple. Instead of merely announcing "I am leaving", a departing host with ``handoff="SleepProxy"`` **registers its services** with a Sleep Proxy on the network before suspending. The proxy then advertises those services via mDNS on the host's behalf and wakes the host again the moment a remote client tries to reach one of them.
-
-This has two advantages over the UnMagic Packet:
-
-- The proxy does not need the sleeping host's services configured statically — it learns them from the registration. This removes the need to maintain a matching host definition on the proxy side.
-- Any standards-compliant Sleep Proxy client — not only Desomnia — can register with a Desomnia proxy, and Desomnia can register with a non-Desomnia proxy.
-
-The registering side is configured here with ``handoff="SleepProxy"``; the accepting side is covered in full on the :doc:`Sleep Proxy <sleepproxy>` page, including lease durations, waking on demand, and the dynamic creation of host and service definitions from incoming registrations. The two pages describe the two ends of the same exchange.
