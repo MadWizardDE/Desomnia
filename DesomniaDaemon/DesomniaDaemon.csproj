@@ -9,7 +9,22 @@
     <RootNamespace>MadWizard.Desomnia.Daemon</RootNamespace>
     <LangVersion>preview</LangVersion>
 	<RollForward>LatestMajor</RollForward>
+
+    <!-- Memory footprint tuning (see AOT analysis). Measure RSS before/after. -->
+    <!-- Drops the ICU data mapping; safe for a daemon that does no culture-aware formatting. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Workstation, non-concurrent GC: avoids Server GC's per-core heap reservations. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+
+    <!-- Turns on the trim + AOT + single-file Roslyn analyzers (diagnostic only; no AOT publish yet). -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Preserve all Desomnia types/members under trimming + NativeAOT (reflective activation & config binding). -->
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.xml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />

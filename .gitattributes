@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# Shell scripts must keep LF endings so they run when the solution is copied to a Linux host (the Pi).
+*.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

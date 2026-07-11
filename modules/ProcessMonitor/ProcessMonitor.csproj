@@ -8,6 +8,7 @@
 
 	  <RootNamespace>MadWizard.Desomnia.Process</RootNamespace>
     <AssemblyName>DesomniaProcessMonitor</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

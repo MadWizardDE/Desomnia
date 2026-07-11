@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>MadWizard.Desomnia</RootNamespace>
     <LangVersion>preview</LangVersion>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

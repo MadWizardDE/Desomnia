@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Trimmer / NativeAOT root descriptor for the Desomnia expedition.
+
+  Preserves ALL types and members of every Desomnia-owned assembly. These types are
+  constructed and populated *reflectively* (Autofac activation, the configuration binder),
+  so nothing references their constructors / property setters statically and the trimmer
+  would otherwise remove them — e.g. "Cannot create instance of type
+  'MadWizard.Desomnia.Configuration.SystemMonitorConfig' because it is missing a public
+  instance constructor."
+
+  preserve="all" with no nested <type> elements keeps the whole assembly AND emits the
+  reflection metadata the binder/container need at runtime. It also keeps non-public
+  members, which matters because config binding uses BindNonPublicProperties = true.
+
+  Referenced via <TrimmerRootDescriptor> from each AOT publish project (Service now, daemon later).
+
+  NOTE: names below are ASSEMBLY names, not project names (several modules override AssemblyName).
+  This roots only Desomnia code; it does NOT make reflection-over-generics (the config binder's
+  IL3050 "requires dynamic code" cases, e.g. binding List<T>/Dictionary<,>) safe — that is a
+  separate concern handled by avoiding those patterns or the source-generated binder.
+-->
+<linker>
+  <assembly fullname="DesomniaCore" preserve="all" />
+  <assembly fullname="DesomniaNetworkMonitor" preserve="all" />
+  <assembly fullname="DesomniaNetworkSessionMonitor" preserve="all" />
+  <assembly fullname="DesomniaPowerRequestMonitor" preserve="all" />
+  <assembly fullname="DesomniaProcessMonitor" preserve="all" />
+  <assembly fullname="DesomniaSessionMonitor" preserve="all" />
+
+  <!--
+    Entry assemblies. Only one is present per build (DesomniaService on Windows, desomniad = the daemon
+    on Linux), so the other produces a benign "could not resolve assembly" trim warning (IL2007). If a
+    toolchain ever promotes that to an error, split this file into per-entry descriptors.
+  -->
+  <assembly fullname="DesomniaService" preserve="all" />
+  <assembly fullname="desomniad" preserve="all" />
+
+  <!--
+    Third-party libraries that reflect on their OWN members by name (so the trimmer can't see
+    the use statically) and therefore need their metadata preserved. Autofac's
+    ImplicitRegistrationSource..cctor calls GetDeclaredMethod() on a private helper it only
+    invokes reflectively; without rooting it throws "Requested type member cannot be found."
+  -->
+  <assembly fullname="Autofac" preserve="all" />
+  <assembly fullname="Autofac.Extensions.DependencyInjection" preserve="all" />
+
+  <!--
+    CommandLineParser (assembly/namespace "CommandLine") reflects over the options type. Rooting should
+    be enough if it uses only plain reflection; if it throws an IL3050 (dynamic-code) error at runtime,
+    replace the daemon's Parser.ParseArguments call with a hand-rolled parse under #if DESOMNIA_AOT.
+  -->
+  <assembly fullname="CommandLine" preserve="all" />
+</linker>

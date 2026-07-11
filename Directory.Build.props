@@ -5,6 +5,17 @@
   </PropertyGroup>
 
   <!--
+    NativeAOT build switch. Publishing with -p:DesomniaAot=true (see DesomniaService\publish-aot-test.ps1)
+    defines the DESOMNIA_AOT compile symbol across ALL projects, so AOT-incompatible code paths can fall
+    back to AOT-safe equivalents (e.g. Autofac strongly-typed Meta<T, TMetadata>, which needs
+    MakeGenericMethod over value-type metadata properties). Passed as a command-line (global) property so
+    it propagates to referenced projects. See AOT-FEASIBILITY.md.
+  -->
+  <PropertyGroup Condition="'$(DesomniaAot)' == 'true'">
+    <DefineConstants>$(DefineConstants);DESOMNIA_AOT</DefineConstants>
+  </PropertyGroup>
+
+  <!--
     Git-tag driven versioning. Tags follow the scheme vMAJOR.MINOR.PATCH[-prerelease] (e.g. v3.1.0-alpha4);
     the nearest tag is baked into the assembly's Version / InformationalVersion so ProductInfo can read it
     back at runtime (cross-platform, single-file-safe). Falls back silently to the SDK default (1.0.0) when

@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>MadWizard.Desomnia.NetworkSession</RootNamespace>
     <AssemblyName>DesomniaNetworkSessionMonitor</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

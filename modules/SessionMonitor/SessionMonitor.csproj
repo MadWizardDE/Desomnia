@@ -8,6 +8,7 @@
 
 	  <RootNamespace>MadWizard.Desomnia.Session</RootNamespace>
     <AssemblyName>DesomniaSessionMonitor</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

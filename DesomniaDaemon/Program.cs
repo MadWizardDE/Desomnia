@@ -57,7 +57,9 @@ try
             builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
             builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
 
+#if !DESOMNIA_AOT
             builder.RegisterPluginModules();
+#endif
 
             builder.LoadConfiguration(configPath);
 
