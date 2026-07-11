@@ -90,27 +90,32 @@ runtime; reference types are fine), `RegisterGeneric`/`MakeGenericType` (warn), 
 (`RegisterAssemblyTypes`), `Meta<T,TMetadata>`, generated factories.
 Source: <https://docs.autofac.org/en/latest/advanced/native-aot-trimming.html>
 
-## Blocker list for a real (daemon) AOT build — ranked
+## Blocker list — resolution status
 
-1. **Tmds.DBus `CreateProxy<ILogin1Manager>()`** (`DBusManager.cs`) — uses `Reflection.Emit`. **Hard
-   blocker**, no rooting can fix it. Must migrate to `Tmds.DBus.Protocol` + `Tmds.DBus.SourceGenerator`.
-   Daemon-only, bounded scope (login1/inhibitor path).
-2. **Runtime plugin loading** (`PluginLoadingExtensions.cs`, `AssemblyLoadContext.LoadFromAssemblyPath`)
-   — architecturally incompatible with a JIT-free binary. Gate out with `#if` for AOT. Plugins are
-   not needed for the daemon's built-in modules.
-3. **Config binding** `ConfigurationBinder.Get<T>(BindNonPublicProperties = true)`
-   (`ConfigurableModule<T>.Build`) — reflective. The AOT-safe source-gen binder does **not** support
-   non-public properties, so config models must expose public settable properties. Touches every module.
-4. **Open-generic logger** (`NetworkContext.RegisterContextAwareLogger`, `Context.Scope`) —
-   `MakeGenericType` over reference types. Probably works (per Autofac docs); if not, swap to a lambda
-   registration.
-5. **Own reflection helpers** — `ReflectionExt` (`GetProperties/Fields/Methods`), `EventSource`
-   (`GetEvents`), `FilterContext.RegisterType<F>` — need `[DynamicallyAccessedMembers]` annotations
-   so the required members survive.
-6. **XML config source** EncryptedXml/XSLT `IL3050` — benign (no encrypted XML in use); suppressible.
-7. **Service-only** (not daemon-relevant): `Assembly.Location` in `Program.cs` → use
-   `AppContext.BaseDirectory`; `Marshal.PtrToStructure(ptr, Type)` in `WTS_API.cs` → use the generic
-   `PtrToStructure<T>` overload; WMI/ETW ship extra native interop DLLs that Linux won't carry.
+1. **Tmds.DBus `CreateProxy<ILogin1Manager>()`** (`DBusManager.cs`) — `Reflection.Emit`, the one hard
+   blocker. **Resolved by exclusion, not rewrite.** The D-Bus/logind path only exists to suspend the
+   *local* machine, which an always-on device never does. Under `#if DESOMNIA_AOT`,
+   `PlatformModule` always registers the sysfs `SysPowerManager` (no D-Bus), so `CreateProxy` is never
+   called. The D-Bus files still compile (their enums are shared by `PowerManagerConfig`) but are
+   unreached. If a full-suspend AOT build is ever needed, migrate to `Tmds.DBus.SourceGenerator` then.
+2. **Runtime plugin loading** (`PluginLoadingExtensions.cs`) — **Resolved.** `RegisterPluginModules()`
+   is gated out under `#if !DESOMNIA_AOT`; the daemon's modules are compiled in.
+3. **Config binding** `ConfigurationBinder.Get<T>(BindNonPublicProperties = true)` — **Resolved by
+   rooting**, not by moving to the source-gen binder. `preserve="all"` keeps the (non-public) members
+   the reflective binder needs. Worked because bound collections are reference-typed and `= []`
+   initializers pre-instantiate the `List<T>`s.
+4. **Open-generic logger** (`NetworkContext.RegisterContextAwareLogger`, `Context.Scope`) — **Works**
+   (confirmed at runtime): `MakeGenericType` over reference types. No lambda fallback needed.
+5. **`Meta<T,TMetadata>` strongly-typed metadata** — **Resolved.** Switched consumers to loosely-typed
+   `Meta<T>` + dictionary under `#if DESOMNIA_AOT` (`MakeGenericMethod(int Order)` broke AOT).
+6. **CommandLineParser** (daemon `Program.cs`) — **left in, rooted** (`preserve="all"` on the
+   `CommandLine` assembly). Untested under AOT (unannotated); if it throws an `IL3050` at runtime on the
+   Pi, replace with a hand-rolled parse under `#if DESOMNIA_AOT`.
+7. **Own reflection helpers** — `ReflectionExt`, `EventSource`, `FilterContext.RegisterType<F>` — covered
+   by rooting so far; annotate with `[DynamicallyAccessedMembers]` if any surface at runtime.
+8. **XML config source** EncryptedXml/XSLT `IL3050` — benign (no encrypted XML in use); suppressible.
+9. **Service-only** (not daemon-relevant): `Assembly.Location` → `AppContext.BaseDirectory`;
+   `Marshal.PtrToStructure(ptr, Type)` → generic overload; WMI/ETW ship extra native interop DLLs.
 
 ## Final AOT binary dependencies
 
@@ -118,18 +123,31 @@ Single native ELF/exe linking only standard system libs (`libc`, `libm`, `libgcc
 `libz`) plus the app's own P/Invoke target **`libpcap`** (SharpPcap). No .NET runtime install. DBus is
 spoken over a socket by pure-managed Tmds.DBus (no native lib). ICU is gone (Invariant).
 
+## The always-on daemon build (the real target)
+
+Because AOT precludes plugin loading, an AOT build is always a *reduced* variant that coexists with
+the normal build — it is not a replacement. The AOT daemon targets **always-on ARM64 devices**: it
+monitors the network and manages *other* hosts (WoL, sleep proxy) but never suspends itself, so the
+D-Bus/logind machinery is simply excluded (see blocker #1). Devices Desomnia *suspends* have plenty of
+RAM and keep the normal (non-AOT) build.
+
 ## Reproducing the build
 
-- Publish profile: `DesomniaService/Properties/PublishProfiles/AotTest.pubxml`.
-- Helper: `DesomniaService/publish-aot-test.ps1` (fixes the vswhere-on-PATH issue).
-- Output: `DesomniaService/bin/aot-test/DesomniaService.exe`.
-- CLI: `dotnet publish DesomniaService\DesomniaService.csproj -p:PublishProfile=AotTest`
-- **Local prerequisite:** VS "Desktop development with C++" workload; `vswhere.exe` must be on PATH
-  (VS Installer dir) or the native link step fails with `MSB3073` (link.exe exit 123).
+**Service (win-x64, local sanity check):**
+- `DesomniaService/publish-aot-test.ps1` (or profile `AotTest`) → `DesomniaService/bin/aot-test/DesomniaService.exe`.
+- Prereq: VS "Desktop development with C++"; `vswhere.exe` on PATH or the link step fails `MSB3073`.
 
-## Project state left behind
+**Daemon (linux-arm64, the target — run ON the Pi):**
+- `DesomniaDaemon/publish-aot.sh` → `DesomniaDaemon/bin/aot-linux-arm64/desomniad`.
+- Cross-compilation from Windows is unsupported; build on the Pi (AOT prereqs already present from a
+  prior publish). The script prints `ldd` + how to measure `VmRSS`/`RssAnon`/`RssFile`.
+- Both builds define `DESOMNIA_AOT` via `-p:DesomniaAot=true`.
 
-- `DesomniaDaemon.csproj`: GC + Invariant settings (**keepers**).
-- `<IsAotCompatible>true</IsAotCompatible>` added to 7 projects (daemon + service trees) — **diagnostic
-  only**, enables the trim/AOT Roslyn analyzers. Adds IL warnings to normal builds; harmless. Remove or
-  gate behind a condition once the expedition ends.
+## Project state (branch `AOT`)
+
+All expedition work lives on branch **`AOT`** (main is untouched). Left intentionally "dirty":
+- `DesomniaDaemon.csproj`: GC + Invariant settings.
+- `<IsAotCompatible>true</IsAotCompatible>` on 7 projects — diagnostic analyzers; adds harmless IL
+  warnings to normal builds. Gate or remove when the expedition concludes.
+- `preserve="all"` rooting (`build/Desomnia.TrimmerRoots.xml`) trades binary size for safety; can be
+  tightened later.
