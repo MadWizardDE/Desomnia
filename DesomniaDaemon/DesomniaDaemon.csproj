@@ -45,6 +45,16 @@
   </ItemGroup>
 
   <!--
+    Always-on build: cap the GC heap and decommit aggressively. Confirmed on the Pi to cut RssAnon
+    (~7 MB) with the live heap at ~7 MB. 25165824 = 0x1800000 = 24 MiB. Tunable; raise or drop the
+    hard limit if real load needs more head-room.
+  -->
+  <ItemGroup Condition="'$(DesomniaAot)' == 'true'">
+    <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimit" Value="25165824" Trim="false" />
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" Trim="false" />
+  </ItemGroup>
+
+  <!--
     AOT publish: optimize for size to shrink the binary and its resident code pages (RssFile).
     All switches below are safe for a headless daemon (no debugger, no EventSource/ETW, no HTTP
     distributed-tracing). The .map / .mstat files report which assemblies/types dominate the binary
