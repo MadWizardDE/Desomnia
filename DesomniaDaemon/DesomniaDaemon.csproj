@@ -44,4 +44,20 @@
     <TrimmerRootAssembly Include="FirewallKnockOperator" />
   </ItemGroup>
 
+  <!--
+    AOT publish: optimize for size to shrink the binary and its resident code pages (RssFile).
+    All switches below are safe for a headless daemon (no debugger, no EventSource/ETW, no HTTP
+    distributed-tracing). The .map / .mstat files report which assemblies/types dominate the binary
+    so we can target the rooting next (analyse the .mstat with the `sizoscope` global tool).
+  -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <EventSourceSupport>false</EventSourceSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <IlcGenerateMapFile>true</IlcGenerateMapFile>
+    <IlcGenerateMstatFile>true</IlcGenerateMstatFile>
+  </PropertyGroup>
+
 </Project>
