@@ -38,4 +38,10 @@
     <ProjectReference Include="..\modules\ProcessMonitor\ProcessMonitor.csproj" />
   </ItemGroup>
 
+  <!-- AOT: statically link plugins that are otherwise loaded dynamically (RegisterPluginModules is skipped). -->
+  <ItemGroup Condition="'$(DesomniaAot)' == 'true'">
+    <ProjectReference Include="..\plugins\FirewallKnockOperator\FirewallKnockOperator.csproj" />
+    <TrimmerRootAssembly Include="FirewallKnockOperator" />
+  </ItemGroup>
+
 </Project>

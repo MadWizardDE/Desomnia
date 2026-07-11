@@ -57,7 +57,10 @@ try
             builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
             builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
 
-#if !DESOMNIA_AOT
+#if DESOMNIA_AOT
+            // Plugins can't be loaded dynamically under AOT; statically include the ones we ship.
+            builder.RegisterModule<MadWizard.Desomnia.Network.FirewallKnockOperator.PluginModule>();
+#else
             builder.RegisterPluginModules();
 #endif
 
