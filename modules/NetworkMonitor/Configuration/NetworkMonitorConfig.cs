@@ -106,7 +106,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal SleepProxyDiscoveryType SleepProxyDiscovery { get; set; } = SleepProxyDiscoveryType.Eager; // default: lazy or eager?
 
         internal SleepProxyMetrics  SleepProxyMetrics       { get; set; } = SleepProxyMetrics.Best;
-        internal ushort?            SleepProxyPort          { get; set; } // default = use a ephemeral port
+        internal ushort?            SleepProxyPort          { get; set; } // null = use an ephemeral port
 
         public SleepProxyOptions MakeSleepProxyOptions() => new()
         {

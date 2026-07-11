@@ -106,7 +106,9 @@ namespace MadWizard.Desomnia.Network.Naming
             EdnsOptionRegistry.Register<EdnsLeaseOption>();
             EdnsOptionRegistry.Register<EdnsOwnerOption>();
 
+            EdnsOptionRegistry.Register<EdnsServiceInfoOption>();
             EdnsOptionRegistry.Register<EdnsServiceFilterOption>();
+            
             EdnsOptionRegistry.Register<EdnsPagingOption>();
         }
     }

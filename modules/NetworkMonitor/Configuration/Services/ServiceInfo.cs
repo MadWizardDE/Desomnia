@@ -17,6 +17,13 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         /// </summary>
         public string?          InstanceName        { get; set; }
 
+        /// <summary>DNS-SD SRV priority / weight advertised for the service (RFC 2782).</summary>
+        public ushort           Priority            { get; set; }
+        public ushort           Weight              { get; set; }
+
+        /// <summary>DNS-SD TXT attributes advertised for the service (RFC 6763 §6).</summary>
+        public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
+
         public IPProtocol       Protocol            { get; set; } = IPProtocol.TCP;
         public ushort           Port                { get; set; }
 

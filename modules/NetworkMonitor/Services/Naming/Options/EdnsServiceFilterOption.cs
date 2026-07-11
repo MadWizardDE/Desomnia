@@ -11,7 +11,7 @@ namespace MadWizard.Desomnia.Network.Naming.Options
     /// </summary>
     public sealed class EdnsServiceFilterOption : EdnsServiceOption
     {
-        public EdnsServiceFilterOption() => Type = (EdnsOptionType)0xFEED; // = 65261, IANA local/experimental-use range (65001–65534)
+        public EdnsServiceFilterOption() => Type = (EdnsOptionType)0xFEEE; // = 65262, IANA local/experimental-use range (65001–65534)
 
         public List<ServiceFilterEntry> Filters { get; init; } = [];
 

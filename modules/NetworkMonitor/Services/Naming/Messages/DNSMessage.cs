@@ -57,7 +57,7 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
             });
 
             Response.AdditionalRecords.Add(MakeService(host, service, instance, options));
-            Response.AdditionalRecords.Add(MakeText(instance, options));
+            Response.AdditionalRecords.Add(MakeText(service, instance, options));
 
             AddAddresses(host, options);
 
@@ -94,7 +94,7 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
                 }
 
                 if (any || question.Type is DnsType.TXT)
-                    AnswerWith(MakeText(instance, options), options.Delay);
+                    AnswerWith(MakeText(service, instance, options), options.Delay);
             }
         }
 
@@ -103,14 +103,19 @@ namespace MadWizard.Desomnia.Network.Naming.Messages
             Name = instance,
             Target = host.LocalDomainName,
             Port = service.Port,
+            Priority = service.Priority,
+            Weight = service.Weight,
 
             TTL = options.HostTTL
         };
 
-        private static TXTRecord MakeText(DomainName instance, AnswerOptions options) => new()
+        private static TXTRecord MakeText(TransportNetworkService service, DomainName instance, AnswerOptions options) => new()
         {
             Name = instance,
-            Strings = [string.Empty],
+            // RFC 6763 §6.1: a service with no attributes still carries a single empty string.
+            Strings = service.Properties.Count > 0
+                ? [.. service.Properties.Select(pair => $"{pair.Key}={pair.Value}")]
+                : [string.Empty],
 
             TTL = options.HostTTL
         };
