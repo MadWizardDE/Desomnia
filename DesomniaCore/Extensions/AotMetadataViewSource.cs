@@ -1,10 +1,9 @@
-#if DESOMNIA_AOT
-using System.Collections;
-using System.Diagnostics.CodeAnalysis;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
 using Autofac.Features.Metadata;
+using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MadWizard.Desomnia
 {
@@ -37,7 +36,7 @@ namespace MadWizard.Desomnia
         Justification = "Metadata view types are preserved whole via the trimmer root descriptor (preserve=all).")]
     [UnconditionalSuppressMessage("Trimming", "IL2075",
         Justification = "Metadata view types are preserved whole via the trimmer root descriptor (preserve=all).")]
-    internal sealed class AotMetadataViewSource : IRegistrationSource
+    internal sealed class AOTMetadataViewSource : IRegistrationSource
     {
         public bool IsAdapterForIndividualComponents => false;
 
@@ -97,4 +96,3 @@ namespace MadWizard.Desomnia
         }
     }
 }
-#endif
