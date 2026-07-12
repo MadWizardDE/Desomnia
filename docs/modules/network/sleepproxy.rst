@@ -7,10 +7,10 @@ A **Sleep Proxy** is an always-on device that maintains the network presence of 
 
 Desomnia can act as **either end** of this exchange:
 
-- As a **Sleep Proxy server** — the always-on device that accepts registrations and wakes hosts. This is the role described on this page.
-- As a **Sleep Proxy client** — a machine that registers its own services before suspending. Because that is part of a host's departure handshake, it is configured through the ``handoff`` attribute and documented on the :doc:`Handoff <handoff>` page.
+- As a Sleep Proxy **server** — the always-on device that accepts registrations and wakes hosts. This is the role described on this page.
+- As a Sleep Proxy **client** — a machine that registers its own services before suspending. Because that is part of a host's departure handshake, it is configured through the ``handoff`` attribute and documented on the :doc:`Handoff <handoff>` page.
 
-Because it speaks the standard protocol, a Desomnia proxy can serve non-Desomnia clients (for example Apple devices), and a Desomnia client can register with a non-Desomnia proxy.
+Because it speaks the standard protocol, a Desomnia proxy can serve non-Desomnia clients, and a Desomnia client can register with a non-Desomnia proxy. Since Apple's **mDNSResponder** is the implementation with the biggest reach, the interoperability — in both directions — is covered on its own page: :doc:`Apple Compatibility <sleepproxy/apple>`.
 
 .. hint::
 
@@ -19,10 +19,10 @@ Because it speaks the standard protocol, a Desomnia proxy can serve non-Desomnia
 How it works
 ------------
 
-1. A host about to suspend sends a registration to the proxy, listing its MAC address, its IP addresses, and the services it wants kept alive (for example RDP on port 3389).
-2. The proxy grants a **lease** for a bounded duration and begins :doc:`answering mDNS queries <mdns>` for those services, so that other devices continue to discover the host as if it were awake.
+1. A host about to suspend sends a registration to the proxy, listing its MAC address, its IP addresses, and the services it wants to be kept reachable (for example RDP on port 3389).
+2. The proxy grants a **lease** for a bounded duration and defends the host's addresses on the link so that connection attempts reach it. If :doc:`mDNS advertising <mdns>` is enabled, it additionally answers service-discovery queries for those services, so that browsing devices continue to find the host as if it were awake.
 3. When a client tries to reach one of the registered services — or when the lease is about to expire with the :ref:`expiry action <sleepproxy-expire>` set to wake — the proxy sends a Magic Packet and the host comes back online.
-4. Once the host is awake again it reclaims its own services, the lease ends, and the proxy releases everything it was holding on the host's behalf.
+4. Once the host is awake again it announces its return, the lease ends immediately, and the proxy releases everything it was holding on the host's behalf.
 
 Enabling the proxy
 ------------------
@@ -48,81 +48,37 @@ The distinction between the two discovery entities is important for the proxy:
 
 See :doc:`auto-configuration <auto>` for the full list of ``autoDetect`` entities and how inheritance between ``<NetworkMonitor>`` and individual hosts works.
 
+Advertising over mDNS
++++++++++++++++++++++
+
+Accepting registrations and waking hosts does not by itself make a sleeping host *findable* over multicast DNS (Bonjour/DNS-SD). The proxy always defends the host's addresses at the link layer, so a client that already has the host's IP address connects straight through and triggers the wake — but reaching that point can depend on two things the proxy does not do by default:
+
+- **Resolving the host's name to an address**, if the client connects by name and the network has no other authority answering for a sleeping host. Enable ``advertiseHosts``.
+- **Keeping the host's services discoverable** to service-browsing clients. Enable ``advertiseServices``.
+
+.. code:: xml
+
+   <NetworkMonitor watchMode="promiscuous" autoDetect="Host|Service" advertiseHosts="true" advertiseServices="true">
+     <!-- ... -->
+   </NetworkMonitor>
+
+Both are off by default and independent of each other; see the :doc:`mDNS responder <mdns>` page for when each is worth turning on.
+
 Leases
 ------
 
-Every registration is bound to a lease with a finite duration. A client may request a specific duration; the proxy clamps the request into the range it is willing to grant and, if the client requests nothing, falls back to a default.
+Every registration is bound to a lease with a finite duration. The client requests a duration — for a Desomnia client this is its ``handoffDuration`` (see :doc:`Handoff <handoff>`) — and the proxy clamps the request into the range it is willing to grant. The granted duration is returned in the registration response.
 
-sleepProxyLease
-+++++++++++++++
-
-:inherited:
-:default: *(unset — falls back to* ``sleepProxyLeaseMax`` *)*
-
-The role of this attribute depends on which side you configure it on:
-
-- On a **proxy**, it is the lease duration granted when a client registers without requesting one of its own.
-- On a **client** (a host handing off with ``handoff="SleepProxy"``), it is the *desired* lease duration transmitted to the proxy at registration time. The proxy is free to clamp the request into the range it is willing to grant — see ``sleepProxyLeaseMin`` and ``sleepProxyLeaseMax`` below.
-
-sleepProxyLeaseMin
-++++++++++++++++++
-
-:inherited:
-:default: ``30min``
-
-The shortest lease the proxy will grant. Requests below this are rounded up.
-
-sleepProxyLeaseMax
-++++++++++++++++++
-
-:inherited:
-:default: ``365d``
-
-The longest lease the proxy will grant. Requests above this are capped.
-
-sleepProxyLimit
-+++++++++++++++
-
-:inherited:
-:default: ``100``
-
-The maximum number of simultaneous leases. Once the pool is exhausted, further registrations are refused until a lease ends. This bounds the resources a single proxy commits to sleeping hosts.
-
-.. _sleepproxy-expire:
-
-sleepProxyLeaseExpire
-+++++++++++++++++++++
-
-:inherited:
-:default: ``none``
-
-What the proxy does when a lease reaches its end without the host having come back on its own:
-
-``none``
-  Simply release the lease. If the host is still asleep, its services stop being advertised until it registers again.
-``wake``
-  Send a Magic Packet to wake the host before releasing the lease — but only if the host is not already responding. Use this when a registered host should never silently disappear from the network, even if it stays asleep longer than its lease.
+.. include:: ./options/sleepproxy/lease.rst
 
 Choosing between proxies
 ------------------------
 
-Several Sleep Proxies may be present on one network. Each advertises a four-part **metric** that lets clients pick the most suitable one — a dedicated, mains-powered, always-on device is a better proxy than an incidentally-available laptop. Clients prefer the proxy with the *lowest* metric.
+Several Sleep Proxies may be present on one network. Each advertises a four-part **metric** that lets clients pick the most suitable one — a dedicated, mains-powered, always-on device is a better proxy than an incidentally-available laptop. Clients prefer the proxy with the *lowest* metric; a Desomnia client works through the candidates from best to worst until a registration succeeds (see ``handoffRetry`` on the :doc:`Handoff <handoff>` page).
 
-sleepProxyMetrics
-+++++++++++++++++
+.. include:: ./options/sleepproxy/metrics.rst
 
-:inherited:
-:default: ``best``
-
-The metric this proxy advertises. You may use one of the shorthands ``best``, ``average`` or ``worst``, or specify the four fields explicitly as ``intent-portability-marginalPower-totalPower`` (each ``10``–``99``), following Apple's convention — for example ``30-40-70-70``. Lower is more preferred. Leave this at ``Best`` if this device is the intended proxy for the segment; raise it if the machine is only an opportunistic fallback.
-
-sleepProxyPort
-++++++++++++++
-
-:inherited:
-:default: ``5353``
-
-The UDP port the Sleep Proxy service listens on. The default is the standard multicast DNS port and should rarely be changed.
+.. include:: ./options/sleepproxy/port.rst
 
 Registering with a Sleep Proxy
 ------------------------------
@@ -136,29 +92,29 @@ To make *this* machine register its services with a proxy before it sleeps, conf
 
    <NetworkMonitor autoDetect="SleepProxy" handoff="SleepProxy">
      <!-- or point at a specific proxy: -->
-     <SleepProxy name="proxy" IPv4="192.168.1.2" />
+     <SleepProxy name="proxy" IPv4="192.168.1.2" port="1234" />
    </NetworkMonitor>
 
-sleepProxyDiscovery
-+++++++++++++++++++
-
-:inherited:
-:default: ``eager``
-
-Controls *when* a client looks for a proxy to register with:
-
-``eager``
-  Discover a proxy up front and keep the registration current, so handoff at suspend time is immediate.
-``lazy``
-  Defer discovery until the host is actually about to suspend. This avoids background traffic at the cost of a slightly slower suspend.
+.. include:: ./options/sleepproxy/discovery.rst
 
 .. note::
 
    ``eager`` and ``lazy`` are mutually exclusive. A discovered proxy is forgotten again when the local host resumes, so that a proxy which has itself gone away is not trusted indefinitely.
 
+Advanced
+--------
+
+The pages below document the machinery behind the proxy: the wire-level details of the protocol and Desomnia's implementation of it, and the specifics of interoperating with Apple's Bonjour Sleep Proxy. None of it is required for configuring or using the proxy — read on if you are curious how it works under the hood, or if you are debugging the exchange with a third-party implementation:
+
+.. toctree::
+   :maxdepth: 1
+
+   sleepproxy/protocol
+   sleepproxy/apple
+
 See also
 --------
 
-- :doc:`Handoff <handoff>` — the departure handshake and the ``handoff`` attribute used by the client side.
-- :doc:`mDNS responder <mdns>` — how the proxy answers service discovery queries for sleeping hosts.
+- :doc:`Handoff <handoff>` — the departure handshake and the client-side attributes ``handoff``, ``handoffDuration``, ``handoffMTU`` and ``handoffRetry``.
+- :doc:`Multicast DNS <mdns>` — how the proxy answers host and service discovery queries for sleeping hosts.
 - :doc:`/guides/wol-proxy` — setting up the always-on proxy device that this feature builds on.

@@ -94,6 +94,14 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
                 foreach (var service in Services)
                 {
+                    // The friendly service name travels privately between Desomnia peers, not as a TXT
+                    // attribute a third-party proxy would re-advertise on the link.
+                    yield return new EdnsServiceInfoOption
+                    {
+                        ServiceDomainName = service.Service.LocalDomainName,
+                        Name = service.Name,
+                    };
+
                     var option = new EdnsServiceFilterOption { ServiceDomainName = service.Service.LocalDomainName };
 
                     foreach (var host in service.HostFilterRule)
@@ -146,11 +154,6 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
     public class ProxyServiceInfo : WatchedServiceInfo
     {
-        // TODO: wie mappen wir das?
-        public ushort Priority  { get; set; }
-        public ushort Weight    { get; set; }
-
-        // TODO: wie mappen wir TXT records?
 
         public ProxyServiceInfo()
         {

@@ -6,6 +6,7 @@ using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
 using Microsoft.Extensions.Configuration.Xml;
+using System.Runtime.CompilerServices;
 
 namespace MadWizard.Desomnia.Daemon
 {
@@ -19,7 +20,7 @@ namespace MadWizard.Desomnia.Daemon
         protected override void Load(ContainerBuilder builder)
         {
             // Implementing Power-Manager
-            if (Config.UseDBus && HasSystemDBus())
+            if (Config.UseDBus && HasSystemDBus() && RuntimeFeature.IsDynamicCodeSupported)
             {
                 builder.RegisterType<DBusManager>()
                     .AsImplementedInterfaces()

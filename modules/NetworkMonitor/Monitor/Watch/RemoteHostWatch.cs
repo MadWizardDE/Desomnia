@@ -241,6 +241,7 @@ namespace MadWizard.Desomnia.Network.Watch
             }
 
             int countPackets = 0;
+            HashSet<IPAddress> wokenIPs = [];
             foreach (var ip in (hint != null ? [hint] : Host.IPAddresses.ToArray()))
             {
                 WakeType wakeType = WakeOptions.Type;
@@ -270,11 +271,16 @@ namespace MadWizard.Desomnia.Network.Watch
                         }
                     }
 
+                    if (wokenIPs.Contains(wakeIP)) // don't wake the same IP more than once
+                        continue;
+
                     Logger.LogTrace($"Wake up \"{Host.Name}\" at {Host.PhysicalAddress.ToHexString()} via {wakeIP}:{WakeOptions.Port}/udp");
 
                     var bytes = udp.Send(wol.Bytes, new IPEndPoint(wakeIP, WakeOptions.Port));
 
                     LastWoken = DateTime.Now;
+
+                    wokenIPs.Add(wakeIP);
 
                     countPackets++;
                 }

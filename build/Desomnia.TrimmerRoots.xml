@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shared trimmer / NativeAOT root descriptor: assemblies present in BOTH the daemon and the service
+  AOT builds. Preserves all types and members (they are constructed/populated reflectively by Autofac
+  activation and the configuration binder, so nothing references them statically). See AOT-FEASIBILITY.md.
+
+  Entry assemblies and build-specific modules live in the per-target descriptors so that neither build
+  references an assembly outside its own closure (which would emit an "IL2007: could not resolve
+  assembly" warning):
+    - Desomnia.TrimmerRoots.Daemon.xml   (referenced by DesomniaDaemon)
+    - Desomnia.TrimmerRoots.Service.xml  (referenced by DesomniaService)
+
+  Names below are ASSEMBLY names, not project names (several modules override AssemblyName).
+-->
+<linker>
+  <assembly fullname="DesomniaCore" preserve="all" />
+  <assembly fullname="DesomniaNetworkMonitor" preserve="all" />
+  <assembly fullname="DesomniaPowerRequestMonitor" preserve="all" />
+  <assembly fullname="DesomniaProcessMonitor" preserve="all" />
+
+  <!-- Autofac reflects on its own private helpers (e.g. ImplicitRegistrationSource..cctor); without
+       rooting it throws "Requested type member cannot be found." -->
+  <assembly fullname="Autofac" preserve="all" />
+  <assembly fullname="Autofac.Extensions.DependencyInjection" preserve="all" />
+
+  <!-- CommandLineParser (assembly/namespace "CommandLine") reflects over the options type. -->
+  <assembly fullname="CommandLine" preserve="all" />
+</linker>

@@ -142,15 +142,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
                         break;
 
                     case TXTRecord txt when services.TryGetValue(txt.Name, out var service):
+                        // Every TXT attribute is kept verbatim to be re-advertised; the friendly
+                        // service name is not among them -- it travels in an EdnsServiceMetaOption.
                         foreach (var pair in txt.KeyValuePairs)
-                        {
-                            switch (pair.Key.ToLower())
-                            {
-                                case "name":
-                                    service.Name = pair.Value;
-                                    break;
-                            }
-                        }
+                            service.Properties[pair.Key] = pair.Value;
                         break;
                 }
             }
@@ -171,6 +166,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             switch (serviceOption)
             {
                 // optional: add more serviceOption types
+
+                case EdnsServiceInfoOption option:
+                    service.Name = option.Name;
+                    break;
 
                 case EdnsServiceFilterOption option:
                     foreach (var filter in option.Filters)
@@ -289,10 +288,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             return message;
         }
 
+        // The TXT record carries the service's own attributes only; the friendly service name travels
+        // in an EdnsServiceMetaOption, so a third-party proxy doesn't re-advertise it on the link.
         public static IEnumerable<KeyValuePair<string, string>> ExtractServiceProperties(ProxyServiceInfo service)
-        {
-            yield return new("name", service.Name);
-        }
+            => service.Properties;
         #endregion
     }
 }

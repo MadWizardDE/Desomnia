@@ -39,6 +39,11 @@ namespace MadWizard.Desomnia.Network.Middleware
 
                             Protocol = service.Port.Protocol,
                             Port = service.Port,
+
+                            Priority = service.Priority,
+                            Weight = service.Weight,
+
+                            Properties = service.Properties,
                         };
 
                         if (watchService is ServiceFilterWatch filterWatch)

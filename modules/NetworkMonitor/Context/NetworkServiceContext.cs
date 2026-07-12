@@ -26,8 +26,8 @@ namespace MadWizard.Desomnia.Network.Context
                     .SingleInstance()
                     .AsSelf();
 
-                // Named property injection: the service now has two settable string properties,
-                // and a TypedParameter would indiscriminately fill both.
+                // Named property injection: the service has several settable properties, and a
+                // TypedParameter would indiscriminately fill same-typed ones.
                 if (info.ServiceName is string name)
                 {
                     service.WithProperty(nameof(TransportNetworkService.ServiceName), name);
@@ -36,6 +36,15 @@ namespace MadWizard.Desomnia.Network.Context
                 if (info.InstanceName is string instance)
                 {
                     service.WithProperty(nameof(TransportNetworkService.InstanceName), instance);
+                }
+
+                // DNS-SD advertising attributes carried over from a Sleep Proxy registration.
+                service.WithProperty(nameof(TransportNetworkService.Priority), info.Priority);
+                service.WithProperty(nameof(TransportNetworkService.Weight), info.Weight);
+
+                if (info.Properties.Count > 0)
+                {
+                    service.WithProperty(nameof(TransportNetworkService.Properties), info.Properties);
                 }
 
                 var watch = builder.RegisterType<ServiceFilterWatch>().As<NetworkServiceWatch>()

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Daemon-only trimmer / NativeAOT roots (referenced by DesomniaDaemon in addition to the shared
+  Desomnia.TrimmerRoots.xml). "desomniad" is the daemon's entry assembly (see AssemblyName in
+  DesomniaDaemon.csproj). FirewallKnockOperator is rooted via a PublishAot-conditional
+  TrimmerRootAssembly in the csproj instead, since it is only referenced in AOT builds.
+-->
+<linker>
+  <assembly fullname="desomniad" preserve="all" />
+</linker>

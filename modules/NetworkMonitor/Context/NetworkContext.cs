@@ -221,7 +221,16 @@ namespace MadWizard.Desomnia.Network.Context
 
                         var service = new SleepProxyService(port)
                         {
-                            Metrics = Config.SleepProxyMetrics
+                            Metrics = Config.SleepProxyMetrics,
+
+                            // Advertise which implementation is proxying, and its version -- so a browser can tell
+                            // Desomnia apart from Apple's Bonjour Sleep Proxy (which doesn't publish these).
+
+                            Properties =
+                            {
+                                ["impl"]    = ProductInfo.Name,
+                                ["ver"]     = ProductInfo.Version
+                            }
                         };
 
                         RegisterTrafficFilter(builder, new UDPTrafficType(service.Port));
@@ -242,7 +251,7 @@ namespace MadWizard.Desomnia.Network.Context
                             .WithMetadata<DatagramService.SocketMetadata>(meta => meta
                                 .For(m => m.Port, port)
                                 .For(m => m.Shared, sharedPort))
-                            .ConfigurePipeline(p => p.Use(new DatagramSocketLink()))
+                            .ConfigurePipeline(p => p.Use(new DatagramSocketLink())) // TODO: remove metadata and set this directly in DatagramSocketLink?
                             .AsImplementedInterfaces()
                             .SingleInstance();
                     }

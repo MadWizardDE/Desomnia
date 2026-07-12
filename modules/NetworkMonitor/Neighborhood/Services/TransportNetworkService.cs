@@ -28,6 +28,18 @@ namespace MadWizard.Desomnia.Network.Neighborhood.Services
         /// </summary>
         public string? InstanceName { get; set; }
 
+        /// <summary>The SRV record priority advertised for this service (RFC 2782); lower is preferred.</summary>
+        public ushort Priority { get; set; }
+        /// <summary>The SRV record weight advertised for this service (RFC 2782), among equal priorities.</summary>
+        public ushort Weight   { get; set; }
+
+        /// <summary>
+        /// The key/value pairs advertised in this service's DNS-SD TXT record (RFC 6763 §6) --
+        /// e.g. carried over from a Sleep Proxy registration's TXT records. Empty means the service
+        /// advertises a single empty TXT string.
+        /// </summary>
+        public IDictionary<string, string> Properties { get; init; } = new Dictionary<string, string>();
+
         public IPPort Port => port;
 
         protected internal virtual IEnumerable<IPPort> Ports

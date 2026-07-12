@@ -27,9 +27,9 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         public bool Register(SleepProxyRegistration reg, out SleepProxyLease lease)
         {
-            var duration = options.DetermineLeaseDuration(reg.RequestedLease);
+            var duration = options.ClampLeaseDuration(reg.RequestedLease);
 
-            if (_activeLeases.Count >= options.Limit)
+            if (_activeLeases.Count >= options.LeaseLimit)
                 throw new InvalidOperationException($"Lease pool ({_activeLeases.Count}) exhausted.");
 
             if (!_activeLeases.TryGetValue(reg.PrimaryAddress, out var owned))
@@ -246,7 +246,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 
         private async Task TryToExpireLeaseGracefully(RemoteHostWatch watch)
         {
-            switch (options.ExpireLease)
+            switch (options.LeaseExpire)
             {
                 case LeaseExpireAction.None:
                     return;

@@ -1,0 +1,65 @@
+<Project>
+
+  <PropertyGroup>
+    <Product>Desomnia</Product>
+  </PropertyGroup>
+
+  <!--
+    NativeAOT build switch, driven by the SDK's own PublishAot property (set by -p:PublishAot=true, a
+    global property that propagates to referenced projects). When NativeAOT is active it defines the
+    DESOMNIA_AOT compile symbol across ALL projects, so AOT-incompatible code paths can fall back to
+    AOT-safe equivalents (e.g. Autofac strongly-typed Meta<T, TMetadata>, which needs MakeGenericMethod
+    over value-type metadata properties), and it enables the trim/AOT analyzers. Because PublishAot is
+    only set during `dotnet publish`, normal builds stay warning-free. See AOT-FEASIBILITY.md.
+  -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <DefineConstants>$(DefineConstants);DESOMNIA_AOT</DefineConstants>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <!--
+    Git-tag driven versioning. Tags follow the scheme vMAJOR.MINOR.PATCH[-prerelease] (e.g. v3.1.0-alpha4);
+    the nearest tag is baked into the assembly's Version / InformationalVersion so ProductInfo can read it
+    back at runtime (cross-platform, single-file-safe). Falls back silently to the SDK default (1.0.0) when
+    git or a tag is unavailable; CI must fetch tags (e.g. actions/checkout with fetch-depth: 0).
+    Set DisableGitVersion=true to opt a build out (e.g. when passing -p:Version= explicitly).
+  -->
+  <Target Name="ResolveGitVersion"
+          BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo"
+          Condition="'$(GitVersionResolved)' != 'true' and '$(DisableGitVersion)' != 'true'">
+
+    <Exec Command="git describe --tags --abbrev=0"
+          ConsoleToMSBuild="true"
+          ContinueOnError="true"
+          StandardOutputImportance="Low"
+          WorkingDirectory="$(MSBuildProjectDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GitTag" />
+      <Output TaskParameter="ExitCode" PropertyName="_GitExitCode" />
+    </Exec>
+
+    <PropertyGroup Condition="'$(_GitExitCode)' == '0' and '$(_GitTag.Trim())' != ''">
+      <GitVersionResolved>true</GitVersionResolved>
+
+      <!-- strip the leading "v"; the SDK derives the numeric AssemblyVersion from this -->
+      <Version>$(_GitTag.Trim().TrimStart('v'))</Version>
+      <InformationalVersion>$(Version)</InformationalVersion>
+
+      <!--
+        Map the prerelease's trailing number onto the FOURTH field of the numeric versions:
+        v3.1.0-alpha7 -> 3.1.0.7, v3.1.0-beta12 -> 3.1.0.12, v3.1.0 -> 3.1.0.0.
+        FileVersion feeds the Win32 FILEVERSION resource (the "File version" in Explorer);
+        AssemblyVersion is the managed identity (fine for an application, but note that changing it
+        per prerelease gives each build a distinct strong-name identity).
+      -->
+      <_CoreVersion>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '-.*$', ''))</_CoreVersion>
+      <_PreRelease>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '^[^-]*-?', ''))</_PreRelease>
+      <_PreNumber>$([System.Text.RegularExpressions.Regex]::Replace('$(_PreRelease)', '\D', ''))</_PreNumber>
+      <_PreNumber Condition="'$(_PreNumber)' == ''">0</_PreNumber>
+
+      <FileVersion>$(_CoreVersion).$(_PreNumber)</FileVersion>
+      <AssemblyVersion>$(_CoreVersion).$(_PreNumber)</AssemblyVersion>
+    </PropertyGroup>
+
+  </Target>
+
+</Project>

@@ -40,9 +40,10 @@ namespace MadWizard.Desomnia.Network.SleepProxy.Registration
             if (_timer.Enabled)
             {
                 _timer.Stop();
-
-                Ended?.Invoke(this, new(reason) { Timeout = timeout });
             }
+
+            Ended?.Invoke(this, new(reason) { Timeout = timeout });
+            Ended = null;
         }
 
         public void Dispose()

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Service-only trimmer / NativeAOT roots (referenced by DesomniaService in addition to the shared
+  Desomnia.TrimmerRoots.xml): the two modules the daemon does not use, plus the service entry assembly.
+-->
+<linker>
+  <assembly fullname="DesomniaNetworkSessionMonitor" preserve="all" />
+  <assembly fullname="DesomniaSessionMonitor" preserve="all" />
+  <assembly fullname="DesomniaService" preserve="all" />
+</linker>

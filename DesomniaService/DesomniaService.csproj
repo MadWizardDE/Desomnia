@@ -33,6 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Preserve all Desomnia types/members under trimming + NativeAOT (reflective activation & config binding). -->
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.xml" />
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.Service.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DesomniaCore\DesomniaCore.csproj" />
     <ProjectReference Include="..\modules\NetworkMonitor\NetworkMonitor.csproj" />
     <ProjectReference Include="..\modules\NetworkSessionMonitor\NetworkSessionMonitor.csproj" />
