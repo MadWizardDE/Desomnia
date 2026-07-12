@@ -67,7 +67,7 @@ NetworkMonitor, SleepProxy and packet capture all work under NativeAOT. The open
    view over the value-type `Order` property) → switch the two *consumption* sites to loosely-typed
    `Meta<T>` + metadata-dictionary reads under `#if DESOMNIA_AOT` (`NetworkMonitor.Services`,
    `NetworkContext` plugin filter). Registrations stay strongly-typed (they only read property names
-   from the expression — AOT-safe). The symbol is defined via `-p:DesomniaAot=true` (see
+   from the expression — AOT-safe). The symbol is defined via `-p:DesomniaAOT=true` (see
    `Directory.Build.props`); the publish script passes it so it propagates to referenced projects.
 
 Note: config binding worked despite its `IL3050` warning because every bound collection element is a
@@ -106,8 +106,12 @@ Source: <https://docs.autofac.org/en/latest/advanced/native-aot-trimming.html>
    initializers pre-instantiate the `List<T>`s.
 4. **Open-generic logger** (`NetworkContext.RegisterContextAwareLogger`, `Context.Scope`) — **Works**
    (confirmed at runtime): `MakeGenericType` over reference types. No lambda fallback needed.
-5. **`Meta<T,TMetadata>` strongly-typed metadata** — **Resolved.** Switched consumers to loosely-typed
-   `Meta<T>` + dictionary under `#if DESOMNIA_AOT` (`MakeGenericMethod(int Order)` broke AOT).
+5. **`Meta<T,TMetadata>` strongly-typed metadata** — **Resolved.** Autofac builds the view via
+   `MakeGenericMethod` over each property, which NativeAOT can't JIT for value types (`int Order`). A
+   custom `AOTMetadataViewSource` (registered only under `DESOMNIA_AOT`, one line in `ApplicationBuilder`)
+   supplies `IEnumerable<Meta<A,B>>` itself, building the view by plain reflection. Consumers keep using
+   `Meta<A,B>` unchanged — no `#if` at the call sites. Verified with an Autofac harness (no duplicates,
+   root and child scope) and on the Pi.
 6. **CommandLineParser** (daemon `Program.cs`) — **left in, rooted** (`preserve="all"` on the
    `CommandLine` assembly). Untested under AOT (unannotated); if it throws an `IL3050` at runtime on the
    Pi, replace with a hand-rolled parse under `#if DESOMNIA_AOT`.
@@ -141,13 +145,21 @@ RAM and keep the normal (non-AOT) build.
 - `DesomniaDaemon/publish-aot.sh` → `DesomniaDaemon/bin/aot-linux-arm64/desomniad`.
 - Cross-compilation from Windows is unsupported; build on the Pi (AOT prereqs already present from a
   prior publish). The script prints `ldd` + how to measure `VmRSS`/`RssAnon`/`RssFile`.
-- Both builds define `DESOMNIA_AOT` via `-p:DesomniaAot=true`.
+- Both builds define `DESOMNIA_AOT` via `-p:DesomniaAOT=true`.
 
 ## Project state (branch `AOT`)
 
-All expedition work lives on branch **`AOT`** (main is untouched). Left intentionally "dirty":
-- `DesomniaDaemon.csproj`: GC + Invariant settings.
-- `<IsAotCompatible>true</IsAotCompatible>` on 7 projects — diagnostic analyzers; adds harmless IL
-  warnings to normal builds. Gate or remove when the expedition concludes.
-- `preserve="all"` rooting (`build/Desomnia.TrimmerRoots.xml`) trades binary size for safety; can be
-  tightened later.
+All work lives on branch **`AOT`** (main untouched) and is fully gated, so normal builds are unaffected —
+only AOT publishes (`-p:DesomniaAOT=true`) pick up the changes:
+- The `DESOMNIA_AOT` compile symbol **and** the trim/AOT analyzers are enabled only for AOT builds
+  (`Directory.Build.props`), so normal builds are warning-free.
+- Rooting is split into a shared descriptor plus per-entry descriptors
+  (`build/Desomnia.TrimmerRoots{,.Daemon,.Service}.xml`) so neither build references a foreign assembly.
+- Daemon runtime tuning (Workstation GC, `InvariantGlobalization`, 24 MiB GC hard limit, size-optimized
+  ILC) lives in `DesomniaDaemon.csproj`.
+
+**Result: 130 MB → 48 MB RSS** on the Pi (ARM64) — a self-contained single binary, no installed runtime,
+full functionality (verified: starts, captures packets, runs the complex use-case chain).
+
+**Deferred (to a later branch):** tightening the `preserve="all"` rooting for a further `RssFile` cut,
+together with the ILC size diagnostics (`IlcGenerateMapFile`/`MstatFile`, removed here for a clean build).

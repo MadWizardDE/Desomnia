@@ -6,7 +6,6 @@
     <Nullable>enable</Nullable>
     <RootNamespace>MadWizard.Desomnia.Power</RootNamespace>
     <AssemblyName>DesomniaPowerRequestMonitor</AssemblyName>
-    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

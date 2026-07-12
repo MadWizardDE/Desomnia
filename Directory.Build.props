@@ -5,14 +5,16 @@
   </PropertyGroup>
 
   <!--
-    NativeAOT build switch. Publishing with -p:DesomniaAot=true (see DesomniaService\publish-aot-test.ps1)
+    NativeAOT build switch. Publishing with -p:DesomniaAOT=true (see DesomniaService\publish-aot-test.ps1)
     defines the DESOMNIA_AOT compile symbol across ALL projects, so AOT-incompatible code paths can fall
     back to AOT-safe equivalents (e.g. Autofac strongly-typed Meta<T, TMetadata>, which needs
-    MakeGenericMethod over value-type metadata properties). Passed as a command-line (global) property so
-    it propagates to referenced projects. See AOT-FEASIBILITY.md.
+    MakeGenericMethod over value-type metadata properties). It also enables the trim/AOT analyzers only
+    for AOT builds, keeping normal builds warning-free. Passed as a command-line (global) property so it
+    propagates to referenced projects. See AOT-FEASIBILITY.md.
   -->
-  <PropertyGroup Condition="'$(DesomniaAot)' == 'true'">
+  <PropertyGroup Condition="'$(DesomniaAOT)' == 'true'">
     <DefineConstants>$(DefineConstants);DESOMNIA_AOT</DefineConstants>
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <!--

@@ -6,7 +6,7 @@
 # cross-compile from Windows. The AOT prerequisites (clang, zlib1g-dev, an objcopy/ld toolchain)
 # must be present; a prior `dotnet publish` on the Pi will already have pulled them in.
 #
-# -p:DesomniaAot=true defines the DESOMNIA_AOT compile symbol across all projects (see
+# -p:DesomniaAOT=true defines the DESOMNIA_AOT compile symbol across all projects (see
 # Directory.Build.props), which excludes the AOT-incompatible paths: the D-Bus/logind suspend
 # manager and runtime plugin loading. The sysfs-based SysPowerManager is used instead; it emits
 # no power requests, so an always-on device never auto-suspends itself.
@@ -27,7 +27,7 @@ dotnet publish "$PROJ" \
     -c Release \
     -r "$RID" \
     -p:PublishAot=true \
-    -p:DesomniaAot=true \
+    -p:DesomniaAOT=true \
     -o "$OUT"
 
 # AssemblyName is 'desomniad' (see DesomniaDaemon.csproj).

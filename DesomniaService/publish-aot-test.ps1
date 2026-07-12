@@ -34,8 +34,8 @@ if ($running) {
 }
 
 Write-Host "Publishing NativeAOT (win-x64)..." -ForegroundColor Cyan
-# -p:DesomniaAot=true is a global property so it reaches referenced projects (defines DESOMNIA_AOT).
-dotnet publish $proj -p:PublishProfile=AotTest -p:DesomniaAot=true
+# -p:DesomniaAOT=true is a global property so it reaches referenced projects (defines DESOMNIA_AOT).
+dotnet publish $proj -p:PublishProfile=AotTest -p:DesomniaAOT=true
 $exit = $LASTEXITCODE
 
 # Trust the build's exit code, not merely the presence of a (possibly stale) file.

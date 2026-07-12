@@ -10,7 +10,6 @@
     <SupportedOSPlatformVersion>8.0</SupportedOSPlatformVersion>
 	<RollForward>LatestMajor</RollForward>
 	<LangVersion>preview</LangVersion>
-	<IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -36,6 +35,7 @@
   <ItemGroup>
     <!-- Preserve all Desomnia types/members under trimming + NativeAOT (reflective activation & config binding). -->
     <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.xml" />
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.Service.xml" />
   </ItemGroup>
 
   <ItemGroup>
