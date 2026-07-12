@@ -95,6 +95,55 @@ jobs:
           path:  ${{ runner.temp }}/publish/desomniad
           if-no-files-found: error
 
+  build-linux-aot:
+    name: Build DesomniaDaemon (AOT)
+    # Separate from build-linux: NativeAOT emits real machine code and links a native binary, so it
+    # cannot cross-compile the way the framework-dependent ReadyToRun build does. It must run ON the
+    # target architecture -- hence a native arm64 runner rather than the x64 host used above.
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        include:
+          # 32-bit arm (armhf) is intentionally omitted: NativeAOT armhf is experimental and there is
+          # no native armhf runner. arm64 covers the modern always-on SBCs where the memory win matters.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '${{ env.VERSION_NET }}.x'
+
+      - name: Install NativeAOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+
+      - name: Publish DesomniaDaemon AOT (${{ matrix.arch }})
+        # -p:PublishAot=true is a global property, so it also defines DESOMNIA_AOT and activates the
+        # AOT-only settings baked into DesomniaDaemon.csproj (GC hard limit, size-optimized ILC,
+        # statically-linked FirewallKnockOperator). The output is a single self-contained native binary;
+        # PublishSingleFile / PublishReadyToRun / --no-self-contained do not apply to an AOT build.
+        run: |
+          dotnet publish DesomniaDaemon/DesomniaDaemon.csproj \
+            -o ${{ runner.temp }}/publish \
+            -f net${{ env.VERSION_NET }} \
+            -c Release \
+            -r linux-${{ matrix.arch }} \
+            -p:PublishAot=true \
+            -p:StripSymbols=true
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # "-native" suffix -> release job zips this as Desomnia_<ver>_linux-arm64-native.zip.
+          name: linux-${{ matrix.arch }}-native
+          path:  ${{ runner.temp }}/publish/desomniad
+          if-no-files-found: error
+
   build-linux-docker:
     name: Build Docker image
     runs-on: ${{ matrix.runner }}
@@ -321,7 +370,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [ build-windows-installer, build-linux ]
+    needs: [ build-windows-installer, build-linux, build-linux-aot ]
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows installer
