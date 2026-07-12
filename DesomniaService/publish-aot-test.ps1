@@ -29,8 +29,8 @@ $exe = Join-Path $PSScriptRoot 'bin\aot-test\DesomniaService.exe'
 # A previous instance still running would lock the output and make the copy step fail (MSB3027).
 $running = Get-Process -Name DesomniaService -ErrorAction SilentlyContinue
 if ($running) {
-    Write-Warning ("DesomniaService.exe is already running (PID {0}); it locks the publish output. " +
-                   "Stop it first:  Stop-Process -Name DesomniaService" -f ($running.Id -join ', '))
+    $pids = $running.Id -join ', '
+    Write-Warning "DesomniaService.exe is already running (PID $pids); it locks the publish output. Stop it first:  Stop-Process -Name DesomniaService"
 }
 
 Write-Host "Publishing NativeAOT (win-x64)..." -ForegroundColor Cyan

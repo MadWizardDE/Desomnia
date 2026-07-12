@@ -78,16 +78,9 @@ namespace MadWizard.Desomnia.Network.Context
 
             Name = Config.Label ?? @interface.Name;
 
-#if DESOMNIA_AOT
-            // NativeAOT: use loosely-typed Meta<T> + metadata dictionary (see NetworkMonitor.Services).
-            Plugins = parent.Resolve<IEnumerable<Meta<PluginModule>>>()
-                .Where(x => (x.Metadata.TryGetValue(nameof(PluginModule.Metadata.Name), out var n) ? n as string : null) is not string name || name == config.Name)
-                .Select(x => x.Value);
-#else
             Plugins = parent.Resolve<IEnumerable<Meta<PluginModule, PluginModule.Metadata>>>()
                 .Where(x => x.Metadata.Name is not string name || name == config.Name)
                 .Select(x => x.Value);
-#endif
 
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkLifetimeScopeTag, builder =>
             {

@@ -20,20 +20,9 @@ namespace MadWizard.Desomnia.Network
         public required NetworkSegment  Network { private get; init; }
         public required NetworkJanitor  Janitor { private get; init; }
 
-#if DESOMNIA_AOT
-        // NativeAOT: strongly-typed Meta<T, TMetadata> builds its view via MakeGenericMethod over the
-        // metadata property types (int Order), which NativeAOT cannot JIT. Fall back to loosely-typed
-        // Meta<T> and read the metadata dictionary by key (default 0, matching [DefaultValue(0)]).
-        public IEnumerable<Meta<INetworkService>> Services { private get; init; } = [];
-
-        private IEnumerable<INetworkService> OrderedServices => Services
-            .OrderBy(s => s.Metadata.TryGetValue(nameof(INetworkService.Metadata.Order), out var order) && order is int o ? o : 0)
-            .Select(s => s.Value);
-#else
         public IEnumerable<Meta<INetworkService, INetworkService.Metadata>> Services { private get; init; } = [];
 
         private IEnumerable<INetworkService> OrderedServices => Services.OrderBy(s => s.Metadata.Order).Select(s => s.Value);
-#endif
 
         public event EventInvocation? Connected;
         public event EventInvocation? Disconnected;

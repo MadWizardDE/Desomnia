@@ -117,6 +117,11 @@ namespace MadWizard.Desomnia
 
         protected void ConfigureContainer(ContainerBuilder container)
         {
+#if DESOMNIA_AOT
+            // AOT: supply strongly-typed metadata views without MakeGenericMethod, so consumers can keep
+            // using Meta<A, B> unchanged. See AotMetadataViewSource.
+            container.RegisterSource(new AotMetadataViewSource());
+#endif
             foreach (var module in _modules)
             {
                 container.RegisterModule(module);
