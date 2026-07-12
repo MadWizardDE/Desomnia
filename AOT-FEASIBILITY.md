@@ -157,6 +157,20 @@ RAM and keep the normal (non-AOT) build.
   remaining `#if` (static plugin registration, see blocker #2) reads, and because the conditional
   `FirewallKnockOperator` project reference keys off `PublishAot` too.
 
+### glibc portability (the CI gotcha)
+
+NativeAOT links the binary against the **build machine's** glibc, and glibc symbol versions are
+**forward-incompatible**: a binary linked on glibc *X* runs only on glibc *≥ X*. There is no way to
+lower the requirement after linking. Symptom on an older target:
+`libc.so.6: version 'GLIBC_2.38' not found (required by ./desomniad)`.
+
+Implication for CI: the `ubuntu-24.04-arm` runner ships **glibc 2.39**, too new for Raspberry Pi OS. So
+the `build-linux-aot` job runs the publish **inside a Debian 12 "Bookworm" container**
+(`mcr.microsoft.com/dotnet/sdk:10.0`, glibc 2.36); the artifact then runs on a **Bookworm-or-newer**
+target. To go older you must build in an even older glibc — but the .NET 10 SDK's own floor is ~glibc
+2.35, so distros older than Bookworm need musl-static instead. Building **locally on the Pi** sidesteps
+all of this: the binary links against the Pi's own glibc, so it always matches.
+
 ## Project state (branch `AOT`)
 
 All work lives on branch **`AOT`** (main untouched) and is fully gated, so normal builds are unaffected —

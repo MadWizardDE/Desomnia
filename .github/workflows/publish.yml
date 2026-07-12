@@ -97,10 +97,15 @@ jobs:
 
   build-linux-aot:
     name: Build DesomniaDaemon (AOT)
-    # Separate from build-linux: NativeAOT emits real machine code and links a native binary, so it
-    # cannot cross-compile the way the framework-dependent ReadyToRun build does. It must run ON the
-    # target architecture -- hence a native arm64 runner rather than the x64 host used above.
+    # NativeAOT emits native machine code and links against the BUILD machine's glibc; it cannot
+    # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive this setup:
+    #   * It must run on the target architecture -> a native arm64 runner (not the x64 host above).
+    #   * The binary requires glibc >= the build glibc. The ubuntu-24.04-arm runner ships glibc 2.39,
+    #     which is too new for Raspberry Pi OS. So the publish runs INSIDE a Debian 12 "Bookworm"
+    #     container (glibc 2.36) -- the mcr.microsoft.com/dotnet/sdk:10.0 image is Bookworm-based and
+    #     already carries the SDK. The resulting binary runs on a Bookworm-or-newer target.
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
 
     strategy:
       matrix:
@@ -109,18 +114,16 @@ jobs:
           # no native armhf runner. arm64 covers the modern always-on SBCs where the memory win matters.
           - arch: arm64
             runner: ubuntu-24.04-arm
+            container: mcr.microsoft.com/dotnet/sdk:10.0   # Debian 12 Bookworm -> glibc 2.36
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '${{ env.VERSION_NET }}.x'
-
+      # The SDK is already in the container (so no setup-dotnet); only the native toolchain is missing.
+      # binutils supplies objcopy, which StripSymbols needs. Run as root in-container -> no sudo.
       - name: Install NativeAOT prerequisites
-        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
+        run: apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev binutils
 
       - name: Publish DesomniaDaemon AOT (${{ matrix.arch }})
         # -p:PublishAot=true is a global property, so it also defines DESOMNIA_AOT and activates the
