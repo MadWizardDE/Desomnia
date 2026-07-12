@@ -20,7 +20,8 @@ namespace MadWizard.Desomnia
     /// B view by plain reflection (<c>SetValue</c>, no dynamic code). Because it reports itself as a
     /// non-adapter source that supplies the collection directly, it shadows the built-in collection source
     /// (verified: no duplicates, resolving at the root or in a child scope). Consumers keep using
-    /// <c>Meta&lt;A,B&gt;</c> unchanged; only the registration of this source is gated behind DESOMNIA_AOT.
+    /// <c>Meta&lt;A,B&gt;</c> unchanged; this source is registered only when dynamic code is unavailable
+    /// (<c>!RuntimeFeature.IsDynamicCodeSupported</c> in <c>ApplicationBuilder.ConfigureContainer</c>).
     /// </summary>
     [UnconditionalSuppressMessage("AOT", "IL3050",
         Justification = "Meta<A,B> and the metadata view types are reference-type instantiations declared " +

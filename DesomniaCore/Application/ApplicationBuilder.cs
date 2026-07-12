@@ -9,6 +9,7 @@ using NLog;
 using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
+using System.Runtime.CompilerServices;
 
 namespace MadWizard.Desomnia
 {
@@ -117,9 +118,10 @@ namespace MadWizard.Desomnia
 
         protected void ConfigureContainer(ContainerBuilder container)
         {
-            #if DESOMNIA_AOT
+            if (!RuntimeFeature.IsDynamicCodeSupported)
+            {
                 container.RegisterSource(new AOTMetadataViewSource());
-            #endif
+            }
 
             foreach (var module in _modules)
             {

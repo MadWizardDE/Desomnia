@@ -34,8 +34,10 @@ if ($running) {
 }
 
 Write-Host "Publishing NativeAOT (win-x64)..." -ForegroundColor Cyan
-# -p:DesomniaAOT=true is a global property so it reaches referenced projects (defines DESOMNIA_AOT).
-dotnet publish $proj -p:PublishProfile=AotTest -p:DesomniaAOT=true
+# PublishAot lives in the AotTest profile (so the VS Publish GUI works too). It only needs to apply to
+# this entry assembly: the AOT-specific code paths in the referenced core are selected at ILC time via
+# RuntimeFeature.IsDynamicCodeSupported (a whole-program feature switch), not a compile symbol.
+dotnet publish $proj -p:PublishProfile=AotTest
 $exit = $LASTEXITCODE
 
 # Trust the build's exit code, not merely the presence of a (possibly stale) file.

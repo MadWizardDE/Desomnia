@@ -64,11 +64,12 @@ NetworkMonitor, SleepProxy and packet capture all work under NativeAOT. The open
    (Autofac reflecting on its own private helper) → root `Autofac` +
    `Autofac.Extensions.DependencyInjection` in the same descriptor.
 3. **`Meta<T, TMetadata>` → `MakeGenericMethod(int)` "missing native code"** (strongly-typed metadata
-   view over the value-type `Order` property) → switch the two *consumption* sites to loosely-typed
-   `Meta<T>` + metadata-dictionary reads under `#if DESOMNIA_AOT` (`NetworkMonitor.Services`,
-   `NetworkContext` plugin filter). Registrations stay strongly-typed (they only read property names
-   from the expression — AOT-safe). The symbol is defined via `-p:DesomniaAOT=true` (see
-   `Directory.Build.props`); the publish script passes it so it propagates to referenced projects.
+   view over the value-type `Order` property) → supply the view ourselves with a custom
+   `AOTMetadataViewSource` (see blocker #5). Consumers keep using `Meta<A,B>` unchanged; the source is
+   registered only when dynamic code is unavailable (`if (!RuntimeFeature.IsDynamicCodeSupported)` in
+   `ApplicationBuilder.ConfigureContainer`). No `#if` and no compile symbol are needed for this — the
+   check is a whole-program feature switch ILC evaluates at publish, so it works across the referenced
+   projects even though the Service's `PublishAot` (in the `AotTest` pubxml) does not propagate to them.
 
 Note: config binding worked despite its `IL3050` warning because every bound collection element is a
 reference type and the `= []` field initializers pre-instantiate the `List<T>`s — so no value-type
@@ -94,10 +95,13 @@ Source: <https://docs.autofac.org/en/latest/advanced/native-aot-trimming.html>
 
 1. **Tmds.DBus `CreateProxy<ILogin1Manager>()`** (`DBusManager.cs`) — `Reflection.Emit`, the one hard
    blocker. **Resolved by exclusion, not rewrite.** The D-Bus/logind path only exists to suspend the
-   *local* machine, which an always-on device never does. Under `#if DESOMNIA_AOT`,
-   `PlatformModule` always registers the sysfs `SysPowerManager` (no D-Bus), so `CreateProxy` is never
-   called. The D-Bus files still compile (their enums are shared by `PowerManagerConfig`) but are
-   unreached. If a full-suspend AOT build is ever needed, migrate to `Tmds.DBus.SourceGenerator` then.
+   *local* machine, which an always-on device never does. `PlatformModule.Load` registers `DBusManager`
+   only inside `if (Config.UseDBus && HasSystemDBus() && RuntimeFeature.IsDynamicCodeSupported)`, so
+   under AOT (where that feature switch folds to `false`) the sysfs `SysPowerManager` fallback is used
+   and `CreateProxy` is never *called*. Note: because the daemon assembly is rooted `preserve="all"`,
+   `DBusManager`'s body is still compiled by ILC, so its `CreateProxy` call still emits an `IL3050`
+   (harmless — unreached at runtime) and pulls some Tmds.DBus proxy code into the binary. A future
+   tightening pass (drop the blanket rooting, or migrate to `Tmds.DBus.SourceGenerator`) removes both.
 2. **Runtime plugin loading** (`PluginLoadingExtensions.cs`) — **Resolved.** `RegisterPluginModules()`
    is gated out under `#if !DESOMNIA_AOT`; the daemon's modules are compiled in.
 3. **Config binding** `ConfigurationBinder.Get<T>(BindNonPublicProperties = true)` — **Resolved by
@@ -108,10 +112,12 @@ Source: <https://docs.autofac.org/en/latest/advanced/native-aot-trimming.html>
    (confirmed at runtime): `MakeGenericType` over reference types. No lambda fallback needed.
 5. **`Meta<T,TMetadata>` strongly-typed metadata** — **Resolved.** Autofac builds the view via
    `MakeGenericMethod` over each property, which NativeAOT can't JIT for value types (`int Order`). A
-   custom `AOTMetadataViewSource` (registered only under `DESOMNIA_AOT`, one line in `ApplicationBuilder`)
-   supplies `IEnumerable<Meta<A,B>>` itself, building the view by plain reflection. Consumers keep using
-   `Meta<A,B>` unchanged — no `#if` at the call sites. Verified with an Autofac harness (no duplicates,
-   root and child scope) and on the Pi.
+   custom `AOTMetadataViewSource` (registered by one line in `ApplicationBuilder`, guarded by
+   `if (!RuntimeFeature.IsDynamicCodeSupported)`) supplies `IEnumerable<Meta<A,B>>` itself, building the
+   view by plain reflection. Consumers keep using `Meta<A,B>` unchanged — no `#if` at the call sites,
+   and no compile symbol: the runtime guard is a whole-program feature switch, so it also swaps out the
+   default source inside the referenced projects at ILC time. Verified with an Autofac harness (no
+   duplicates, root and child scope) and on the Pi.
 6. **CommandLineParser** (daemon `Program.cs`) — **left in, rooted** (`preserve="all"` on the
    `CommandLine` assembly). Untested under AOT (unannotated); if it throws an `IL3050` at runtime on the
    Pi, replace with a hand-rolled parse under `#if DESOMNIA_AOT`.
@@ -138,21 +144,30 @@ RAM and keep the normal (non-AOT) build.
 ## Reproducing the build
 
 **Service (win-x64, local sanity check):**
-- `DesomniaService/publish-aot-test.ps1` (or profile `AotTest`) → `DesomniaService/bin/aot-test/DesomniaService.exe`.
+- `DesomniaService/publish-aot-test.ps1`, the `AotTest` profile, or **VS → Publish → AotTest** →
+  `DesomniaService/bin/aot-test/DesomniaService.exe`. `PublishAot` lives in the pubxml, so all three work.
 - Prereq: VS "Desktop development with C++"; `vswhere.exe` on PATH or the link step fails `MSB3073`.
 
 **Daemon (linux-arm64, the target — run ON the Pi):**
 - `DesomniaDaemon/publish-aot.sh` → `DesomniaDaemon/bin/aot-linux-arm64/desomniad`.
 - Cross-compilation from Windows is unsupported; build on the Pi (AOT prereqs already present from a
   prior publish). The script prints `ldd` + how to measure `VmRSS`/`RssAnon`/`RssFile`.
-- Both builds define `DESOMNIA_AOT` via `-p:DesomniaAOT=true`.
+- The script passes `-p:PublishAot=true` on the command line (a global property). The daemon *needs* it
+  global — not just for ILC but because it defines `DESOMNIA_AOT` for the daemon project, which the sole
+  remaining `#if` (static plugin registration, see blocker #2) reads, and because the conditional
+  `FirewallKnockOperator` project reference keys off `PublishAot` too.
 
 ## Project state (branch `AOT`)
 
 All work lives on branch **`AOT`** (main untouched) and is fully gated, so normal builds are unaffected —
-only AOT publishes (`-p:DesomniaAOT=true`) pick up the changes:
+only AOT publishes (`-p:PublishAot=true`) pick up the changes:
+- Where the AOT/JIT choice is a *runtime* decision, it is made at runtime via
+  `RuntimeFeature.IsDynamicCodeSupported` (a whole-program feature switch) — no compile symbol, so it
+  works across referenced projects even when `PublishAot` is set only on the entry assembly (the Service
+  pubxml). `#if DESOMNIA_AOT` survives in exactly one place: the daemon's static plugin registration,
+  which can't be a runtime check because the plugin project reference itself is `PublishAot`-conditional.
 - The `DESOMNIA_AOT` compile symbol **and** the trim/AOT analyzers are enabled only for AOT builds
-  (`Directory.Build.props`), so normal builds are warning-free.
+  (`Directory.Build.props`, keyed off `PublishAot`), so normal builds are warning-free.
 - Rooting is split into a shared descriptor plus per-entry descriptors
   (`build/Desomnia.TrimmerRoots{,.Daemon,.Service}.xml`) so neither build references a foreign assembly.
 - Daemon runtime tuning (Workstation GC, `InvariantGlobalization`, 24 MiB GC hard limit, size-optimized

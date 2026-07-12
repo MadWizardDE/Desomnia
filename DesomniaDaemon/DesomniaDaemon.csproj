@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <!-- AOT: statically link plugins that are otherwise loaded dynamically (RegisterPluginModules is skipped). -->
-  <ItemGroup Condition="'$(DesomniaAOT)' == 'true'">
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
     <ProjectReference Include="..\plugins\FirewallKnockOperator\FirewallKnockOperator.csproj" />
     <TrimmerRootAssembly Include="FirewallKnockOperator" />
   </ItemGroup>
@@ -47,7 +47,7 @@
     (~7 MB) with the live heap at ~7 MB. 25165824 = 0x1800000 = 24 MiB. Tunable; raise or drop the
     hard limit if real load needs more head-room.
   -->
-  <ItemGroup Condition="'$(DesomniaAOT)' == 'true'">
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
     <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimit" Value="25165824" Trim="false" />
     <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" Trim="false" />
   </ItemGroup>

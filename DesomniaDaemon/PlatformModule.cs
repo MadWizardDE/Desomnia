@@ -6,6 +6,7 @@ using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
 using Microsoft.Extensions.Configuration.Xml;
+using System.Runtime.CompilerServices;
 
 namespace MadWizard.Desomnia.Daemon
 {
@@ -19,16 +20,7 @@ namespace MadWizard.Desomnia.Daemon
         protected override void Load(ContainerBuilder builder)
         {
             // Implementing Power-Manager
-#if DESOMNIA_AOT
-            // Always-on / NativeAOT build: no local logind suspend. The D-Bus power manager depends on
-            // Tmds.DBus CreateProxy (Reflection.Emit), which NativeAOT cannot JIT, so we always use the
-            // sysfs fallback. It emits no power requests, so the device never auto-suspends itself.
-            builder.RegisterType<SysPowerManager>()
-                .AsImplementedInterfaces()
-                .SingleInstance()
-                .AsSelf();
-#else
-            if (Config.UseDBus && HasSystemDBus())
+            if (Config.UseDBus && HasSystemDBus() && RuntimeFeature.IsDynamicCodeSupported)
             {
                 builder.RegisterType<DBusManager>()
                     .AsImplementedInterfaces()
@@ -52,7 +44,6 @@ namespace MadWizard.Desomnia.Daemon
                     .SingleInstance()
                     .AsSelf();
             }
-#endif
 
             // Options mappings
             builder.RegisterType<HostsManager>()
