@@ -171,6 +171,13 @@ target. To go older you must build in an even older glibc — but the .NET 10 SD
 2.35, so distros older than Bookworm need musl-static instead. Building **locally on the Pi** sidesteps
 all of this: the binary links against the Pi's own glibc, so it always matches.
 
+Two further quirks of running the publish inside a `container:` (both handled in `build-linux-aot`):
+the container runs as **root** over a tree owned by another uid, so git aborts with *dubious ownership*
+and the git-describe version target falls back to 1.0.0 — fixed with
+`git config --global --add safe.directory "$GITHUB_WORKSPACE"`. And `runner.temp` is **not** consistently
+shared between in-container `run:` steps and the `upload-artifact` action, so build output must be written
+under `github.workspace` (bind-mounted) or the upload can't find it.
+
 ## Project state (branch `AOT`)
 
 All work lives on branch **`AOT`** (main untouched) and is fully gated, so normal builds are unaffected —
