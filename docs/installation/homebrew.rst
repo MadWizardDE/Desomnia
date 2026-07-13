@@ -29,12 +29,16 @@ Homebrew normally downloads source code and builds the project locally. Desomnia
 
 The availability of pre-built bottles can be checked `here <https://github.com/mad0x20wizard/homebrew-tools/pkgs/container/tools%2Fdesomnia>`__.
 
+.. note::
+
+   Homebrew installs the full-featured build: all plugins included, and able to manage the local system's sleep. On a ``linux/arm64`` device dedicated to the always-on :doc:`Wake-on-LAN proxy </guides/wol-proxy>` role — where a minimal footprint matters more than plugins — consider the self-contained **native build** instead. It needs no .NET runtime and uses far less memory, but drops runtime plugin loading and does not suspend the host it runs on. It is not distributed through Homebrew; obtain it from the release archive (see :doc:`manual installation </installation/manually>`) or as the ``-native`` :doc:`Docker image </installation/docker>`. See :doc:`/modules/network/performance` for the trade-offs.
+
 Filesystem layout
 -----------------
 
 Use these locations to customise your installation of Desomnia, relative to your Homebrew installation:
 
-.. include:: ./paths.rst
+.. include:: ./paths/data.rst
 
 Running as background service
 -----------------------------

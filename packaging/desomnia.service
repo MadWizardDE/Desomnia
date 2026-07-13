@@ -1,0 +1,14 @@
+[Unit]
+Description=Desomnia intelligent power management
+Documentation=https://github.com/mad0x20wizard/Desomnia
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/desomniad
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

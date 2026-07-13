@@ -177,9 +177,10 @@ System requirements
 - .NET Runtime 10, or Docker (Linux only)
 - `Npcap <https://npcap.com/>`_ on Windows or `libpcap <https://github.com/the-tcpdump-group/libpcap>`_ on Linux / macOS (optional, required for NetworkMonitor)
 
-.. note::
+Native build
+++++++++++++
 
-   On always-on 64-bit ARM devices — such as a Raspberry Pi acting as a Wake-on-LAN / Sleep Proxy — you can instead use the **native build** for ``linux-arm64``: a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of ~130 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ for when to use it and its constraints.
+On always-on 64-bit ARM devices — such as a Raspberry Pi acting as a Wake-on-LAN / Sleep Proxy — you can instead use the **native build** for ``linux-arm64``: a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of >100 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ or `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for when to use it and its constraints.
 
 ----
 
@@ -198,9 +199,6 @@ If you like this project, consider supporting it:
    :alt: Documentation Status
 .. |License| image:: https://img.shields.io/badge/license-GPL3-blue.svg
    :alt: License
-
-
-.. TODO: Create Discord server
 
 .. |Discord| image:: https://img.shields.io/badge/chat-on%20discord-7289da.svg
    :target: https://discord.gg/6x6n7pcG39

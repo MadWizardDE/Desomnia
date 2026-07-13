@@ -99,22 +99,26 @@ jobs:
     name: Build DesomniaDaemon (AOT)
     # NativeAOT emits native machine code and links against the BUILD machine's glibc; it cannot
     # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive the runner choice:
-    #   * It must run on the target architecture -> a native arm64 runner (not the x64 host above).
+    #   * Each target must be built on a runner of its own architecture (arm64 on an arm64 runner,
+    #     x64 on an x64 runner) -- there is no cross-arch AOT.
     #   * The binary requires glibc >= the build glibc, and glibc is forward-incompatible. The
-    #     ubuntu-24.04-arm runner ships glibc 2.39 -- too new for Raspberry Pi OS. .NET 10 ships no
+    #     ubuntu-24.04(-arm) runners ship glibc 2.39 -- too new for Raspberry Pi OS. .NET 10 ships no
     #     Debian container image (its default sdk:10.0 is Ubuntu 24.04 / glibc 2.39), and a static musl
     #     build is a dead end here because a fully-static binary can't dlopen the glibc libpcap SharpPcap
-    #     needs at runtime. So we build on the ubuntu-22.04-arm runner (glibc 2.35): the binary then runs
-    #     on Debian 12 "Bookworm" (glibc 2.36) and newer.
+    #     needs at runtime. So we build on the ubuntu-22.04(-arm) runners (glibc 2.35): the binaries then
+    #     run on Debian 12 "Bookworm" (glibc 2.36) and newer.
     runs-on: ${{ matrix.runner }}
 
     strategy:
       matrix:
         include:
           # 32-bit arm (armhf) is intentionally omitted: NativeAOT armhf is experimental and there is
-          # no native armhf runner. arm64 covers the modern always-on SBCs where the memory win matters.
+          # no native armhf runner. arm64 and x64 cover the always-on SBCs and servers where the memory
+          # win matters; they are also the two architectures the deb/rpm packages ship (build-linux-packages).
           - arch: arm64
             runner: ubuntu-22.04-arm   # glibc 2.35 -> binary runs on glibc >= 2.35 (Bookworm = 2.36)
+          - arch: x64
+            runner: ubuntu-22.04       # glibc 2.35 -> same floor for amd64 targets
 
     steps:
       - name: Checkout code
@@ -146,9 +150,64 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          # "-native" suffix -> release job zips this as Desomnia_<ver>_linux-arm64-native.zip.
+          # "-native" suffix -> release job zips this as Desomnia_<ver>_linux-<arch>-native.zip,
+          # and build-linux-packages turns it into the deb/rpm payload.
           name: linux-${{ matrix.arch }}-native
           path:  ${{ runner.temp }}/publish/desomniad
+          if-no-files-found: error
+
+  build-linux-packages:
+    name: Build deb/rpm packages
+    # Reuses the AOT binaries from build-linux-native as the package payload -- no rebuild. The
+    # packages ship the native build deliberately: it needs no .NET runtime and is the low-memory,
+    # server-oriented flavour. Users who need runtime plugins or local sleep management install via
+    # the archive, Homebrew or Docker instead. nfpm derives both deb and rpm from one config.
+    runs-on: ubuntu-latest
+    needs: [ build-linux-native ]
+
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            goarch: arm64   # nfpm -> deb "arm64",  rpm "aarch64"
+          - arch: x64
+            goarch: amd64   # nfpm -> deb "amd64",  rpm "x86_64"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download native daemon (${{ matrix.arch }})
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}-native
+          path: ${{ runner.temp }}/payload
+
+      - name: Install nfpm
+        # Tracks the latest nfpm release (v2 config format is stable). Pin the tag for reproducibility.
+        run: |
+          NFPM_VERSION="$(curl -fsSL https://api.github.com/repos/goreleaser/nfpm/releases/latest | jq -r .tag_name)"
+          NFPM_VERSION="${NFPM_VERSION#v}"
+          curl -fsSL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_amd64.deb" -o "${{ runner.temp }}/nfpm.deb"
+          sudo apt-get install -y "${{ runner.temp }}/nfpm.deb"
+
+      - name: Build .deb and .rpm (${{ matrix.arch }})
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION="${{ env.VERSION_DESOMNIA }}"
+          export VERSION="${VERSION#v}"
+          export PAYLOAD="${{ runner.temp }}/payload/desomniad"
+          chmod +x "$PAYLOAD"
+          mkdir -p "${{ runner.temp }}/packages"
+          nfpm package -f packaging/nfpm.yaml -p deb -t "${{ runner.temp }}/packages/"
+          nfpm package -f packaging/nfpm.yaml -p rpm -t "${{ runner.temp }}/packages/"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.arch }}
+          path:  ${{ runner.temp }}/packages/
           if-no-files-found: error
 
   build-linux-docker:
@@ -206,6 +265,11 @@ jobs:
           name: linux-${{ matrix.arch }}
           path: ${{ runner.temp }}/context
           merge-multiple: true
+
+      - name: Stage default configuration
+        # The Dockerfile COPYs monitor.xml from the build context root; the context is runner.temp/context,
+        # not the repo, so the default config has to be placed there explicitly.
+        run: cp packaging/monitor.xml ${{ runner.temp }}/context/monitor.xml
 
       - name: Build and push by digest
         id: build
@@ -301,6 +365,10 @@ jobs:
         with:
           name: linux-arm64-native
           path: ${{ runner.temp }}/context
+
+      - name: Stage default configuration
+        # See the note in build-linux-docker: the Dockerfile COPYs monitor.xml from the context root.
+        run: cp packaging/monitor.xml ${{ runner.temp }}/context/monitor.xml
 
       - name: Docker meta
         id: meta
@@ -434,7 +502,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [ build-windows-installer, build-linux, build-linux-native ]
+    needs: [ build-windows-installer, build-linux, build-linux-native, build-linux-packages ]
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows installer
@@ -447,6 +515,12 @@ jobs:
         with:
           pattern: linux-*
           path: ${{ runner.temp }}/linux
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: ${{ runner.temp }}/packages
+          merge-multiple: true
 
       - name: Create linux archives
         shell: bash
@@ -497,6 +571,8 @@ jobs:
           files: |
             ${{ runner.temp }}/Desomnia_*.*
             ${{ runner.temp }}/plugin-*.zip
+            ${{ runner.temp }}/packages/*.deb
+            ${{ runner.temp }}/packages/*.rpm
 
   release-homebrew:
     name: Create Homebrew release

@@ -1,0 +1,87 @@
+# nfpm configuration for the Desomnia native (AOT) Linux packages.
+# Produces a .deb and a .rpm from the ahead-of-time compiled `desomniad` binary.
+#
+# Driven by the `build-linux-packages` job in .github/workflows/publish.yml, which supplies
+# GOARCH, VERSION and PAYLOAD through the environment (one nfpm invocation per architecture).
+# nfpm maps the Go arch (amd64/arm64) to the right deb (amd64/arm64) and rpm (x86_64/aarch64)
+# name automatically, so a single config covers both formats and both architectures.
+#
+# Build locally, e.g.:
+#   GOARCH=arm64 VERSION=3.0.0 PAYLOAD=/path/to/desomniad \
+#     nfpm package -f packaging/nfpm.yaml -p deb -t ./out/
+
+name: desomnia
+arch: ${GOARCH}
+platform: linux
+version: ${VERSION}
+version_schema: semver
+release: "1"
+section: net
+priority: optional
+maintainer: Kevin Koslowski <kevin@madwizard.de>
+vendor: madwizard
+homepage: https://github.com/mad0x20wizard/Desomnia
+license: GPL-3.0-or-later
+description: |
+  Intelligent power management for home labs and always-on servers.
+  Desomnia watches the network and drives Wake-on-LAN, a Bonjour Sleep Proxy
+  and system sleep, so idle machines can suspend and still wake on demand.
+  This package installs the ahead-of-time compiled, self-contained native
+  daemon: no .NET runtime required, low memory footprint. Runtime plugin
+  loading and managing the host's own sleep are not available in this build;
+  use the archive, Docker or Homebrew installation for those.
+
+contents:
+  # The AOT daemon binary. The mode here is authoritative regardless of the
+  # bit the artifact carried through upload/download.
+  - src: ${PAYLOAD}
+    dst: /usr/sbin/desomniad
+    file_info:
+      mode: 0755
+
+  # systemd service unit (installed, but not started until a monitor.xml exists).
+  - src: packaging/desomnia.service
+    dst: /usr/lib/systemd/system/desomnia.service
+    file_info:
+      mode: 0644
+
+  # Example configuration. Marked as a config file so a local copy is never
+  # overwritten on upgrade. Its parent /etc/desomnia is created implicitly.
+  - src: packaging/monitor.xml
+    dst: /etc/desomnia/monitor.xml
+    type: "config|noreplace"
+    file_info:
+      mode: 0644
+
+  - src: LICENSE.txt
+    dst: /usr/share/doc/desomnia/LICENSE.txt
+    file_info:
+      mode: 0644
+
+  # Default location for file logging (when enabled via NLog.config).
+  - dst: /var/log/desomnia
+    type: dir
+    file_info:
+      mode: 0755
+
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
+  preremove: packaging/scripts/preremove.sh
+  postremove: packaging/scripts/postremove.sh
+
+# libpcap is required at runtime (SharpPcap dlopen's it); ethtool/iproute2 are the optional
+# tools Desomnia uses to arm Wake-on-LAN and assign temporary address mappings. The libpcap
+# package name differs across the Debian t64 transition, hence the alternation for deb.
+overrides:
+  deb:
+    depends:
+      - libpcap0.8t64 | libpcap0.8
+    recommends:
+      - ethtool
+      - iproute2
+  rpm:
+    depends:
+      - libpcap
+    recommends:
+      - ethtool
+      - iproute2

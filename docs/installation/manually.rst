@@ -23,15 +23,11 @@ In order to automatically configure your network interface for **Wake-on-LAN** a
 Native build
 ------------
 
-For 64-bit ARM systems, a **native build** is offered in addition to the standard one — the ``Desomnia_<version>_linux-arm64-native.zip`` asset on the `GitHub Releases <https://github.com/mad0x20wizard/Desomnia/releases>`_ page. It is compiled ahead of time into a single self-contained binary that **does not require the .NET Runtime**, so you can skip the runtime step under `Prerequisites`_ above and simply place the binary. It also uses considerably less memory — around 48 MB instead of ~130 MB — which makes it a good fit for always-on devices such as a Raspberry Pi acting as a Wake-on-LAN or Sleep Proxy. See :doc:`/modules/network/performance` for the reasoning.
+For 64-bit systems, a **native build** is offered in addition to the standard one — the ``Desomnia_<version>_linux-<aarch>-native.zip`` asset on the `GitHub Releases <https://github.com/mad0x20wizard/Desomnia/releases>`_ page. It is compiled ahead of time into a single self-contained binary that **does not require the .NET Runtime**, so you can skip the runtime step under `Prerequisites`_ above and simply place the binary. It also uses considerably less memory — around 48 MB instead of ~130 MB — which makes it a good fit for always-on devices such as a Raspberry Pi acting as a Wake-on-LAN or Sleep Proxy. See :doc:`/modules/network/performance` for the reasoning.
 
-Before choosing it, note its constraints:
+.. include:: ./native/constraints.rst
 
-- It runs only on ``linux-arm64`` and requires *glibc 2.35 or newer* — Debian 12 "Bookworm", Ubuntu 22.04, Raspberry Pi OS (Bookworm), or later. For 32-bit ARM, other architectures, or older systems, use the standard build.
-- Plugins cannot be loaded at runtime; the Firewall Knock Operator is included, but other plugins are not available.
-- It is intended for always-on monitor and proxy roles and does not manage the sleep of the device it runs on.
-
-The ``libpcap`` library and the optional network tools above are still required; only the .NET Runtime becomes unnecessary.
+The ``libpcap`` library and the optional network tools above are still required to install; only the .NET Runtime becomes unnecessary.
 
 Portable mode
 -------------
@@ -45,10 +41,8 @@ Filesystem layout
 
 For a persistent installation, use the following locations in alignment with the `Filesystem Hierarchy Standard`_ (FHS):
 
-/usr/sbin
-    Drop the binary for your platform and architecture here so it can be found automatically. Set the executable permission with ``chmod +x /usr/sbin/desomniad``.
-
-.. include:: ./paths.rst
+.. include:: ./paths/bin.rst
+.. include:: ./paths/data.rst
 
 Service configuration
 ---------------------

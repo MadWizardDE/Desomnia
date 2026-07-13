@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Desomnia default configuration.
+
+  Out of the box this runs a zero-configuration Sleep Proxy: it watches the network in
+  promiscuous mode and, because autoDetect includes Host and Service, keeps any sleeping
+  host reachable and wakes it on demand without per-host setup. See the docs for details:
+  https://desomnia.readthedocs.io/en/latest/modules/network/sleepproxy.html
+
+  Add static hosts, routers or a Wake-on-LAN client role below to tailor it to your network.
+-->
+<SystemMonitor version="1">
+
+    <NetworkMonitor watchMode="promiscuous"
+        autoDetect="MAC|IP|Router|Host|Service" autoRefresh="1h"
+        sleepProxyLease="7 days">
+
+        <!-- add additional configuration here -->
+
+    </NetworkMonitor>
+
+</SystemMonitor>

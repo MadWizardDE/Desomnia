@@ -27,12 +27,14 @@ COPY plugins/ /usr/lib/desomnia/plugins/
 COPY desomniad /usr/sbin/desomniad
 RUN chmod +x /usr/sbin/desomniad
 
+COPY monitor.xml /etc/desomnia/monitor.xml
+
 USER root
 
 ENTRYPOINT ["desomniad"]
 
 # ---------------------------------------------------------------------------
-# native: self-contained NativeAOT daemon, linux-arm64 only, no .NET runtime
+# native: self-contained NativeAOT daemon, 64bit only, no .NET runtime
 # ---------------------------------------------------------------------------
 # runtime-deps is Microsoft's base for self-contained / NativeAOT apps: it carries the native C
 # libraries such a binary links (glibc, libgcc, libstdc++, zlib) but NOT the .NET runtime, so it is
@@ -51,6 +53,8 @@ RUN apt-get update \
 
 COPY desomniad /usr/sbin/desomniad
 RUN chmod +x /usr/sbin/desomniad
+
+COPY monitor.xml /etc/desomnia/monitor.xml
 
 USER root
 

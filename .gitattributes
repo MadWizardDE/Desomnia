@@ -6,6 +6,10 @@
 # Shell scripts must keep LF endings so they run when the solution is copied to a Linux host (the Pi).
 *.sh text eol=lf
 
+# Packaging inputs consumed on Linux (systemd unit, nfpm config) keep LF endings.
+packaging/*.service text eol=lf
+packaging/nfpm.yaml text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

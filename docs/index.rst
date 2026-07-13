@@ -13,6 +13,7 @@
 
    /installation/manually
    /installation/homebrew
+   /installation/packages
    /installation/docker
    /installation/installer
 
