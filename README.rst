@@ -180,7 +180,7 @@ System requirements
 Native build
 ++++++++++++
 
-On always-on 64-bit ARM devices — such as a Raspberry Pi acting as a Wake-on-LAN / Sleep Proxy — you can instead use the **native build** for ``linux-arm64``: a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of >100 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ or `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for when to use it and its constraints.
+On 64-bit Linux devices you can instead use the **native build** – a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of >100 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ or `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for when to use it and its constraints.
 
 ----
 
