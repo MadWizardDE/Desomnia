@@ -1,14 +1,16 @@
 # nfpm configuration for the Desomnia native (AOT) Linux packages.
 # Produces a .deb and a .rpm from the ahead-of-time compiled `desomniad` binary.
 #
-# Driven by the `build-linux-packages` job in .github/workflows/publish.yml, which supplies
-# GOARCH, VERSION and PAYLOAD through the environment (one nfpm invocation per architecture).
-# nfpm maps the Go arch (amd64/arm64) to the right deb (amd64/arm64) and rpm (x86_64/aarch64)
-# name automatically, so a single config covers both formats and both architectures.
+# Driven by the `build-linux-packages` job in .github/workflows/publish.yml. The GOARCH, VERSION
+# and PAYLOAD placeholders below are NOT expanded by nfpm itself -- the job renders them with
+# `envsubst` before calling nfpm (one invocation per architecture). nfpm then maps the Go arch
+# (amd64/arm64) to the right deb (amd64/arm64) and rpm (x86_64/aarch64) name automatically, so a
+# single config covers both formats and both architectures.
 #
-# Build locally, e.g.:
-#   GOARCH=arm64 VERSION=3.0.0 PAYLOAD=/path/to/desomniad \
-#     nfpm package -f packaging/nfpm.yaml -p deb -t ./out/
+# Build locally the same way, e.g.:
+#   export GOARCH=arm64 VERSION=3.0.0 PAYLOAD=/path/to/desomniad
+#   envsubst '${GOARCH} ${VERSION} ${PAYLOAD}' < packaging/nfpm.yaml > /tmp/nfpm.yaml
+#   nfpm package -f /tmp/nfpm.yaml -p deb -t ./out/
 
 name: desomnia
 arch: ${GOARCH}

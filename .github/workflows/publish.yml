@@ -96,7 +96,7 @@ jobs:
           if-no-files-found: error
 
   build-linux-native:
-    name: Build DesomniaDaemon (AOT)
+    name: Build DesomniaDaemon AOT
     # NativeAOT emits native machine code and links against the BUILD machine's glibc; it cannot
     # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive the runner choice:
     #   * Each target must be built on a runner of its own architecture (arm64 on an arm64 runner,
@@ -200,8 +200,13 @@ jobs:
           export PAYLOAD="${{ runner.temp }}/payload/desomniad"
           chmod +x "$PAYLOAD"
           mkdir -p "${{ runner.temp }}/packages"
-          nfpm package -f packaging/nfpm.yaml -p deb -t "${{ runner.temp }}/packages/"
-          nfpm package -f packaging/nfpm.yaml -p rpm -t "${{ runner.temp }}/packages/"
+          # nfpm does not expand ${...} in the config, so render the placeholders ourselves first.
+          # The explicit var list keeps envsubst from touching anything else in the file. The rendered
+          # file is written to the repo root (the working dir) so the relative contents `src` paths
+          # (packaging/*, LICENSE.txt) still resolve.
+          envsubst '${GOARCH} ${VERSION} ${PAYLOAD}' < packaging/nfpm.yaml > nfpm.rendered.yaml
+          nfpm package -f nfpm.rendered.yaml -p deb -t "${{ runner.temp }}/packages/"
+          nfpm package -f nfpm.rendered.yaml -p rpm -t "${{ runner.temp }}/packages/"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
