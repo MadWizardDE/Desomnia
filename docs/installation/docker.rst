@@ -38,6 +38,28 @@ The following ``docker-compose.yaml`` contains all the settings needed to start 
 
 Place this file in the current directory and run ``docker compose up`` to start the container. The host paths on the left side of each volume mapping (e.g. ``./config``) are relative to the directory where the compose file lives; the right side shows the path inside the container.
 
+Native image
+------------
+
+For 64-bit ARM hosts, a **native** image is published alongside the standard one, distinguished by a ``-native`` suffix on the tag — for example ``mad0x20wizard/desomnia:latest-native`` or ``mad0x20wizard/desomnia:<version>-native``. To use it, simply add the suffix to the image in the compose file:
+
+.. code:: yaml
+
+  services:
+    desomnia:
+      image: mad0x20wizard/desomnia:latest-native
+      # ... the rest of the configuration is unchanged
+
+It is built from the ahead-of-time compiled, self-contained daemon on a minimal base image that carries no .NET runtime. The result is a considerably smaller image with a noticeably lower memory footprint, which makes it a good fit for always-on single-board computers such as a Raspberry Pi acting as a Wake-on-LAN proxy. See :doc:`/modules/network/performance` for the underlying details.
+
+It carries the same constraints as the native binary:
+
+- It is published for **linux/arm64 only**; on other architectures, use the standard image (without the suffix).
+- Plugins cannot be loaded at runtime. The :doc:`Firewall Knock Operator </plugins/fko>` is built in, but the ``plugins`` volume has no effect and other plugins are unavailable.
+- It is meant for the monitor and proxy roles and does not suspend the host it runs on, so the local sleep management described below does not apply to it.
+
+Everything else — the Network Monitor and the Sleep Proxy — behaves exactly as in the standard image.
+
 Limitations
 -----------
 

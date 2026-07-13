@@ -177,6 +177,10 @@ System requirements
 - .NET Runtime 10, or Docker (Linux only)
 - `Npcap <https://npcap.com/>`_ on Windows or `libpcap <https://github.com/the-tcpdump-group/libpcap>`_ on Linux / macOS (optional, required for NetworkMonitor)
 
+.. note::
+
+   On always-on 64-bit ARM devices — such as a Raspberry Pi acting as a Wake-on-LAN / Sleep Proxy — you can instead use the **native build** for ``linux-arm64``: a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of ~130 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ for when to use it and its constraints.
+
 ----
 
 If you like this project, consider supporting it:

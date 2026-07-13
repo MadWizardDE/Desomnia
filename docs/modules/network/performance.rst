@@ -50,3 +50,24 @@ Local resource management
 There is one case where Desomnia deliberately keeps more than the opening packet. When a host is watched as a local resource for :doc:`sleep management </guides/sleep>` — Desomnia measuring its traffic to decide whether the system is idle — throughput can only be judged from the data itself, not from connection attempts. For such a host the SYN-only optimisation is lifted on its watched TCP services and the **full data stream** is captured so that bytes can be counted.
 
 This does not disable the filter: the capture is still a positive whitelist scoped to the host's configured service ports (a local resource host always carries at least one Must service filter), and all other traffic is dropped in the kernel as usual. Only the payload of the watched services is added back.
+
+Memory footprint
+----------------
+
+:OS: 🐧 *Linux* (arm64)
+
+Running as an always-on :doc:`Wake-on-LAN / Sleep Proxy </guides/wol-proxy>` on a small device — a Raspberry Pi or comparable single-board computer — puts a premium on memory. The standard build runs on the .NET runtime, which compiles the application just-in-time as it runs; on a Raspberry Pi this settles at roughly **130 MB** of resident memory, most of which is the runtime and its compiler rather than Desomnia's own working set.
+
+Native build
+++++++++++++
+
+For ``linux-arm64`` a **native build** is published alongside the standard one — the ``…_linux-arm64-native.zip`` asset on the `releases page <https://github.com/mad0x20wizard/Desomnia/releases>`__. It is compiled ahead of time into a single self-contained executable, with no just-in-time compiler and no separate .NET runtime. This cuts the resident footprint to around **48 MB**, removes the runtime dependency entirely, and shortens startup, since no compilation happens at launch.
+
+Use it when Desomnia runs as an always-on monitor or proxy on a memory-constrained 64-bit ARM device. In exchange for the smaller footprint it carries a few constraints:
+
+- **64-bit ARM only.** The native build targets ``linux-arm64``; other platforms use the standard build — which is also where the memory saving matters least, as those machines are rarely as constrained.
+- **A recent system.** It requires *glibc 2.35 or newer* — Debian 12 "Bookworm", Ubuntu 22.04, Raspberry Pi OS (Bookworm) and later. On older systems, use the standard build.
+- **No dynamic plugins.** Plugins cannot be loaded at runtime; the :doc:`Firewall Knock Operator </plugins/fko>` is built in, but other plugins are unavailable in this build.
+- **For always-on roles.** It is intended for devices that watch the network and manage *other* hosts (Wake-on-LAN, Sleep Proxy, remote monitoring); it does not manage the sleep of the device it runs on. Use the standard build for :doc:`local sleep management </guides/sleep>`.
+
+Everything else — packet capture, the Berkeley Packet Filter whitelist described above, and the Sleep Proxy — behaves exactly as in the standard build.
