@@ -164,19 +164,21 @@ NativeAOT links the binary against the **build machine's** glibc, and glibc symb
 lower the requirement after linking. Symptom on an older target:
 `libc.so.6: version 'GLIBC_2.38' not found (required by ./desomniad)`.
 
-Implication for CI: the `ubuntu-24.04-arm` runner ships **glibc 2.39**, too new for Raspberry Pi OS. So
-the `build-linux-aot` job runs the publish **inside a Debian 12 "Bookworm" container**
-(`mcr.microsoft.com/dotnet/sdk:10.0`, glibc 2.36); the artifact then runs on a **Bookworm-or-newer**
-target. To go older you must build in an even older glibc — but the .NET 10 SDK's own floor is ~glibc
-2.35, so distros older than Bookworm need musl-static instead. Building **locally on the Pi** sidesteps
-all of this: the binary links against the Pi's own glibc, so it always matches.
+Implication for CI: the `ubuntu-24.04-arm` runner ships **glibc 2.39**, too new for Raspberry Pi OS. The
+fix is to build on an **older-glibc runner**: `build-linux-aot` runs on **`ubuntu-22.04-arm` (glibc
+2.35)**, so the artifact runs on **Debian 12 "Bookworm" (glibc 2.36) and newer**.
 
-Two further quirks of running the publish inside a `container:` (both handled in `build-linux-aot`):
-the container runs as **root** over a tree owned by another uid, so git aborts with *dubious ownership*
-and the git-describe version target falls back to 1.0.0 — fixed with
-`git config --global --add safe.directory "$GITHUB_WORKSPACE"`. And `runner.temp` is **not** consistently
-shared between in-container `run:` steps and the `upload-artifact` action, so build output must be written
-under `github.workspace` (bind-mounted) or the upload can't find it.
+Two blind alleys we ruled out getting here:
+- **A Debian container.** .NET 10 ships **no Debian image** — `mcr.microsoft.com/dotnet/sdk:10.0` is now
+  Ubuntu 24.04 "Noble" (glibc 2.39), and there is no `-bookworm`/`-jammy` tag. Building in it reproduces
+  the exact 2.39 problem. (You *could* install the SDK by hand into a `debian:12`/`ubuntu:22.04` base, but
+  the 22.04 runner gives the same glibc floor with none of the container faff.)
+- **musl static.** A fully-static musl binary can't `dlopen` a glibc-linked `libpcap.so`, which SharpPcap
+  loads at runtime — so musl is a dead end for this daemon regardless of its portability appeal.
+
+Floors: Ubuntu 22.04 is the oldest .NET 10-supported apt runner (glibc 2.35), so **anything older than
+Bookworm is out of reach with the .NET 10 SDK** — such targets would need an older SDK or an OS upgrade.
+Building **locally on the Pi** always matches its own glibc and sidesteps the whole issue.
 
 ## Project state (branch `AOT`)
 

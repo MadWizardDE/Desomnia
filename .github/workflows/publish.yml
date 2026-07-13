@@ -98,14 +98,15 @@ jobs:
   build-linux-aot:
     name: Build DesomniaDaemon (AOT)
     # NativeAOT emits native machine code and links against the BUILD machine's glibc; it cannot
-    # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive this setup:
+    # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive the runner choice:
     #   * It must run on the target architecture -> a native arm64 runner (not the x64 host above).
-    #   * The binary requires glibc >= the build glibc. The ubuntu-24.04-arm runner ships glibc 2.39,
-    #     which is too new for Raspberry Pi OS. So the publish runs INSIDE a Debian 12 "Bookworm"
-    #     container (glibc 2.36) -- the mcr.microsoft.com/dotnet/sdk:10.0 image is Bookworm-based and
-    #     already carries the SDK. The resulting binary runs on a Bookworm-or-newer target.
+    #   * The binary requires glibc >= the build glibc, and glibc is forward-incompatible. The
+    #     ubuntu-24.04-arm runner ships glibc 2.39 -- too new for Raspberry Pi OS. .NET 10 ships no
+    #     Debian container image (its default sdk:10.0 is Ubuntu 24.04 / glibc 2.39), and a static musl
+    #     build is a dead end here because a fully-static binary can't dlopen the glibc libpcap SharpPcap
+    #     needs at runtime. So we build on the ubuntu-22.04-arm runner (glibc 2.35): the binary then runs
+    #     on Debian 12 "Bookworm" (glibc 2.36) and newer.
     runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.container }}
 
     strategy:
       matrix:
@@ -113,36 +114,29 @@ jobs:
           # 32-bit arm (armhf) is intentionally omitted: NativeAOT armhf is experimental and there is
           # no native armhf runner. arm64 covers the modern always-on SBCs where the memory win matters.
           - arch: arm64
-            runner: ubuntu-24.04-arm
-            container: mcr.microsoft.com/dotnet/sdk:10.0   # Debian 12 Bookworm -> glibc 2.36
+            runner: ubuntu-22.04-arm   # glibc 2.35 -> binary runs on glibc >= 2.35 (Bookworm = 2.36)
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # The SDK is already in the container (so no setup-dotnet); only the native toolchain is missing.
-      # binutils supplies objcopy, which StripSymbols needs. Run as root in-container -> no sudo.
-      - name: Install NativeAOT prerequisites
-        run: apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev binutils
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '${{ env.VERSION_NET }}.x'
 
-      # The container runs as root but the checked-out tree is owned by a different uid, so git aborts
-      # with "dubious ownership". That makes the git-describe version target (Directory.Build.props)
-      # fail (exit 128) and the build falls back to the default 1.0.0. Trust the workspace to fix it.
-      - name: Trust the workspace for git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      # binutils (objcopy, for StripSymbols) ships with the runner image; only clang + zlib headers are missing.
+      - name: Install NativeAOT prerequisites
+        run: sudo apt-get update && sudo apt-get install -y clang zlib1g-dev
 
       - name: Publish DesomniaDaemon AOT (${{ matrix.arch }})
         # -p:PublishAot=true is a global property, so it also defines DESOMNIA_AOT and activates the
         # AOT-only settings baked into DesomniaDaemon.csproj (GC hard limit, size-optimized ILC,
         # statically-linked FirewallKnockOperator). The output is a single self-contained native binary;
         # PublishSingleFile / PublishReadyToRun / --no-self-contained do not apply to an AOT build.
-        #
-        # Output goes under github.workspace, NOT runner.temp: in a container job runner.temp is not
-        # reliably shared between in-container run steps and the upload-artifact action, whereas the
-        # workspace is bind-mounted consistently -- so the upload below can actually find the binary.
         run: |
           dotnet publish DesomniaDaemon/DesomniaDaemon.csproj \
-            -o "$GITHUB_WORKSPACE/artifacts/aot" \
+            -o ${{ runner.temp }}/publish \
             -f net${{ env.VERSION_NET }} \
             -c Release \
             -r linux-${{ matrix.arch }} \
@@ -153,9 +147,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # "-native" suffix -> release job zips this as Desomnia_<ver>_linux-arm64-native.zip.
-          # Relative path is resolved against github.workspace (same location the publish wrote to).
           name: linux-${{ matrix.arch }}-native
-          path:  artifacts/aot/desomniad
+          path:  ${{ runner.temp }}/publish/desomniad
           if-no-files-found: error
 
   build-linux-docker:
