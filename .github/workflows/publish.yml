@@ -586,10 +586,10 @@ jobs:
   release-homebrew:
     name: Create Homebrew release
     runs-on: ubuntu-latest
-    
+
     # Building macOS bottles is expensive, so we only update the Homebrew formula for stable releases.
     if: ${{ ! (contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta')) }}
-    
+
     steps:
       - name: Update Homebrew formula
         uses: dawidd6/action-homebrew-bump-formula@v8
@@ -598,3 +598,47 @@ jobs:
           tap: mad0x20wizard/homebrew-tools
           formula: desomnia
           no_fork: true
+
+  release-cloudsmith:
+    name: Publish packages to Cloudsmith
+    # Uploads the deb/rpm packages to the Cloudsmith-hosted apt/dnf repository, so users can
+    # `apt install desomnia` by name and receive updates through their package manager.
+    # Cloudsmith generates and GPG-signs the repository metadata server-side, so this job is
+    # stateless -- push and done, no repository checkout, keys or serialization needed.
+    #
+    # Requires: CLOUDSMITH_ORG (repository variable) and CLOUDSMITH_API_KEY (secret).
+    runs-on: ubuntu-latest
+    needs: [ build-linux-packages ]
+
+    # Only stable releases are published to the repository -- everyone subscribed to it gets
+    # them via the regular system upgrade. Pre-releases stay on GitHub Releases (direct
+    # download); a separate opt-in prerelease repository can be added later if wanted.
+    if: ${{ ! (contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta')) }}
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: ${{ runner.temp }}/incoming
+          merge-multiple: true
+
+      - name: Install Cloudsmith CLI
+        run: pip install --upgrade cloudsmith-cli
+
+      - name: Push packages
+        env:
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+        run: |
+          REPO="${{ vars.CLOUDSMITH_ORG }}/desomnia"
+          echo "Publishing ${{ github.ref_name }} to $REPO"
+
+          # any-distro/any-version: the AOT packages are self-contained (glibc >= 2.35 is their
+          # only floor), so one upload serves every distribution instead of per-distro copies.
+          # --republish allows a re-tagged version to overwrite its earlier upload.
+          for f in "${{ runner.temp }}"/incoming/*.deb; do
+            cloudsmith push deb "$REPO/any-distro/any-version" "$f" --republish
+          done
+          for f in "${{ runner.temp }}"/incoming/*.rpm; do
+            cloudsmith push rpm "$REPO/any-distro/any-version" "$f" --republish
+          done
