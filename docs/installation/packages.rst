@@ -37,25 +37,52 @@ installation.
 Installation
 ------------
 
+The recommended way is to register the Desomnia **package repository** once — ``apt`` or ``dnf``
+then installs *and updates* Desomnia like any other system package. Alternatively, individual
+packages can be downloaded from the `GitHub Releases`_ page and installed directly, without
+automatic updates.
+
+The repository is hosted by `Cloudsmith`_. The setup script below detects your distribution,
+imports the repository signing key, and registers the package source; if you prefer to
+configure the source by hand, the repository page linked above provides per-distribution
+instructions.
+
 Debian, Ubuntu, Raspberry Pi OS
 +++++++++++++++++++++++++++++++
 
-Download the ``.deb`` matching your architecture from the `GitHub Releases`_ page and install it
-with ``apt``, which resolves the required system libraries automatically:
+Register the repository, then install:
 
 .. code:: bash
 
-   sudo apt install ./Desomnia_<version>_linux-arm64-native.deb
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/desomnia/setup.deb.sh' | sudo -E bash
+   sudo apt install desomnia
+
+Desomnia is then kept up to date by ``apt upgrade``, together with the rest of the system.
 
 Fedora, RHEL, openSUSE
 ++++++++++++++++++++++
 
-Download the ``.rpm`` matching your architecture and install it with ``dnf`` (or ``zypper`` on
-openSUSE):
+Register the repository, then install:
 
 .. code:: bash
 
-   sudo dnf install ./Desomnia_<version>_linux-arm64-native.rpm
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/desomnia/setup.rpm.sh' | sudo -E bash
+   sudo dnf install desomnia
+
+On openSUSE, install with ``zypper install desomnia`` instead.
+
+Direct download
++++++++++++++++
+
+Download the package matching your format and architecture from the `GitHub Releases`_ page and
+install it directly — dependencies are still resolved automatically, but newer versions have to
+be downloaded and installed manually. Only **stable releases** are published to the repository;
+alpha and beta versions are available exclusively this way:
+
+.. code:: bash
+
+   sudo apt install ./Desomnia_<version>_linux-arm64-native.deb   # Debian, Ubuntu, Raspberry Pi OS
+   sudo dnf install ./Desomnia_<version>_linux-arm64-native.rpm   # Fedora, RHEL, openSUSE
 
 .. note::
 
@@ -122,8 +149,10 @@ Journal
 Updating
 --------
 
-Download the newer package and install it the same way. If the service was running, it is
-restarted automatically; your ``monitor.xml`` is left untouched.
+When installed from the repository, Desomnia is updated by the regular system upgrade
+(``apt upgrade`` / ``dnf upgrade``). For a directly downloaded package, download the newer
+package and install it the same way. In both cases, if the service was running it is restarted
+automatically, and your ``monitor.xml`` is left untouched.
 
 Uninstallation
 --------------
@@ -134,7 +163,17 @@ Uninstallation
    sudo dnf remove desomnia      # Fedora/RHEL
 
 This stops and disables the service. Your configuration in ``/etc/desomnia`` and any log files
-are left in place; remove them manually if you no longer need them.
+are left in place; remove them manually if you no longer need them. If you registered the
+package repository, the source file created by the setup script
+(``/etc/apt/sources.list.d/mad0x20wizard-desomnia.list`` or
+``/etc/yum.repos.d/mad0x20wizard-desomnia.repo``) can be removed as well.
+
+.. note::
+
+   Package repository hosting is graciously provided by `Cloudsmith`_, the only fully hosted,
+   cloud-native, universal package management solution.
+
+.. _`Cloudsmith`: https://cloudsmith.io/~mad0x20wizard/repos/desomnia/packages/
 
 .. _`GitHub Releases`: https://github.com/mad0x20wizard/Desomnia/releases
 
