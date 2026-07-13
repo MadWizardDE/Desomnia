@@ -642,3 +642,39 @@ jobs:
           for f in "${{ runner.temp }}"/incoming/*.rpm; do
             cloudsmith push rpm "$REPO/any-distro/any-version" "$f" --republish
           done
+
+  release-cleanup:
+    name: Remove previous pre-releases
+    # When a full release is published, delete the pre-release entries it supersedes from the
+    # Releases page (e.g. v3.1.0 removes v3.1.0-alpha1..-alphaN and other older prereleases).
+    # Only prereleases whose version sorts BELOW the new release are deleted, so an already
+    # published alpha of a NEWER version (e.g. v3.2.0-alpha1 while releasing v3.1.1) survives.
+    # The git tags are kept: they document history, and the repository is mirrored from an
+    # external origin, so a mirror push would resurrect deleted tags anyway.
+    runs-on: ubuntu-latest
+    needs: [ release ]
+
+    if: ${{ ! (contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta')) }}
+
+    steps:
+      - name: Delete superseded pre-releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          CURRENT="${{ github.ref_name }}"
+          # Compare dpkg-style: mapping "-alpha"/"-beta" to "~..." makes prereleases sort below
+          # their final release under GNU sort -V (which implements the Debian tilde rule).
+          current="${CURRENT/-/\~}"
+
+          for tag in $(gh release list --limit 200 --json tagName,isPrerelease \
+                         --jq '.[] | select(.isPrerelease) | .tagName'); do
+            t="${tag/-/\~}"
+            lowest="$(printf '%s\n%s\n' "$t" "$current" | sort -V | head -n1)"
+            if [ "$lowest" = "$t" ] && [ "$t" != "$current" ]; then
+              echo "Deleting pre-release $tag"
+              gh release delete "$tag" --yes
+            else
+              echo "Keeping $tag (newer than $CURRENT)"
+            fi
+          done
