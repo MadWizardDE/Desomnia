@@ -6,7 +6,7 @@ using MadWizard.Desomnia.Logging;
 using MadWizard.Desomnia.Network.Logging;
 using Microsoft.Extensions.Hosting;
 using NLog;
- 
+
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
 LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
