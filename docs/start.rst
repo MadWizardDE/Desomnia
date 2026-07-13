@@ -13,6 +13,9 @@ To install Desomnia, pick the method that fits your platform and preferences:
 :doc:`Homebrew </installation/homebrew>` – 🐧 Linux, 🍎 macOS
   | Native deployment, with all features available. Installs required dependencies, helps with service registration.
   | Update to newer versions easily.
+:doc:`Native packages </installation/packages>` – 🐧 Linux
+  | Native ``.deb`` / ``.rpm`` deployment for Debian, Ubuntu, Raspberry Pi OS, Fedora and openSUSE, with limited features available. Bundles the low-memory native build; no .NET runtime required.
+  | Registers the service and ships a ready-to-run default configuration — a good fit for headless servers and single-board computers.
 :doc:`Docker </installation/docker>` – 🐧 Linux
   | Containerised deployment, with limited features available. Required dependencies are bundled; no installation required. 
   | Update to newer versions easily.

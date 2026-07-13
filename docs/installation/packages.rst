@@ -45,7 +45,7 @@ with ``apt``, which resolves the required system libraries automatically:
 
 .. code:: bash
 
-   sudo apt install ./desomnia_<version>_arm64.deb
+   sudo apt install ./Desomnia_<version>_linux-arm64-native.deb
 
 Fedora, RHEL, openSUSE
 ++++++++++++++++++++++
@@ -55,7 +55,7 @@ openSUSE):
 
 .. code:: bash
 
-   sudo dnf install ./desomnia-<version>-1.aarch64.rpm
+   sudo dnf install ./Desomnia_<version>_linux-arm64-native.rpm
 
 .. note::
 

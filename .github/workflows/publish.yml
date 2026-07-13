@@ -205,8 +205,12 @@ jobs:
           # file is written to the repo root (the working dir) so the relative contents `src` paths
           # (packaging/*, LICENSE.txt) still resolve.
           envsubst '${GOARCH} ${VERSION} ${PAYLOAD}' < packaging/nfpm.yaml > nfpm.rendered.yaml
-          nfpm package -f nfpm.rendered.yaml -p deb -t "${{ runner.temp }}/packages/"
-          nfpm package -f nfpm.rendered.yaml -p rpm -t "${{ runner.temp }}/packages/"
+          # Name the output files like the release archives (Desomnia_<ver>_linux-<arch>-native.<ext>)
+          # by giving nfpm a full target path. This only renames the file; the package's internal
+          # version (3.1.0~alpha17-1) and Architecture metadata (amd64/aarch64) are unaffected.
+          BASENAME="Desomnia_${VERSION}_linux-${{ matrix.arch }}-native"
+          nfpm package -f nfpm.rendered.yaml -p deb -t "${{ runner.temp }}/packages/${BASENAME}.deb"
+          nfpm package -f nfpm.rendered.yaml -p rpm -t "${{ runner.temp }}/packages/${BASENAME}.rpm"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
