@@ -95,7 +95,7 @@ jobs:
           path:  ${{ runner.temp }}/publish/desomniad
           if-no-files-found: error
 
-  build-linux-aot:
+  build-linux-native:
     name: Build DesomniaDaemon (AOT)
     # NativeAOT emits native machine code and links against the BUILD machine's glibc; it cannot
     # cross-compile like the framework-dependent ReadyToRun build. Two consequences drive the runner choice:
@@ -282,7 +282,7 @@ jobs:
     # manifest-merge dance is needed; we build and push the tags directly. Built natively on an arm64
     # runner. The image reuses the same `linux-arm64-native` binary the release artifact ships.
     runs-on: ubuntu-24.04-arm
-    needs: [ build-linux-aot ]
+    needs: [ build-linux-native ]
 
     steps:
       - name: Checkout
@@ -434,7 +434,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [ build-windows-installer, build-linux, build-linux-aot ]
+    needs: [ build-windows-installer, build-linux, build-linux-native ]
     runs-on: ubuntu-latest
     steps:
       - name: Download Windows installer
