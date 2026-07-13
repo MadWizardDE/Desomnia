@@ -212,6 +212,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           file: ./Dockerfile
+          target: standard   # the framework-dependent, multi-arch, plugin-capable flavour
           context: ${{ runner.temp }}/context
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -274,6 +275,62 @@ jobs:
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ vars.DOCKERHUB_IMAGE }}:${{ steps.meta.outputs.version }}
+
+  build-linux-native-docker:
+    name: Build native Docker image
+    # The NativeAOT daemon is linux-arm64 only, so this is a single-arch image -- no push-by-digest /
+    # manifest-merge dance is needed; we build and push the tags directly. Built natively on an arm64
+    # runner. The image reuses the same `linux-arm64-native` binary the release artifact ships.
+    runs-on: ubuntu-24.04-arm
+    needs: [ build-linux-aot ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Download native daemon
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64-native
+          path: ${{ runner.temp }}/context
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKERHUB_IMAGE }}
+          # Same tag set as the standard image, with a "-native" suffix on every tag
+          # (e.g. :3.0.0-beta2 -> :3.0.0-beta2-native, :latest -> :latest-native).
+          flavor: |
+            suffix=-native,onlatest=true
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{major}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}}
+
+      - name: Build and push (native, linux/arm64)
+        uses: docker/build-push-action@v6
+        with:
+          file: ./Dockerfile
+          target: native
+          context: ${{ runner.temp }}/context
+          platforms: linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          push: true
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
 
   build-windows:
     name: Build DesomniaService
