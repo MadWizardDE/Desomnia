@@ -630,7 +630,7 @@ jobs:
         env:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
         run: |
-          REPO="${{ vars.CLOUDSMITH_ORG }}/desomnia"
+          REPO="${{ vars.CLOUDSMITH_ORG }}/tools"
           echo "Publishing ${{ github.ref_name }} to $REPO"
 
           # any-distro/any-version: the AOT packages are self-contained (glibc >= 2.35 is their
