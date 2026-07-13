@@ -158,6 +158,23 @@ Download the latest release from the `GitHub releases page <https://github.com/m
 
 See the `Homebrew installation guide <https://desomnia.readthedocs.io/en/latest/installation/homebrew.html>`__ for filesystem layout, plugin installation, and platform-specific notes.
 
+📦 Native packages – 🐧 Linux
+++++++++++++++++++++++++++++++
+
+Native ``.deb`` / ``.rpm`` packages ship the low-memory **native build** (no .NET Runtime required) and are distributed through a package repository, so Desomnia is updated together with the rest of the system. Register the repository once, then install:
+
+.. code:: bash
+
+   # Debian / Ubuntu / Raspberry Pi OS
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/tools/setup.deb.sh' | sudo -E bash
+   sudo apt install desomnia
+
+   # Fedora / RHEL / openSUSE
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/tools/setup.rpm.sh' | sudo -E bash
+   sudo dnf install desomnia
+
+The package starts Desomnia as a zero-configuration Sleep Proxy out of the box. See the `package installation guide <https://desomnia.readthedocs.io/en/latest/installation/packages.html>`__ for supported platforms and the constraints of the native build. Package repository hosting is graciously provided by `Cloudsmith <https://cloudsmith.io/~mad0x20wizard/repos/tools/packages/>`__.
+
 🐋 Docker – 🐧 Linux
 ++++++++++++++++++++++
 
@@ -180,7 +197,7 @@ System requirements
 Native build
 ++++++++++++
 
-On 64-bit Linux devices you can instead use the **native build** – a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of >100 MB). See the `manual installation guide <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__ or `Docker installation guide <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ for when to use it and its constraints.
+On 64-bit Linux devices you can instead use the **native build** – a single self-contained binary that needs no .NET Runtime and reduces the memory footprint by more than half (~50 MB instead of >100 MB). It is available as a `native package <https://desomnia.readthedocs.io/en/latest/installation/packages.html>`__, through the `manual installation <https://desomnia.readthedocs.io/en/latest/installation/manually.html>`__, or as a `Docker image <https://desomnia.readthedocs.io/en/latest/installation/docker.html>`__ — the guides explain when to use it and its constraints.
 
 ----
 

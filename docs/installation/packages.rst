@@ -54,7 +54,7 @@ Register the repository, then install:
 
 .. code:: bash
 
-   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/desomnia/setup.deb.sh' | sudo -E bash
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/tools/setup.deb.sh' | sudo -E bash
    sudo apt install desomnia
 
 Desomnia is then kept up to date by ``apt upgrade``, together with the rest of the system.
@@ -66,7 +66,7 @@ Register the repository, then install:
 
 .. code:: bash
 
-   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/desomnia/setup.rpm.sh' | sudo -E bash
+   curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/tools/setup.rpm.sh' | sudo -E bash
    sudo dnf install desomnia
 
 On openSUSE, install with ``zypper install desomnia`` instead.
@@ -165,15 +165,15 @@ Uninstallation
 This stops and disables the service. Your configuration in ``/etc/desomnia`` and any log files
 are left in place; remove them manually if you no longer need them. If you registered the
 package repository, the source file created by the setup script
-(``/etc/apt/sources.list.d/mad0x20wizard-desomnia.list`` or
-``/etc/yum.repos.d/mad0x20wizard-desomnia.repo``) can be removed as well.
+(``/etc/apt/sources.list.d/mad0x20wizard-tools.list`` or
+``/etc/yum.repos.d/mad0x20wizard-tools.repo``) can be removed as well.
 
 .. note::
 
    Package repository hosting is graciously provided by `Cloudsmith`_, the only fully hosted,
    cloud-native, universal package management solution.
 
-.. _`Cloudsmith`: https://cloudsmith.io/~mad0x20wizard/repos/desomnia/packages/
+.. _`Cloudsmith`: https://cloudsmith.io/~mad0x20wizard/repos/tools/packages/
 
 .. _`GitHub Releases`: https://github.com/mad0x20wizard/Desomnia/releases
 
