@@ -4,7 +4,7 @@
 Desomnia
 ========
 
-|Build Status| |Build Status Docs| |License| |Discord|
+|Build Status| |Build Status Docs| |Cloudsmith| |License| |Discord|
 
 Desomnia is an intelligent sleep management solution designed for use on local networks, ranging from home labs to small businesses. It monitors the usage of your machines locally and via network to keep them awake as long as they are in use and can wake them at the exact moment you open a connection to one of it's services — transparently, with minimal or no changes at all on the connecting sides. This is achieved through a smart use of standard network protocols and a little bit of IP spoofing.
 
@@ -173,7 +173,9 @@ Native ``.deb`` / ``.rpm`` packages ship the low-memory **native build** (no .NE
    curl -1sLf 'https://dl.cloudsmith.io/public/mad0x20wizard/tools/setup.rpm.sh' | sudo -E bash
    sudo dnf install desomnia
 
-The package starts Desomnia as a zero-configuration Sleep Proxy out of the box. See the `package installation guide <https://desomnia.readthedocs.io/en/latest/installation/packages.html>`__ for supported platforms and the constraints of the native build. Package repository hosting is graciously provided by `Cloudsmith <https://cloudsmith.io/~mad0x20wizard/repos/tools/packages/>`__.
+The package starts Desomnia as a zero-configuration Sleep Proxy out of the box. See the `package installation guide <https://desomnia.readthedocs.io/en/latest/installation/packages.html>`__ for supported platforms and the constraints of the native build.
+
+Package repository hosting is graciously provided by `Cloudsmith <https://cloudsmith.io/~mad0x20wizard/repos/tools/packages/>`__. Cloudsmith is the only fully hosted, cloud-native, universal package management solution, that enables your organization to create, store and share packages in any format, to any place, with total confidence.
 
 🐋 Docker – 🐧 Linux
 ++++++++++++++++++++++
@@ -207,6 +209,10 @@ If you like this project, consider supporting it:
 
 .. |"Buy Me A Coffee"| image:: https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png
    :target: https://coff.ee/mad0x20wizard
+
+.. |Cloudsmith| image:: https://img.shields.io/badge/OSS%20hosting%20by-cloudsmith-blue?logo=cloudsmith&style=flat-square&link=https%3A%2F%2Fcloudsmith.com
+   :target: https://github.com/mad0x20wizard/Desomnia/actions/workflows/publish.yml
+   :alt: Build Status
 
 .. |Build Status| image:: https://github.com/mad0x20wizard/Desomnia/actions/workflows/publish.yml/badge.svg
    :target: https://github.com/mad0x20wizard/Desomnia/actions/workflows/publish.yml
