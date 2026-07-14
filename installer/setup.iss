@@ -149,6 +149,7 @@ Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: autoDetect; String: {co
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: handoff; String: {code:NetworkMonitorPrefs|Handoff}; Check: ShouldConfigureNetworkMonitor
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: handoffDuration; String: {code:NetworkMonitorPrefs|HandoffDuration}; Check: ShouldConfigureNetworkMonitor
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: hostAutoDetect; String: {code:NetworkMonitorPrefs|HostAutoDetect}; Check: ShouldConfigureNetworkMonitor
+Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: allowWakeOnLAN; String: {code:NetworkMonitorPrefs|AllowWakeOnLAN}; Check: ShouldConfigureNetworkMonitor
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

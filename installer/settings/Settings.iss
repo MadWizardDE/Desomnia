@@ -300,7 +300,7 @@ begin
     AdvertiseProxyCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
     AdvertiseProxyCheckbox.Height := ScaleY(AdvertiseProxyCheckbox.Height);
 
-    AdvertiseProxyCheckbox.Caption := 'Advertise as Bonjour Sleep Proxy on the local network';
+    AdvertiseProxyCheckbox.Caption := 'Advertise as Bonjour Sleep Proxy via Multicast DNS';
 
     TopY := TopY + AdvertiseProxyCheckbox.Height + ScaleY(4);
 
@@ -311,7 +311,7 @@ begin
     OpenRegistrationCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
     OpenRegistrationCheckbox.Height := ScaleY(OpenRegistrationCheckbox.Height);
 
-    OpenRegistrationCheckbox.Caption := 'Allow any remote host to register';
+    OpenRegistrationCheckbox.Caption := 'Allow unknown hosts to register';
 
     TopY := TopY + ScaleY(18);
 

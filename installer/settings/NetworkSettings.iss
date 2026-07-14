@@ -16,7 +16,9 @@ type
 
     IPInput: HWND;
     NetworkIPLabel: TNewStaticText;
-    
+
+    WakeOnLANCheckbox: TNewCheckBox;
+
     HelpIcon: TBitmapImage;
     HelpLabel: TNewStaticText;
     Help2Icon: TBitmapImage;
@@ -61,6 +63,16 @@ end;
 procedure OnConfigureRemoteServices(Sender: TObject);
 begin
   RemoteHostsConfig := ConfigureHostServices('Configure remote services', RemoteHostsConfig, hsdsHost or hsdsHostEdit or hsdsHostSelect or hsdsMacEdit or hsdsIPEdit or hsdsSecurity);
+end;
+
+var
+  WakeOnLANClicked: Boolean;   // the user made an explicit choice
+  WakeOnLANUpdating: Boolean;  // guards against programmatic Checked changes
+
+procedure OnWakeOnLANClicked(Sender: TObject);
+begin
+  if not WakeOnLANUpdating then
+    WakeOnLANClicked := True;
 end;
 
 procedure RefreshNetworkInterfaces;
@@ -246,7 +258,7 @@ begin
     NetworkIPLabel.WordWrap := False;
     
     NetworkComboBox.Width := NetworkComboBox.Width - NetworkIPLabel.Width - ScaleX(15);
-    
+
    TopY := TopY + NetworkComboBox.Height + ScaleY(20);
 
      HelpIcon := TBitmapImage.Create(WizardForm);
@@ -327,6 +339,15 @@ begin
 
     Success := InitializeBitmapImageFromStockIcon(Help3Icon, SIID_NETWORKCONNECT, Page.SurfaceColor, []);
 
+    WakeOnLANCheckbox := TNewCheckBox.Create(WizardForm);
+    WakeOnLANCheckbox.Parent := Page.Surface;
+    WakeOnLANCheckbox.Height := ScaleY(WakeOnLANCheckbox.Height);
+    WakeOnLANCheckbox.Top := TopY + ConfigureServicesButton.Height + ScaleY(8);
+    WakeOnLANCheckbox.Caption := 'Automatically enable Wake-on-LAN';
+    WakeOnLANCheckbox.Width := GetTextWidthForControl(WakeOnLANCheckbox.Caption, WakeOnLANCheckbox.Handle) + ScaleX(20);
+    WakeOnLANCheckbox.Left := Page.Surface.Width - WakeOnLANCheckbox.Width;
+    WakeOnLANCheckbox.OnClick := @OnWakeOnLANClicked;
+
 
     // Assign the click handler
     RefreshNetworkButton.OnClick := @OnRefreshNetworkInterfaceList;
@@ -361,11 +382,21 @@ begin
     with NetworkSettingsControls do
     begin
       ConfigureServicesButton.Visible := SettingsControls.ModeTimeoutRadioBox.Checked;
-      
+
       if ConfigureServicesButton.Visible then
         Help3Icon.Left := ConfigureServicesButton.Left - Help3Icon.Width - ScaleX(5)
       else
         Help3Icon.Left := ConfigureRemoteServicesButton.Left - Help3Icon.Width - ScaleX(5);
+
+      // Wake-on-LAN only concerns this machine when it suspends itself (Mode A)
+      WakeOnLANCheckbox.Visible := SettingsControls.ModeTimeoutRadioBox.Checked;
+
+      if not WakeOnLANClicked then
+      begin
+        WakeOnLANUpdating := True;
+        WakeOnLANCheckbox.Checked := SettingsControls.PowerCheckbox.Checked;
+        WakeOnLANUpdating := False;
+      end;
     end;
   end;
 end;
@@ -396,6 +427,9 @@ begin
 
   if (Param = 'Mode') and SettingsControls.PromiscuousCheckbox.Checked then
     Result := 'promiscuous';
+
+  if (Param = 'AllowWakeOnLAN') and SettingsControls.ModeTimeoutRadioBox.Checked and NetworkSettingsControls.WakeOnLANCheckbox.Checked then
+    Result := 'MagicPacket';
 
   if Param = 'AutoDetect' then
   begin

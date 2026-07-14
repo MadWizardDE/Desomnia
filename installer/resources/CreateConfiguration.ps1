@@ -232,6 +232,7 @@ if ($network = $ini["NetworkMonitor"])
         watchMode  = $network["mode"]
         handoff    = $network["handoff"]
         handoffDuration = $network["handoffDuration"] -replace '\s', ''
+        allowWakeOnLAN  = $network["allowWakeOnLAN"]
     }
 
     Add-Services $monitor $ini["Services"]
