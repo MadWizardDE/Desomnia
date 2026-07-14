@@ -12,6 +12,11 @@ type
     SleepDelayCombo: TNewComboBox;
     SleepDelayLabel: TNewStaticText;
 
+    RegisterProxyCheckbox: TNewCheckBox;
+    WakeAfterCombo: TNewComboBox;
+    WakeAfterLabel: TNewStaticText;
+    MandatoryHandoffCheckbox: TNewCheckBox;
+
     DuoCheckbox: TNewCheckBox;
     DuoStopDelayCombo: TNewComboBox;
     DuoStopDelayLabel: TNewStaticText;
@@ -20,6 +25,8 @@ type
     ModeNetworkDescLabel: TNewStaticText;
 
     PromiscuousCheckbox: TNewCheckBox;
+    AdvertiseProxyCheckbox: TNewCheckBox;
+    OpenRegistrationCheckbox: TNewCheckBox;
   end;
   
 var
@@ -51,25 +58,46 @@ begin
 
     DuoStopDelayCombo.Enabled := DuoCheckbox.Checked;
     DuoStopDelayLabel.Enabled := DuoCheckbox.Checked;
+
+    // Sleep Proxy registration requires power management and network monitoring
+    RegisterProxyCheckbox.Enabled := PowerCheckbox.Checked and IsComponentSelected('DesomniaService\NetworkMonitor');
+
+    if not RegisterProxyCheckbox.Enabled then
+      RegisterProxyCheckbox.Checked := False;
+
+    WakeAfterCombo.Enabled := RegisterProxyCheckbox.Checked;
+    WakeAfterLabel.Enabled := RegisterProxyCheckbox.Checked;
+
+    MandatoryHandoffCheckbox.Enabled := RegisterProxyCheckbox.Checked;
+
+    if not MandatoryHandoffCheckbox.Enabled then
+      MandatoryHandoffCheckbox.Checked := False;
+
+    // Sleep Proxy service requires the Wake-on-LAN proxy of Mode B
+    AdvertiseProxyCheckbox.Enabled := PromiscuousCheckbox.Checked;
+
+    if not AdvertiseProxyCheckbox.Enabled then
+      AdvertiseProxyCheckbox.Checked := False;
+
+    OpenRegistrationCheckbox.Enabled := AdvertiseProxyCheckbox.Checked;
+
+    if not OpenRegistrationCheckbox.Enabled then
+      OpenRegistrationCheckbox.Checked := False;
   end;
 end;
 
-function CreateDurationComboBox(Top: Integer; BoxLabel: TNewStaticText; Immediate: Boolean): TNewComboBox;
+function CreateLabeledComboBox(Top: Integer; BoxLabel: TNewStaticText): TNewComboBox;
 begin
   Result := TNewComboBox.Create(SettingsPage);
   Result.Parent := SettingsPage.Surface;
   Result.Top := Top;
   Result.Width := ScaleX(DurationComboWidth);
   Result.Left := SettingsPage.Surface.Width - Result.Width;
-  
-  if Immediate Then
-    Result.Items.Add('immediate');
-  
-  Result.Items.Add('30 s');
-  Result.Items.Add('5 min');
-  Result.Items.Add('30 min');
-  Result.Items.Add('1 h');
-  
+
+  // force the window handle into existence, so Height reports the actual,
+  // font-scaled height instead of the 96-DPI design default
+  Result.Items.Clear;
+
   BoxLabel.Parent := SettingsPage.Surface;
   BoxLabel.WordWrap := False;
   BoxLabel.AutoSize := True;
@@ -78,11 +106,25 @@ begin
 
 end;
 
+function CreateDurationComboBox(Top: Integer; BoxLabel: TNewStaticText; Immediate: Boolean): TNewComboBox;
+begin
+  Result := CreateLabeledComboBox(Top, BoxLabel);
+
+  if Immediate Then
+    Result.Items.Add('immediate');
+
+  Result.Items.Add('30 s');
+  Result.Items.Add('5 min');
+  Result.Items.Add('30 min');
+  Result.Items.Add('1 h');
+end;
+
 function CreateSettingsPage(AfterPageID: Integer): TWizardPage;
 var
   TopY: Integer;
   DescLeft: Integer;
   DescWidth: Integer;
+  SubLeft: Integer;
 
 begin
   SettingsPage :=
@@ -97,6 +139,7 @@ begin
     TopY := 0;
     DescLeft := ScaleX(24);
     DescWidth := SettingsPage.SurfaceWidth - DescLeft;
+    SubLeft := DescLeft + ScaleX(16);
 
     // --- Radio 1 ---
     ModeTimeoutRadioBox := TNewRadioButton.Create(SettingsPage);
@@ -127,24 +170,7 @@ begin
     ModeTimeoutDescLabel.Caption := ModeTimeoutDescLabel.Caption + ' This includes automatic Wake-on-LAN for suspended network hosts.';
     
     TopY := TopY + ModeTimeoutDescLabel.Height + ScaleY(10);
-    
-    PowerCheckbox := TNewCheckBox.Create(SettingsPage);
-    PowerCheckbox.Parent := SettingsPage.Surface;
-    PowerCheckbox.Left := DescLeft;      // indent under the radio
-    PowerCheckbox.Top := TopY;
-    PowerCheckbox.Width := SettingsPage.SurfaceWidth - DescLeft;
-    PowerCheckbox.Height := ScaleY(PowerCheckbox.Height);
-    PowerCheckbox.Checked := True;
 
-    PowerCheckbox.Caption := 'Replace Windows built-in power management';
-    
-    SleepDelayLabel := TNewStaticText.Create(SettingsPage);
-    SleepDelayLabel.Caption := 'sleep after';
-    SleepDelayCombo := CreateDurationComboBox(TopY, SleepDelayLabel, True);
-    SleepDelayCombo.Text := '30 min';
-
-    TopY := TopY + SleepDelayCombo.Height;
-    
     DuoCheckbox := TNewCheckBox.Create(SettingsPage);
     DuoStopDelayCombo := TNewComboBox.Create(SettingsPage);
     DuoStopDelayLabel := TNewStaticText.Create(SettingsPage);
@@ -152,28 +178,24 @@ begin
 
     if IsDuoInstalled then
     begin
-      TopY := TopY + ScaleY(4);
-      
-      PowerCheckbox.Checked := False;
-    
       DuoCheckbox.Parent := SettingsPage.Surface;
       DuoCheckbox.Left := DescLeft;      // indent under the radio
       DuoCheckbox.Top := TopY;
       DuoCheckbox.Width := SettingsPage.SurfaceWidth - DescLeft;
       DuoCheckbox.Height := ScaleY(DuoCheckbox.Height);
       DuoCheckbox.Checked := True;
-      
+
       //DuoCheckbox.Hint := 'When a remote Moonlight client tries to connect to a stopped instance, it will automatically be started.'; //+ #13#10 +
       //DuoCheckbox.ShowHint := True;
       //DuoCheckbox.Cursor := crHelp;
 
-      
-      
+
+
       DuoCheckbox.Caption := 'Start/stop Duo instances automatically';
-      
+
       DuoStopDelayCombo := CreateDurationComboBox(TopY, DuoStopDelayLabel, True);
       DuoStopDelayCombo.Text := '20 s';
-      
+
       // TODO: increase tooltip duration
       //DuoStopDelayLabel.Hint := 'The instance will stopped after the configured delay, when the last client has disconnected.';
       //DuoStopDelayLabel.ShowHint := True;
@@ -181,8 +203,57 @@ begin
 
 
 
-      TopY := TopY + DuoStopDelayCombo.Height;
+      TopY := TopY + DuoStopDelayCombo.Height + ScaleY(4);
     end;
+
+    PowerCheckbox := TNewCheckBox.Create(SettingsPage);
+    PowerCheckbox.Parent := SettingsPage.Surface;
+    PowerCheckbox.Left := DescLeft;      // indent under the radio
+    PowerCheckbox.Top := TopY;
+    PowerCheckbox.Width := SettingsPage.SurfaceWidth - DescLeft;
+    PowerCheckbox.Height := ScaleY(PowerCheckbox.Height);
+    PowerCheckbox.Checked := not IsDuoInstalled;
+
+    PowerCheckbox.Caption := 'Replace Windows built-in power management';
+
+    SleepDelayLabel := TNewStaticText.Create(SettingsPage);
+    SleepDelayLabel.Caption := 'sleep after';
+    SleepDelayCombo := CreateDurationComboBox(TopY, SleepDelayLabel, True);
+    SleepDelayCombo.Text := '30 min';
+
+    TopY := TopY + SleepDelayCombo.Height + ScaleY(4);
+
+    // --- Sleep Proxy options under the power checkbox ---
+    RegisterProxyCheckbox := TNewCheckBox.Create(SettingsPage);
+    RegisterProxyCheckbox.Parent := SettingsPage.Surface;
+    RegisterProxyCheckbox.Left := SubLeft;      // indent under the checkbox
+    RegisterProxyCheckbox.Top := TopY;
+    RegisterProxyCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
+    RegisterProxyCheckbox.Height := ScaleY(RegisterProxyCheckbox.Height);
+
+    RegisterProxyCheckbox.Caption := 'Automatically register with a Sleep Proxy on the local network';
+
+    WakeAfterLabel := TNewStaticText.Create(SettingsPage);
+    WakeAfterLabel.Caption := 'wake after';
+    WakeAfterCombo := CreateLabeledComboBox(TopY, WakeAfterLabel);
+    WakeAfterCombo.Items.Add('1 h');
+    WakeAfterCombo.Items.Add('6 h');
+    WakeAfterCombo.Items.Add('12 h');
+    WakeAfterCombo.Items.Add('7 days');
+    WakeAfterCombo.Text := '7 days';
+
+    TopY := TopY + WakeAfterCombo.Height + ScaleY(4);
+
+    MandatoryHandoffCheckbox := TNewCheckBox.Create(SettingsPage);
+    MandatoryHandoffCheckbox.Parent := SettingsPage.Surface;
+    MandatoryHandoffCheckbox.Left := SubLeft;      // indent under the checkbox
+    MandatoryHandoffCheckbox.Top := TopY;
+    MandatoryHandoffCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
+    MandatoryHandoffCheckbox.Height := ScaleY(MandatoryHandoffCheckbox.Height);
+
+    MandatoryHandoffCheckbox.Caption := 'Only suspend after a successful Sleep Proxy handoff';
+
+    TopY := TopY + MandatoryHandoffCheckbox.Height;
 
     TopY := TopY + ScaleY(20);
     
@@ -207,7 +278,7 @@ begin
     ModeNetworkDescLabel.WordWrap := True;
     ModeNetworkDescLabel.Caption :=
       'Network traffic will be monitored in order to automatically wake up suspended network hosts that are accessed from this computer. ';
-    TopY := TopY + ScaleY(44);
+    TopY := TopY + ModeNetworkDescLabel.Height + ScaleY(10);
 
     // --- Checkbox under Radio 2 ---
     PromiscuousCheckbox := TNewCheckBox.Create(SettingsPage);
@@ -218,6 +289,29 @@ begin
     PromiscuousCheckbox.Height := ScaleY(PromiscuousCheckbox.Height);
 
     PromiscuousCheckbox.Caption := 'Act as Wake-on-LAN proxy for other hosts on the same local network';
+
+    TopY := TopY + PromiscuousCheckbox.Height + ScaleY(6);
+
+    // --- Sleep Proxy options under the Wake-on-LAN proxy checkbox ---
+    AdvertiseProxyCheckbox := TNewCheckBox.Create(SettingsPage);
+    AdvertiseProxyCheckbox.Parent := SettingsPage.Surface;
+    AdvertiseProxyCheckbox.Left := SubLeft;      // indent under the checkbox
+    AdvertiseProxyCheckbox.Top := TopY;
+    AdvertiseProxyCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
+    AdvertiseProxyCheckbox.Height := ScaleY(AdvertiseProxyCheckbox.Height);
+
+    AdvertiseProxyCheckbox.Caption := 'Advertise as Bonjour Sleep Proxy on the local network';
+
+    TopY := TopY + AdvertiseProxyCheckbox.Height + ScaleY(4);
+
+    OpenRegistrationCheckbox := TNewCheckBox.Create(SettingsPage);
+    OpenRegistrationCheckbox.Parent := SettingsPage.Surface;
+    OpenRegistrationCheckbox.Left := SubLeft;      // indent under the checkbox
+    OpenRegistrationCheckbox.Top := TopY;
+    OpenRegistrationCheckbox.Width := SettingsPage.SurfaceWidth - SubLeft;
+    OpenRegistrationCheckbox.Height := ScaleY(OpenRegistrationCheckbox.Height);
+
+    OpenRegistrationCheckbox.Caption := 'Allow any remote host to register';
 
     TopY := TopY + ScaleY(18);
 
@@ -230,8 +324,11 @@ begin
     // React to changes
     ModeTimeoutRadioBox.OnClick := @SettingsChanged;
     PowerCheckbox.OnClick := @SettingsChanged;
+    RegisterProxyCheckbox.OnClick := @SettingsChanged;
     DuoCheckbox.OnClick := @SettingsChanged;
     ModeNetworkRadioBox.OnClick := @SettingsChanged;
+    PromiscuousCheckbox.OnClick := @SettingsChanged;
+    AdvertiseProxyCheckbox.OnClick := @SettingsChanged;
     SettingsChanged(nil);
   end;
 

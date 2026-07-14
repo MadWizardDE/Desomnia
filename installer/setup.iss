@@ -73,6 +73,8 @@ OutputDir=bin
 OutputBaseFilename={#MyOutputBaseFilename}
 SolidCompression=yes
 WizardStyle=classic
+; Extra room for the Sleep Proxy options on the mode-of-operation page
+WizardSizePercent=130,130
 SetupIconFile=..\DesomniaService\Properties\moon.ico
 AppModifyPath="{commonappdata}\{#MyAppName}\installer\setup.exe" /modify=1
 UninstallDisplayIcon={app}\DesomniaService.exe
@@ -143,6 +145,10 @@ Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: name; String: {code:Net
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: interface; String: {code:NetworkMonitorPrefs|InterfaceID}; Check: ShouldConfigureNetworkMonitor
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: network; String: {code:NetworkMonitorPrefs|Network}; Check: ShouldConfigureNetworkMonitor
 Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: mode; String: {code:NetworkMonitorPrefs|Mode}; Check: ShouldConfigureNetworkMonitor
+Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: autoDetect; String: {code:NetworkMonitorPrefs|AutoDetect}; Check: ShouldConfigureNetworkMonitor
+Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: handoff; String: {code:NetworkMonitorPrefs|Handoff}; Check: ShouldConfigureNetworkMonitor
+Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: handoffDuration; String: {code:NetworkMonitorPrefs|HandoffDuration}; Check: ShouldConfigureNetworkMonitor
+Filename: {tmp}\prefs.ini; Section: NetworkMonitor; Key: hostAutoDetect; String: {code:NetworkMonitorPrefs|HostAutoDetect}; Check: ShouldConfigureNetworkMonitor
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

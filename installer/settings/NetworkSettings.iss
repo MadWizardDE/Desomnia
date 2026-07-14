@@ -396,7 +396,37 @@ begin
 
   if (Param = 'Mode') and SettingsControls.PromiscuousCheckbox.Checked then
     Result := 'promiscuous';
-  
+
+  if Param = 'AutoDetect' then
+  begin
+    if SettingsControls.RegisterProxyCheckbox.Checked then
+      Result := 'SleepProxy';
+
+    if SettingsControls.AdvertiseProxyCheckbox.Checked then
+    begin
+      Result := 'Service';
+      if SettingsControls.OpenRegistrationCheckbox.Checked then
+        Result := Result + '|Host';
+    end;
+  end;
+
+  if (Param = 'Handoff') and SettingsControls.RegisterProxyCheckbox.Checked then
+  begin
+    Result := 'SleepProxy';
+    if SettingsControls.MandatoryHandoffCheckbox.Checked then
+      Result := Result + '|Mandatory';
+  end;
+
+  if (Param = 'HandoffDuration') and SettingsControls.RegisterProxyCheckbox.Checked then
+    Result := SettingsControls.WakeAfterCombo.Text;
+
+  if (Param = 'HostAutoDetect') and SettingsControls.AdvertiseProxyCheckbox.Checked then
+  begin
+    Result := 'Service';
+    if SettingsControls.OpenRegistrationCheckbox.Checked then
+      Result := Result + '|Host';
+  end;
+
 end;
 
 

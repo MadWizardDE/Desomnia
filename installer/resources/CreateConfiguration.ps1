@@ -151,7 +151,9 @@ function Add-Hosts
         [IniFile+Section] $Hosts,
 
         [Parameter(Mandatory)]
-        [string] $Type
+        [string] $Type,
+
+        [string] $AutoDetect
 
     )
 
@@ -170,6 +172,10 @@ function Add-Hosts
         if ($ip -eq "auto") {
             $ip = $null
             $auto += "IPv4|IPv6"
+        }
+
+        if ($AutoDetect) {
+            $auto += $AutoDetect
         }
 
         $remote = Add-XmlElement $monitor $Type $null @{
@@ -213,16 +219,23 @@ if ($network = $ini["NetworkMonitor"])
         $name = $null
     }
 
+    $autoDetect = "IPv4|IPv6|Router"
+    if ($network["autoDetect"]) {
+        $autoDetect = $autoDetect + "|" + $network["autoDetect"]
+    }
+
     $monitor = Add-XmlElement $root "NetworkMonitor" $null @{
         name       = $name
-        autoDetect = "IPv4|IPv6|Router"
+        autoDetect = $autoDetect
         interface  = $network["interface"]
         network    = $network["network"]
         watchMode  = $network["mode"]
+        handoff    = $network["handoff"]
+        handoffDuration = $network["handoffDuration"] -replace '\s', ''
     }
 
     Add-Services $monitor $ini["Services"]
-    Add-Hosts $monitor $ini["RemoteHosts"] "RemoteHost"
+    Add-Hosts $monitor $ini["RemoteHosts"] "RemoteHost" -AutoDetect $network["hostAutoDetect"]
     Add-Hosts $monitor $ini["VirtualHosts"] "VirtualHost"
 
 }

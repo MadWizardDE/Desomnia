@@ -337,7 +337,7 @@ begin
     VirtualMachineList.Left := VirtualMachineProviderComboBox.Left;
     VirtualMachineList.Top := TopY;
     VirtualMachineList.Width := Page.Surface.Width;
-    VirtualMachineList.Height := ScaleY(180);
+    VirtualMachineList.Height := ScaleY(220);
     VirtualMachineList.Flat := False;
     VirtualMachineList.OnClickCheck := @VirtualMachineListChanged;
 
