@@ -174,6 +174,10 @@ function Add-Hosts
             $auto += "IPv4|IPv6"
         }
 
+        if ($addr[2] -eq "auto") {
+            $auto += "Service"
+        }
+
         if ($AutoDetect) {
             $auto += $AutoDetect
         }

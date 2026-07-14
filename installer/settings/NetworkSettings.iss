@@ -61,8 +61,16 @@ begin
 end;
 
 procedure OnConfigureRemoteServices(Sender: TObject);
+var
+  Style: THostServiceDialogStyle;
 begin
-  RemoteHostsConfig := ConfigureHostServices('Configure remote services', RemoteHostsConfig, hsdsHost or hsdsHostEdit or hsdsHostSelect or hsdsMacEdit or hsdsIPEdit or hsdsSecurity);
+  Style := hsdsHost or hsdsHostEdit or hsdsHostSelect or hsdsMacEdit or hsdsIPEdit or hsdsSecurity;
+
+  // Services can only be detected dynamically when this machine acts as a Sleep Proxy
+  if SettingsControls.AdvertiseProxyCheckbox.Checked then
+    Style := Style or hsdsServiceAuto;
+
+  RemoteHostsConfig := ConfigureHostServices('Configure remote services', RemoteHostsConfig, Style);
 end;
 
 var
@@ -454,12 +462,9 @@ begin
   if (Param = 'HandoffDuration') and SettingsControls.RegisterProxyCheckbox.Checked then
     Result := SettingsControls.WakeAfterCombo.Text;
 
-  if (Param = 'HostAutoDetect') and SettingsControls.AdvertiseProxyCheckbox.Checked then
-  begin
-    Result := 'Service';
-    if SettingsControls.OpenRegistrationCheckbox.Checked then
-      Result := Result + '|Host';
-  end;
+  // 'Service' is added per host via the Automatic services checkbox in the remote services dialog
+  if (Param = 'HostAutoDetect') and SettingsControls.OpenRegistrationCheckbox.Checked then
+    Result := 'Host';
 
 end;
 

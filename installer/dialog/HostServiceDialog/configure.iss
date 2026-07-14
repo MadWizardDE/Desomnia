@@ -19,6 +19,7 @@ begin
     MacAutoCheckbox.Checked := False;
     ClearIP(IPInput);
     IPAutoCheckbox.Checked := False;
+    ServicesAutoCheckbox.Checked := False;
     ServicesList.Items.Clear();
     SetHostControlsEnabled(False);
     SecurityIcon.Visible := False;
@@ -56,6 +57,15 @@ begin
       for I := 0 to GetArrayLength(Host.Services) - 1 do
       begin
         ServicesList.AddGroup(Host.Services[I].Name, Host.Services[I].Port + '/' + LowerCase(Host.Services[I].Protocol), 0, nil);
+      end;
+
+      if (Style and hsdsServiceAuto) <> 0 then
+      begin
+        ServicesAutoCheckbox.Checked := Host.ServicesAuto;
+
+        ServicesList.Enabled := not Host.ServicesAuto;
+        ServiceAddButton.Enabled := not Host.ServicesAuto;
+        ServiceRemoveButton.Enabled := not Host.ServicesAuto;
       end;
 
       SecurityIcon.Visible := Host.Security.Method <> '';

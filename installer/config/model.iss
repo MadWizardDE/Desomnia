@@ -42,6 +42,8 @@ type
     IPAddressAuto: Boolean;
 
     Services: array of TServiceConfig;
+    ServicesAuto: Boolean;
+
     Security: TSecurityConfig;
 
     Automation: THostAutomationConfig;
@@ -88,6 +90,8 @@ begin
   
   Result.IPAddress := Host.IPAddress;
   Result.IPAddressAuto := Host.IPAddressAuto;
+
+  Result.ServicesAuto := Host.ServicesAuto;
 
   SetArrayLength(Result.Services, GetArrayLength(Host.Services));
   

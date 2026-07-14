@@ -112,6 +112,25 @@ end;
 
 
 
+procedure OnServicesAutoChange(Sender: TObject);
+var
+  Host: THostConfig;
+begin
+  if not ConfigureServicesControls.Rebuilding then
+  begin
+    Host := ConfigureServicesConfig.Hosts[ConfigureServicesConfig.Index];
+
+    Host.ServicesAuto := ConfigureServicesControls.ServicesAutoCheckbox.Checked;
+
+    if Host.ServicesAuto then
+      SetArrayLength(Host.Services, 0); // services will be detected dynamically
+
+    ConfigureServicesConfig.Hosts[ConfigureServicesConfig.Index] := Host;
+
+    UpdateHostServicesForm(ConfigureServicesConfig);
+  end;
+end;
+
 procedure OnHostAdd(Sender: TObject);
 var
   Host: THostConfig;

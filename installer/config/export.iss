@@ -75,7 +75,10 @@ begin
       Address := Address + 'auto'
     else
       Address := Address + FormatIP(Host.IPAddress, False);
-    
+
+    if Host.ServicesAuto then
+      Address := Address + '|auto';
+
     SetIniString(Section, Host.Name, Address, ExportIniPath);
 
     ExportServices(Host.Name, Host);

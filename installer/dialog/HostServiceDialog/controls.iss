@@ -174,7 +174,7 @@ begin
     ServicesList.Width := InputWidth;
     ServicesList.Height := ScaleY(200);
     ServicesList.Flat := False;
-    
+
     ServicesLabel := AddControlLabel(Layout, ServicesList, 'Services:');
 
     ServiceRemoveButton := TNewButton.Create(Form);
@@ -197,16 +197,33 @@ begin
 
     Top := Top + ServicesList.Height + RowGap / 2
 
+    ServicesAutoCheckbox := TNewCheckBox.Create(Form);
+
     ServicesHelpLabel := TNewStaticText.Create(Form);
     ServicesHelpLabel.Parent := Form;
     ServicesHelpLabel.Left := InputLeft;
     ServicesHelpLabel.Top := Top;
     ServicesHelpLabel.Width := InputWidth;
+
+    if (Style and hsdsServiceAuto) <> 0 then
+    begin
+      ServicesAutoCheckbox.Parent := Form;
+      ServicesAutoCheckbox.Height := ScaleY(ServicesAutoCheckbox.Height);
+      ServicesAutoCheckbox.Top := Top + ScaleY(0);
+      ServicesAutoCheckbox.Caption := 'Automatic';
+      ServicesAutoCheckbox.Width := GetTextWidthForControl(ServicesAutoCheckbox.Caption, ServicesAutoCheckbox.Handle) + ScaleX(20);
+      ServicesAutoCheckbox.Left := InputLeft + InputWidth - ServicesAutoCheckbox.Width;
+      ServicesAutoCheckbox.OnClick := @OnServicesAutoChange;
+
+      // keep the informational text clear of the checkbox
+      ServicesHelpLabel.Width := ServicesAutoCheckbox.Left - ColumnGap * 2 - InputLeft;
+    end;
+
     ServicesHelpLabel.AutoSize := True;
     ServicesHelpLabel.WordWrap := True;
     ServicesHelpLabel.Caption :=
       'Desomnia will only monitor traffic for the configured services. ';
-      
+
     Top := Top + ServicesHelpLabel.Height + RowGap;
 
     AddBevelLine(Layout);
@@ -267,6 +284,7 @@ begin
 
     ServicesLabel.Enabled := Enabled;
     ServicesList.Enabled := Enabled;
+    ServicesAutoCheckbox.Enabled := Enabled;
     ServiceAddButton.Enabled := Enabled;
     ServiceRemoveButton.Enabled := Enabled;
     ServicesHelpLabel.Enabled := Enabled;

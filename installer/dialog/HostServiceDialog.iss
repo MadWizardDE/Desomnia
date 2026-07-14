@@ -8,6 +8,7 @@ const
   hsdsMacEdit       = 8; // 2^3
   hsdsIPEdit        = 16; // 2^4
   hsdsSecurity      = 32; // 2^5
+  hsdsServiceAuto   = 64; // 2^6
 
 type THostServiceDialogStyle = Integer;
 
@@ -35,6 +36,7 @@ type
 
     ServicesLabel: TNewStaticText;
     ServicesList: TNewCheckListBox;
+    ServicesAutoCheckbox: TNewCheckBox;
     ServiceAddButton: TNewButton;
     ServiceRemoveButton: TNewButton;
     ServicesHelpLabel: TNewStaticText;
