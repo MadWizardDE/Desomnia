@@ -15,6 +15,11 @@ env:
   VERSION_NET: '10.0'
   VERSION_DESOMNIA: ${{ github.ref_name }}
 
+  # Attach the .deb/.rpm packages as downloadable assets to the GitHub Release. Disabled:
+  # they cluttered the Releases page, and users should install them from the package
+  # repository (see release-cloudsmith) instead. Set to true to re-attach them.
+  ATTACH_PACKAGES: false
+
 jobs:
 
   build-plugins:
@@ -525,6 +530,9 @@ jobs:
           pattern: linux-*
           path: ${{ runner.temp }}/linux
       - name: Download packages
+        # Toggled by ATTACH_PACKAGES (see env block). When skipped, the packages/* globs in the
+        # release step simply match nothing -- action-gh-release logs a warning and moves on.
+        if: env.ATTACH_PACKAGES == 'true'
         uses: actions/download-artifact@v4
         with:
           pattern: package-*
