@@ -60,6 +60,15 @@ contents:
     file_info:
       mode: 0644
 
+  # Debian's canonical license metadata: the control format has no License field (the
+  # `license` key above only reaches the rpm header), so deb tooling and repository
+  # scanners (e.g. Cloudsmith) read the machine-readable DEP-5 copyright file instead.
+  - src: packaging/copyright
+    dst: /usr/share/doc/desomnia/copyright
+    packager: deb
+    file_info:
+      mode: 0644
+
   # Default location for file logging (when enabled via NLog.config).
   - dst: /var/log/desomnia
     type: dir
