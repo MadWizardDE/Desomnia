@@ -24,7 +24,7 @@ which makes it a good fit for an always-on :doc:`Wake-on-LAN proxy </guides/wol-
 Supported platforms
 --------------------
 
-Packages are published for the following architectures on the `GitHub Releases`_ page:
+Packages are published for the following architectures:
 
 - ``amd64`` / ``x86_64`` — 64-bit Intel/AMD
 - ``arm64`` / ``aarch64`` — 64-bit ARM, e.g. a Raspberry Pi 3/4/5 running a 64-bit OS
@@ -39,8 +39,8 @@ Installation
 
 The recommended way is to register the Desomnia **package repository** once — ``apt`` or ``dnf``
 then installs *and updates* Desomnia like any other system package. Alternatively, individual
-packages can be downloaded from the `GitHub Releases`_ page and installed directly, without
-automatic updates.
+packages can be downloaded from the repository page and installed directly, without automatic
+updates.
 
 The repository is hosted by `Cloudsmith`_. The setup script below detects your distribution,
 imports the repository signing key, and registers the package source; if you prefer to
@@ -74,15 +74,20 @@ On openSUSE, install with ``zypper install desomnia`` instead.
 Direct download
 +++++++++++++++
 
-Download the package matching your format and architecture from the `GitHub Releases`_ page and
-install it directly — dependencies are still resolved automatically, but newer versions have to
-be downloaded and installed manually. Only **stable releases** are published to the repository;
-alpha and beta versions are available exclusively this way:
+To install a package without registering the repository, download the file matching your format
+and architecture from the `Cloudsmith`_ repository page and install it directly — dependencies
+are still resolved automatically, but newer versions have to be downloaded and installed
+manually:
 
 .. code:: bash
 
    sudo apt install ./Desomnia_<version>_linux-arm64-native.deb   # Debian, Ubuntu, Raspberry Pi OS
    sudo dnf install ./Desomnia_<version>_linux-arm64-native.rpm   # Fedora, RHEL, openSUSE
+
+.. note::
+
+   Only **stable releases** are packaged. To try an alpha or beta version, use the archive from
+   the `GitHub Releases`_ page as described in the :doc:`manual installation </installation/manually>`.
 
 .. note::
 
