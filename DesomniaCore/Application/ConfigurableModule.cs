@@ -6,9 +6,6 @@ namespace MadWizard.Desomnia
 {
     public abstract class ConfigurableModule : Module
     {
-        /// <summary>The module's configuration type, used to derive collection element names.</summary>
-        protected internal virtual Type? ConfigType => null;
-
         protected internal virtual void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source) { }
     }
 
@@ -16,7 +13,14 @@ namespace MadWizard.Desomnia
     {
         public T Config { get; private set; } = default!;
 
-        protected internal override Type ConfigType => typeof(T);
+        protected internal override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
+        {
+            base.ConfigureConfigurationSource(source);
+
+            // Derive the names of nameless collection elements from the config type,
+            // so the provider can synthesize deterministic name attributes for them.
+            source.AddCollectionElementsOf(typeof(T));
+        }
 
         protected internal override void Build(HostApplicationBuilder builder)
         {

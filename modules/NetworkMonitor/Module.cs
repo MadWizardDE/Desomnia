@@ -24,6 +24,8 @@ namespace MadWizard.Desomnia.Network
     {
         protected override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
         {
+            base.ConfigureConfigurationSource(source); // derives collection element names from the config type
+
             source.AddBooleanAttribute("must", new() { ["type"] = "Must" })
                   .AddCollectionNameBuilder("NetworkMonitor", (element, nr) => NetworkMonitorConfig.NAMLESS_PREFIX + nr);
         }

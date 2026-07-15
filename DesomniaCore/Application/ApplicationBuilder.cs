@@ -149,11 +149,6 @@ namespace MadWizard.Desomnia
             foreach (var module in _modules.OfType<ConfigurableModule>())
             {
                 module.ConfigureConfigurationSource(source);
-
-                if (module.ConfigType is Type configType)
-                {
-                    source.AddCollectionElementsOf(configType);
-                }
             }
 
             _builder.Configuration.Sources.Add(source);
