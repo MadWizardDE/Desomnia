@@ -2,20 +2,13 @@ using System.Text.RegularExpressions;
 
 namespace MadWizard.Desomnia.PowerRequest.Configuration
 {
-    public class PowerRequestFilterRule
+    // The pattern is mandatory: the only constructor takes it as XML text content
+    // (or as a "pattern" attribute, which the binder maps to the constructor parameter).
+    public class PowerRequestFilterRule(string pattern)
     {
-        private readonly Regex? _pattern;
-
-        public PowerRequestFilterRule() { }
-
-        public PowerRequestFilterRule(string pattern) // <- XML text content
-        {
-            _pattern = new Regex(pattern);
-        }
-
         public required string Name { get; set; }
 
-        public Regex Pattern => _pattern ?? throw new ArgumentNullException("pattern");
+        public Regex Pattern { get; } = new(pattern);
 
         public FilterRuleType Type { get; set; } = FilterRuleType.MustNot;
     }

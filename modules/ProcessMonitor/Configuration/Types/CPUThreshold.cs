@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using MadWizard.Desomnia.Configuration;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace MadWizard.Desomnia.Process.Configuration
 {
@@ -47,7 +42,7 @@ namespace MadWizard.Desomnia.Process.Configuration
         {
             str = string.Concat(str.Where(c => !char.IsWhiteSpace(c))); // remove all whitespace
 
-            if (TimeSpan.TryParse(str, CultureInfo.InvariantCulture, out var time))
+            if (TimeSpan.TryParse(ValueVariations.NormalizeTimeSpan(str), CultureInfo.InvariantCulture, out var time))
             {
                 return new CPUThreshold(time);
             }

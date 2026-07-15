@@ -16,6 +16,8 @@
 //  4. An element's text content (= the section value) constructs complex types that declare
 //     a public constructor with a single string parameter (replaces the provider's synthetic
 //     "text" attribute and the private "Text" carrier properties on the config classes).
+//     Types whose ONLY constructor takes the string make the text mandatory. Text content
+//     that no constructor consumes fails loudly instead of being silently dropped.
 //  5. Collection items with a numeric configuration key and an unset string "Name" property
 //     get a synthesized name "{SectionKey}#{index+1}" (replaces AddNamelessCollectionElement).
 //  6. Enum values accept "|"-separated flags and dashed member names, TimeSpan values accept
@@ -172,7 +174,9 @@ namespace MadWizard.Desomnia.Configuration.Binding
 
             foreach (PropertyInfo property in modelProperties)
             {
-                if (constructorParameters is null || !constructorParameters.Any(p => p.Name == property.Name))
+                // DESOMNIA: match constructor parameters case-insensitively (upstream compares
+                // ordinally, which never matches camelCase parameters to PascalCase properties)
+                if (constructorParameters is null || !constructorParameters.Any(p => string.Equals(p.Name, property.Name, StringComparison.OrdinalIgnoreCase)))
                 {
                     BindProperty(property, instance, configuration, options);
                 }
@@ -340,6 +344,10 @@ namespace MadWizard.Desomnia.Configuration.Binding
 
                 ParameterInfo[]? constructorParameters = null;
 
+                // DESOMNIA: an element's text content (= the section value) constructs types
+                // declaring a single-string constructor; attributes/children bind afterwards.
+                bool hasTextContent = !string.IsNullOrWhiteSpace(configValue);
+
                 // If we don't have an instance, try to create one
                 if (bindingPoint.Value is null)
                 {
@@ -358,16 +366,25 @@ namespace MadWizard.Desomnia.Configuration.Binding
                         Type genericType = typeof(List<>).MakeGenericType(type.GenericTypeArguments);
                         bindingPoint.SetValue(Activator.CreateInstance(genericType));
                     }
-                    // DESOMNIA: an element's text content (= the section value) constructs types
-                    // declaring a single-string constructor; attributes/children bind afterwards.
-                    else if (!string.IsNullOrWhiteSpace(configValue) && FindTextConstructor(type) is ConstructorInfo textConstructor)
+                    else if (hasTextContent && FindTextConstructor(type) is ConstructorInfo textConstructor)
                     {
-                        bindingPoint.SetValue(InvokeTextConstructor(textConstructor, configValue.Trim(), section));
+                        bindingPoint.SetValue(InvokeTextConstructor(textConstructor, configValue!.Trim(), section));
+
+                        hasTextContent = false; // consumed
                     }
                     else
                     {
                         bindingPoint.SetValue(CreateInstance(type, config, options, out constructorParameters));
                     }
+                }
+
+                // DESOMNIA: never lose text content silently. Text left over at this point means
+                // the type declares no single-string constructor (derived config classes must
+                // redeclare it!) or the instance already existed before binding.
+                if (hasTextContent && !bindingPoint.IsReadOnly)
+                {
+                    Debug.Assert(section is not null);
+                    throw new ConfigurationValueException(SR.Format(SR.Error_FailedBinding, configValue, section?.Path, bindingPoint.Value?.GetType() ?? type));
                 }
 
                 Debug.Assert(bindingPoint.Value is not null);
@@ -401,19 +418,23 @@ namespace MadWizard.Desomnia.Configuration.Binding
 
                 if (!string.IsNullOrEmpty(configValue))
                 {
-                    // DESOMNIA: an element with only text content ("<rule>^regex$</rule>") constructs
-                    // complex types declaring a single-string constructor. Any other unconvertible
-                    // value on a known property or collection item always fails loudly (upstream only
-                    // throws here when ErrorOnUnknownConfiguration is set).
-                    if (!bindingPoint.IsReadOnly && bindingPoint.Value is null &&
-                        FindTextConstructor(type) is ConstructorInfo textConstructor)
+                    // DESOMNIA: read-only binding points cannot receive any value — stay silent
+                    // like upstream (the value may have fed a constructor parameter instead).
+                    if (!bindingPoint.IsReadOnly)
                     {
-                        bindingPoint.SetValue(InvokeTextConstructor(textConstructor, configValue.Trim(), section));
-                    }
-                    else
-                    {
-                        Debug.Assert(section is not null);
-                        throw new ConfigurationValueException(SR.Format(SR.Error_FailedBinding, configValue, section?.Path, type));
+                        // An element with only text content ("<rule>^regex$</rule>") constructs
+                        // complex types declaring a single-string constructor. Any other
+                        // unconvertible value on a known property or collection item always fails
+                        // loudly (upstream only throws here when ErrorOnUnknownConfiguration is set).
+                        if (bindingPoint.Value is null && FindTextConstructor(type) is ConstructorInfo textConstructor)
+                        {
+                            bindingPoint.SetValue(InvokeTextConstructor(textConstructor, configValue.Trim(), section));
+                        }
+                        else
+                        {
+                            Debug.Assert(section is not null);
+                            throw new ConfigurationValueException(SR.Format(SR.Error_FailedBinding, configValue, section?.Path, type));
+                        }
                     }
                 }
                 else if (!bindingPoint.IsReadOnly && bindingPoint.Value is null)
@@ -1136,7 +1157,10 @@ namespace MadWizard.Desomnia.Configuration.Binding
                 }
                 else
                 {
-                    throw new InvalidOperationException(SR.Format(SR.Error_ParameterHasNoMatchingConfig, type, parameterName));
+                    // DESOMNIA: a constructor parameter that cannot be filled from config is a
+                    // configuration error and must surface from collection binding (e.g. a type
+                    // whose only constructor takes mandatory element text content)
+                    throw new ConfigurationValueException(SR.Format(SR.Error_ParameterHasNoMatchingConfig, type, parameterName));
                 }
             }
 
