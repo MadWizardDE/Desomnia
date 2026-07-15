@@ -25,7 +25,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         // Network-Identification
         public required string  Name            { get; init; }
 
-        public string?          Label           { get => !Name.StartsWith(NAMLESS_PREFIX) ? Name : null; }
+        public string?          Label           { get => !Name.StartsWith(NAMLESS_PREFIX, StringComparison.OrdinalIgnoreCase) ? Name : null; }
 
         public string?          Interface       { get; set; }
         public IPNetwork?       Network         { get; set; }

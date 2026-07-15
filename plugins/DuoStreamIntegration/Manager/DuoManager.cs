@@ -102,7 +102,7 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             var instances = new List<DuoInstance>();
             foreach (var name in instancesKey.GetSubKeyNames())
             {
-                var info = config[name] ?? new DuoInstanceInfo(name);
+                var info = config[name] ?? new DuoInstanceInfo { Name = name };
 
                 info.OnDemand ??= config.OnInstanceDemand;
                 info.OnIdle ??= config.OnInstanceIdle;

@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 
 namespace MadWizard.Desomnia.Service.Duo.Configuration
 {
-    public class DuoInstanceInfo(string name)
+    // No single-string constructor here: the strict binder reserves that signature
+    // for XML text content, which this class does not accept.
+    public class DuoInstanceInfo
     {
-        public string Name { get; set; } = name;
+        public required string Name { get; set; }
 
         public NamedAction? OnDemand { get; set; }
 

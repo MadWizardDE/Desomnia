@@ -33,6 +33,13 @@ namespace MadWizard.Desomnia.Network.Configuration.Filter
 
         public class HTTPHeaderInfo
         {
+            public HTTPHeaderInfo() { }
+
+            public HTTPHeaderInfo(string text) // <- XML text content
+            {
+                Text = text;
+            }
+
             public required string Name { get; set; }
             public string? Text { get; set; }
         }
@@ -43,13 +50,24 @@ namespace MadWizard.Desomnia.Network.Configuration.Filter
             {
                 Name = "User-Agent"; // LATER add attributes to HTTPUserAgentInfo
             }
+
+            public HTTPUserAgentInfo(string text) : this() // <- XML text content
+            {
+                Text = text;
+            }
         }
 
         public class HTTPCookieInfo
         {
+            public HTTPCookieInfo() { }
+
+            public HTTPCookieInfo(string value) // <- XML text content
+            {
+                Value = value;
+            }
+
             public required string Name { get; set; }
-            private string? Text { get; set; }
-            public string? Value => Text;
+            public string? Value { get; private set; }
         }
     }
 }

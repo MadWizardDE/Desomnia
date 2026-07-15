@@ -1,15 +1,35 @@
-﻿using System.Text;
-using System.Text.RegularExpressions;
-using System.Xml;
+using System.ComponentModel;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Xml.Linq;
 
 namespace Microsoft.Extensions.Configuration.Xml
 {
+    /*
+     * Most quirks of the XML format were historically smoothed over here by rewriting the
+     * document before the stock provider parsed it (synthetic "__empty"/"text" attributes,
+     * enum and TimeSpan value rewriting). These live type-aware in
+     * MadWizard.Desomnia.Configuration.Binding.StrictConfigurationBinder now. Only three
+     * fixups remain that must happen on the XML level:
+     *
+     *  1. Value-less attributes ("<traffic must ...>") are not well-formed XML and are
+     *     expanded by plain string replacement before parsing.
+     *  2. Self-closing empty elements ("<element/>") produce no configuration key at all,
+     *     so their presence would be invisible to the binder. Forcing them to serialize
+     *     as "<element></element>" makes the provider emit an empty value for them.
+     *  3. Nameless collection elements get a synthesized name attribute. This keeps the
+     *     provider's key layout deterministic: a single element without a name attribute
+     *     would otherwise flatten its attributes directly into the collection section,
+     *     making items indistinguishable from attributes. Which element names form
+     *     collections is no longer registered by hand, but derived from the modules'
+     *     configuration types (see AddCollectionElementsOf).
+     */
     public class ExtendedXmlConfigurationSource : XmlConfigurationSource
     {
-        internal readonly List<string> EnumAttributes = [];
         internal readonly Dictionary<string, AttributeMapping> BooleanAttributes = [];
-        internal readonly Dictionary<string, CollectionNameBuilder> NamelessCollectionElements = [];
+        internal readonly HashSet<string> CollectionElements = new(StringComparer.OrdinalIgnoreCase);
+        internal readonly Dictionary<string, CollectionNameBuilder> CollectionNameBuilders = new(StringComparer.OrdinalIgnoreCase);
 
         public delegate string CollectionNameBuilder(XElement element, uint nr);
 
@@ -25,24 +45,100 @@ namespace Microsoft.Extensions.Configuration.Xml
             ResolveFileProvider();
         }
 
-        public ExtendedXmlConfigurationSource AddEnumAttribute(string name)
-        {
-            EnumAttributes.Add(name);
-            return this;
-        }
-
         public ExtendedXmlConfigurationSource AddBooleanAttribute(string name, AttributeMapping mapping)
         {
             BooleanAttributes.Add(name, mapping);
             return this;
         }
 
-        public ExtendedXmlConfigurationSource AddNamelessCollectionElement(string name, CollectionNameBuilder? builder = null)
+        /// <summary>
+        /// Registers an explicit name builder for nameless elements of the given collection.
+        /// Use this when code relies on the synthesized name format (which is otherwise an
+        /// implementation detail, defaulting to "{elementName}#{nr}").
+        /// </summary>
+        public ExtendedXmlConfigurationSource AddCollectionNameBuilder(string elementName, CollectionNameBuilder builder)
         {
-            builder ??= (element, nr) => $"{element.Name.LocalName}#{nr}";
-            NamelessCollectionElements.Add(name, builder);
+            CollectionNameBuilders[elementName] = builder;
+            CollectionElements.Add(elementName); // an explicit builder also marks the element as a collection
+
             return this;
         }
+
+        /// <summary>
+        /// Walks the given configuration type and records the names of all properties holding
+        /// collections of complex items. XML elements with these names are collection elements
+        /// and get a synthesized name attribute if they don't carry one.
+        /// </summary>
+        public ExtendedXmlConfigurationSource AddCollectionElementsOf(Type configType)
+        {
+            CollectCollectionElements(configType, []);
+            return this;
+        }
+
+        private void CollectCollectionElements(Type type, HashSet<Type> visited)
+        {
+            if (IsFrameworkType(type) || !visited.Add(type))
+                return;
+
+            // run the type initializer, so custom TypeConverters registered there
+            // (e.g. in a static constructor via TypeDescriptor.AddAttributes) take
+            // effect before IsComplexType queries them
+            RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+
+            for (Type? t = type; t is not null && t != typeof(object); t = t.BaseType)
+            {
+                const BindingFlags declared = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+                foreach (var property in t.GetProperties(declared))
+                {
+                    if (FindComplexItemType(property.PropertyType) is Type itemType)
+                    {
+                        CollectionElements.Add(property.Name);
+
+                        CollectCollectionElements(itemType, visited);
+                    }
+                    else if (IsComplexType(property.PropertyType))
+                    {
+                        CollectCollectionElements(property.PropertyType, visited);
+                    }
+                }
+            }
+        }
+
+        /// <returns>The item type, if the given type is a collection of complex items.</returns>
+        private static Type? FindComplexItemType(Type type)
+        {
+            if (type == typeof(string) || type.IsArray)
+                return null;
+
+            IEnumerable<Type> candidates = type.GetInterfaces();
+            if (type.IsInterface)
+                candidates = candidates.Prepend(type);
+
+            foreach (var candidate in candidates)
+            {
+                if (candidate.IsConstructedGenericType && candidate.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                {
+                    var itemType = candidate.GenericTypeArguments[0];
+
+                    return IsComplexType(itemType) ? itemType : null;
+                }
+            }
+
+            return null;
+        }
+
+        /// <returns>true, if the type binds by its children (attributes/elements) rather than from a string value.</returns>
+        private static bool IsComplexType(Type type)
+        {
+            if (!(type.IsClass || type.IsInterface) || type == typeof(string) || IsFrameworkType(type))
+                return false;
+
+            return !TypeDescriptor.GetConverter(type).CanConvertFrom(typeof(string));
+        }
+
+        private static bool IsFrameworkType(Type type)
+            => type.Namespace is string ns && (ns == "System" || ns.StartsWith("System.") || ns.StartsWith("Microsoft."));
 
         public override IConfigurationProvider Build(IConfigurationBuilder builder)
         {
@@ -64,13 +160,9 @@ namespace Microsoft.Extensions.Configuration.Xml
         }
     }
 
-    partial class CustomXmlConfigurationProvider(ExtendedXmlConfigurationSource source) : XmlConfigurationProvider(source)
+    class CustomXmlConfigurationProvider(ExtendedXmlConfigurationSource source) : XmlConfigurationProvider(source)
     {
-        internal const string EMPTY_ATTRIBUTE_NAME = "__empty";
-        internal const string TEXT_ATTRIBUTE_NAME = "text";
         internal const string NAME_ATTRIBUTE_NAME = "name";
-
-        internal static Regex TimeSpanRegex = TimeSpanPattern();
 
         public override void Load(Stream stream)
         {
@@ -119,25 +211,10 @@ namespace Microsoft.Extensions.Configuration.Xml
         {
             SupportNamelessCollectionElements(element);
 
-            SupportTextNode(element);
             SupportEmptyNode(element);
-
-            SupportTimeSpanAttribute(element);
-            SupportEnumAttributes(element);
 
             foreach (XElement childElement in element.Elements())
                 TraverseNodes(childElement);
-        }
-
-        private void SupportEnumAttributes(XElement element)
-        {
-            foreach (var attribute in element.Attributes())
-            {
-                if (source.EnumAttributes.Any(name => attribute.Name.LocalName.Equals(name, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    attribute.Value = attribute.Value.Replace("|", ",").Replace("-", "").Trim();
-                }
-            }
         }
 
         private void SupportNamelessCollectionElements(XElement element)
@@ -148,14 +225,17 @@ namespace Microsoft.Extensions.Configuration.Xml
             {
                 var elementName = child.Name.LocalName;
 
-                if (source.NamelessCollectionElements.ContainsKey(elementName))
+                if (source.CollectionElements.Contains(elementName))
                 {
                     if (child.Attribute(NAME_ATTRIBUTE_NAME) is null)
                     {
-                        if (!(counters ??= []).ContainsKey(elementName))
-                            counters[elementName] = 0;
+                        counters ??= new(StringComparer.OrdinalIgnoreCase);
+                        counters.TryGetValue(elementName, out uint nr);
+                        counters[elementName] = ++nr;
 
-                        var name = source.NamelessCollectionElements[elementName](child, ++counters[elementName]);
+                        var name = source.CollectionNameBuilders.TryGetValue(elementName, out var builder)
+                            ? builder(child, nr)
+                            : $"{elementName}#{nr}";
 
                         child.Add(new XAttribute(NAME_ATTRIBUTE_NAME, name));
                     }
@@ -163,68 +243,12 @@ namespace Microsoft.Extensions.Configuration.Xml
             }
         }
 
-        private static void SupportTextNode(XElement element)
-        {
-            var text = string.Concat(element.Nodes().OfType<XText>().Select(t => t.Value));
-
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                element.Add(new XAttribute(TEXT_ATTRIBUTE_NAME, text)); // make text content accessible
-            }
-        }
-
         private static void SupportEmptyNode(XElement element)
         {
-            if (!(element.HasAttributes || element.HasElements))
+            if (!(element.HasAttributes || element.Nodes().Any()))
             {
-                element.Add(new XAttribute(EMPTY_ATTRIBUTE_NAME, "true")); // allow empty nodes
+                element.Add(new XText(string.Empty)); // force "<x></x>", so the element emits an (empty) value
             }
         }
-
-        private static void SupportTimeSpanAttribute(XElement element)
-        {
-            foreach (var attribute in element.Attributes())
-            {
-                attribute.Value = NormalizeTimeSpanVariations(attribute.Value);
-            }
-        }
-
-        internal static string NormalizeTimeSpanVariations(string value)
-        {
-            var trimmed = WhitespacePattern().Replace(value, "");
-
-            if (ISO8601TimeSpanPattern().IsMatch(trimmed))
-            {
-                TimeSpan time = XmlConvert.ToTimeSpan(trimmed);
-
-                return time.ToString();
-            }
-
-            else if (TimeSpanPattern().Match(trimmed) is Match match && match.Success)
-            {
-                TimeSpan time = TimeSpan.Zero;
-                if (match.Groups.TryGetValue("days", out var days) && days.Success)
-                    time += TimeSpan.FromDays(int.Parse(days.Value));
-                if (match.Groups.TryGetValue("hours", out var hours) && hours.Success)
-                    time += TimeSpan.FromHours(int.Parse(hours.Value));
-                if (match.Groups.TryGetValue("minutes", out var minutes) && minutes.Success)
-                    time += TimeSpan.FromMinutes(int.Parse(minutes.Value));
-                if (match.Groups.TryGetValue("seconds", out var seconds) && seconds.Success)
-                    time += TimeSpan.FromSeconds(int.Parse(seconds.Value));
-                if (match.Groups.TryGetValue("milliseconds", out var milliseconds) && milliseconds.Success)
-                    time += TimeSpan.FromMilliseconds(int.Parse(milliseconds.Value));
-
-                return time.ToString();
-            }
-
-            return value;
-        }
-
-        [GeneratedRegex(@"\s+")]
-        private static partial Regex WhitespacePattern();
-        [GeneratedRegex(@"^P(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(\d+H)?(\d+M)?(\d+S)?)?$")]
-        private static partial Regex ISO8601TimeSpanPattern();
-        [GeneratedRegex(@"^(?=.*\d+(?:days|day|d|h|min|s|ms))(?:(?<days>\d+)(?:days|day|d))?(?:(?<hours>\d+)h)?(?:(?<minutes>\d+)min)?(?:(?<seconds>\d+)s)?(?:(?<milliseconds>\d+)ms)?$")]
-        private static partial Regex TimeSpanPattern();
     }
 }

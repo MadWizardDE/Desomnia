@@ -62,10 +62,5 @@ namespace MadWizard.Desomnia.Daemon
             }
         }
 
-        protected override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
-        {
-            source.AddEnumAttribute("watchOperation")
-                  .AddEnumAttribute("watchMode");
-        }
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration.Xml;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 
 namespace MadWizard.Desomnia.Configuration
@@ -55,7 +54,7 @@ namespace MadWizard.Desomnia.Configuration
             {
                 var split = str.Split('+');
 
-                delay = TimeSpan.Parse(CustomXmlConfigurationProvider.NormalizeTimeSpanVariations(split[1]));
+                delay = TimeSpan.Parse(ValueVariations.NormalizeTimeSpan(split[1]));
 
                 return split[0];
             }
