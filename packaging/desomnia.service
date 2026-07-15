@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/sbin/desomniad
+ExecStart=/usr/sbin/desomniad -a
 Restart=always
 RestartSec=5
 
