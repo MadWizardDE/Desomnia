@@ -11,9 +11,7 @@
 -->
 <SystemMonitor version="1">
 
-    <NetworkMonitor watchMode="promiscuous"
-        autoDetect="MAC|IP|Router|Host|Service" autoRefresh="1h"
-        sleepProxyLease="7 days">
+    <NetworkMonitor watchMode="promiscuous" autoDetect="MAC|IP|Router|Host|Service" autoRefresh="1h">
 
         <!-- add additional configuration here -->
 
