@@ -5,7 +5,7 @@ namespace MadWizard.Desomnia.Process.Configuration
 {
     // The pattern is mandatory: the only constructor takes it as XML text content
     // (or as a "pattern" attribute, which the binder maps to the constructor parameter).
-    public class ProcessWatchInfo(string pattern)
+    public class ProcessWatchInfo(string pattern) // <- XML text content
     {
         public required string Name { get; set; }
 

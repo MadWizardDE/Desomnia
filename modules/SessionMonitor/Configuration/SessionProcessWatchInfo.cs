@@ -5,7 +5,7 @@ namespace MadWizard.Desomnia.Session.Configuration
 {
     // Constructors are not inherited: the text-content constructor must be redeclared,
     // otherwise the binder cannot deliver the pattern to this derived type.
-    public class SessionProcessWatchInfo(string pattern) : ProcessWatchInfo(pattern)
+    public class SessionProcessWatchInfo(string pattern) : ProcessWatchInfo(pattern) // <- XML text content
     {
         public DelayedAction? OnSessionIdle { get; set; }
         public DelayedAction? OnSessionDemand { get; set; }

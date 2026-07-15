@@ -29,7 +29,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Knocking
     public class SharedSecretData : KeyData
     {
         public SharedSecretData() { }
-        public SharedSecretData(string text) : base(text) { }
+        public SharedSecretData(string text) : base(text) { } // <- XML text content
 
         public string?  Label { get; init; }
 
@@ -56,7 +56,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Knocking
     public class AuthKeyData : KeyData
     {
         public AuthKeyData() { }
-        public AuthKeyData(string text) : base(text) { }
+        public AuthKeyData(string text) : base(text) { } // <- XML text content
 
         public DigestType Type { get; set; } = DigestType.Default;
     }
