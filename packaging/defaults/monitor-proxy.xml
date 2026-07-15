@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Desomnia default configuration.
+  Desomnia default configuration (always-on Sleep Proxy).
 
   Out of the box this runs a zero-configuration Sleep Proxy: it watches the network in
   promiscuous mode and, because autoDetect includes Host and Service, keeps any sleeping

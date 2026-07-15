@@ -43,8 +43,6 @@ It is built from the ahead-of-time compiled, self-contained daemon on a minimal 
 
 .. include:: ./native/constraints.rst
 
-Everything else — the Network Monitor and the Sleep Proxy — behaves exactly as in the standard image.
-
 Limitations
 -----------
 

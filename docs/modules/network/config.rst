@@ -197,7 +197,7 @@ handoffRetry
 ++++++++++++
 
 :inherited:
-:default: ``0``
+:default: ``2``
 
 How many additional handoff attempts (departing host) or reachability re-checks (receiving proxy) are made before a handoff is considered failed.
 

@@ -1,8 +1,7 @@
-using MadWizard.Desomnia.Daemon.DBus;
 using MadWizard.Desomnia.Daemon.DBus.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Tmds.DBus;
+using Tmds.DBus.Protocol;
 
 namespace MadWizard.Desomnia.Power.Manager
 {
@@ -13,7 +12,6 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public required ILogger<DBusPowerManager> Logger { private get; init; }
 
-        [DBusService("/org/freedesktop/login1")]
         public required ILogin1Manager LoginManager { private get; set; }
 
         public event EventHandler? Suspended;
@@ -60,7 +58,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 {
                     await LoginManager.SuspendWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // since systemd 249
                 }
-                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                catch (DBusErrorReplyException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
                 {
                     await LoginManager.SuspendWithFlagsAsync(0);
                 }
@@ -83,7 +81,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 {
                     await LoginManager.HibernateWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
                 }
-                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                catch (DBusErrorReplyException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
                 {
                     await LoginManager.HibernateWithFlagsAsync(0);
                 }
@@ -109,7 +107,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 {
                     await LoginManager.PowerOffWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
                 }
-                catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                catch (DBusErrorReplyException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
                 {
                     await LoginManager.PowerOffWithFlagsAsync(0);
                 }
@@ -135,7 +133,7 @@ namespace MadWizard.Desomnia.Power.Manager
                     {
                         await LoginManager.RebootWithFlagsAsync(ILogin1Manager.SD_LOGIND_SKIP_INHIBITORS); // systemd >= 249
                     }
-                    catch (DBusException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
+                    catch (DBusErrorReplyException ex) when (ex.ErrorName == "org.freedesktop.DBus.Error.InvalidArgs")
                     {
                         await LoginManager.RebootWithFlagsAsync(0);
                     }

@@ -15,11 +15,13 @@ which makes it a good fit for an always-on :doc:`Wake-on-LAN proxy </guides/wol-
 
 .. note::
 
-   Because this is the native build, two features are unavailable: runtime plugin loading (the
-   :doc:`Firewall Knock Operator </plugins/fko>` is built in, but other plugins are not) and
-   managing the sleep of the *host it runs on*. If you need either, install the full build via
-   :doc:`Homebrew </installation/homebrew>`, the :doc:`archive </installation/manually>`, or
-   :doc:`Docker </installation/docker>` instead.
+   Because this is the native build, plugins cannot be loaded at runtime: the
+   :doc:`Firewall Knock Operator </plugins/fko>` is built in, but other plugins are not. If you
+   need additional plugins, install the full build via :doc:`Homebrew </installation/homebrew>`,
+   the :doc:`archive </installation/manually>`, or :doc:`Docker </installation/docker>` instead.
+   Everything else — including :doc:`local sleep management </guides/sleep>` via
+   ``systemd-logind`` — works as in the full build, so the package also suits hosts that should
+   sleep themselves.
 
 Supported platforms
 --------------------
@@ -81,8 +83,8 @@ manually:
 
 .. code:: bash
 
-   sudo apt install ./Desomnia_<version>_linux-arm64-native.deb   # Debian, Ubuntu, Raspberry Pi OS
-   sudo dnf install ./Desomnia_<version>_linux-arm64-native.rpm   # Fedora, RHEL, openSUSE
+   sudo apt install ./Desomnia_<version>_linux-<arch>-native.deb   # Debian, Ubuntu, Raspberry Pi OS
+   sudo dnf install ./Desomnia_<version>_linux-<arch>-native.rpm   # Fedora, RHEL, openSUSE
 
 .. note::
 
@@ -112,12 +114,24 @@ Desomnia uses the following locations in alignment with the `Filesystem Hierarch
 Configuration
 -------------
 
-The package installs a ready-to-run configuration at ``/etc/desomnia/monitor.xml`` that puts
-Desomnia into a zero-configuration :doc:`Sleep Proxy </modules/network/sleepproxy>` mode: it
-watches the network in promiscuous mode and keeps sleeping hosts reachable, waking them on
-demand, without any per-host setup. This is why the service can run immediately after
-installation, and it suits the always-on :doc:`Wake-on-LAN proxy </guides/wol-proxy>` role
-directly.
+The package installs a ready-to-run configuration at ``/etc/desomnia/monitor.xml``, which is
+why the service can run immediately after installation. On the first installation, the
+configuration is chosen to match the machine's role:
+
+- **Always-on box** — if the machine cannot suspend, or no network adapter can wake it via
+  Wake-on-LAN (typical for single-board computers like a Raspberry Pi), Desomnia starts in the
+  zero-configuration :doc:`Sleep Proxy </modules/network/sleepproxy>` mode: it watches the
+  network in promiscuous mode and keeps sleeping hosts reachable, waking them on demand,
+  without any per-host setup — the always-on :doc:`Wake-on-LAN proxy </guides/wol-proxy>` role.
+- **Sleep-capable host** — if the machine can suspend *and* has a Wake-on-LAN capable adapter,
+  a local configuration is installed instead: Desomnia watches only the host's own traffic (no
+  promiscuous mode, no proxy role), prepared for :doc:`local sleep management </guides/sleep>`.
+  Suspending on idle stays off until you configure it.
+
+The choice is made **only on the first installation** — upgrades never touch ``monitor.xml``.
+Both templates ship under ``/usr/share/desomnia/`` (``monitor-proxy.xml`` and
+``monitor-host.xml``); to switch roles later, copy the one you want over
+``/etc/desomnia/monitor.xml`` and restart the service.
 
 To tailor it to your network — declaring specific hosts, a router, or a Wake-on-LAN client role —
 edit the file and restart the service:

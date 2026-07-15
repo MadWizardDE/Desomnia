@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Desomnia default configuration (sleep-capable host).
+
+  This machine can suspend and its network adapter supports Wake-on-LAN, so Desomnia is set
+  up for local sleep management instead of the always-on Sleep Proxy role: it watches only
+  this host's own traffic (no promiscuous mode) and does not proxy for other hosts. See:
+  https://desomnia.readthedocs.io/en/latest/guides/sleep.html
+
+  Suspending on idle is NOT enabled out of the box. To activate it, add a timeout and the
+  onIdle action to the SystemMonitor element, e.g.:
+
+      <SystemMonitor version="1" timeout="2min" onIdle="sleep" onDemand="sleepless">
+
+  and declare the demands (services, remote clients, ...) that should keep this host awake.
+-->
+<SystemMonitor version="1">
+
+    <NetworkMonitor autoDetect="MAC|IP|Router" autoRefresh="1h">
+
+        <!-- add additional configuration here -->
+
+    </NetworkMonitor>
+
+</SystemMonitor>

@@ -2,7 +2,7 @@
 <!--
   Shared trimmer / NativeAOT root descriptor: assemblies present in BOTH the daemon and the service
   AOT builds. Preserves all types and members (they are constructed/populated reflectively by Autofac
-  activation and the configuration binder, so nothing references them statically). See AOT-FEASIBILITY.md.
+  activation and the configuration binder, so nothing references them statically).
 
   Entry assemblies and build-specific modules live in the per-target descriptors so that neither build
   references an assembly outside its own closure (which would emit an "IL2007: could not resolve

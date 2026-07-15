@@ -1,0 +1,49 @@
+<!--
+  D-Bus introspection for org.freedesktop.login1.Manager (systemd-logind),
+  trimmed to the members Desomnia uses. Tmds.DBus.SourceGenerator turns this
+  into a compile-time proxy (see AdditionalFiles in DesomniaDaemon.csproj).
+  Authoritative source: busctl introspect org.freedesktop.login1 /org/freedesktop/login1 (with the xml-interface option)
+  see: https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.login1.html
+-->
+<node>
+  <interface name="org.freedesktop.login1.Manager">
+    <method name="CanReboot">
+      <arg name="result" type="s" direction="out"/>
+    </method>
+    <method name="CanSuspend">
+      <arg name="result" type="s" direction="out"/>
+    </method>
+    <method name="CanHibernate">
+      <arg name="result" type="s" direction="out"/>
+    </method>
+    <method name="SuspendWithFlags">
+      <arg name="flags" type="t" direction="in"/>
+    </method>
+    <method name="HibernateWithFlags">
+      <arg name="flags" type="t" direction="in"/>
+    </method>
+    <method name="PowerOffWithFlags">
+      <arg name="flags" type="t" direction="in"/>
+    </method>
+    <method name="RebootWithFlags">
+      <arg name="flags" type="t" direction="in"/>
+    </method>
+    <method name="ScheduleShutdown">
+      <arg name="type" type="s" direction="in"/>
+      <arg name="usec" type="t" direction="in"/>
+    </method>
+    <method name="Inhibit">
+      <arg name="what" type="s" direction="in"/>
+      <arg name="who" type="s" direction="in"/>
+      <arg name="why" type="s" direction="in"/>
+      <arg name="mode" type="s" direction="in"/>
+      <arg name="pipe_fd" type="h" direction="out"/>
+    </method>
+    <method name="ListInhibitors">
+      <arg name="inhibitors" type="a(ssssuu)" direction="out"/>
+    </method>
+    <signal name="PrepareForSleep">
+      <arg name="start" type="b"/>
+    </signal>
+  </interface>
+</node>

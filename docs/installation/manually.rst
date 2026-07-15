@@ -23,7 +23,7 @@ In order to automatically configure your network interface for **Wake-on-LAN** a
 Native build
 ------------
 
-For 64-bit systems, a **native build** is offered in addition to the standard one — the ``Desomnia_<version>_linux-<aarch>-native.zip`` asset on the `GitHub Releases <https://github.com/mad0x20wizard/Desomnia/releases>`_ page. It is compiled ahead of time into a single self-contained binary that **does not require the .NET Runtime**, so you can skip the runtime step under `Prerequisites`_ above and simply place the binary. It also uses considerably less memory — around 48 MB instead of ~130 MB — which makes it a good fit for always-on devices such as a Raspberry Pi acting as a Wake-on-LAN or Sleep Proxy. See :doc:`/modules/network/performance` for the reasoning.
+For 64-bit systems, a **native build** is offered in addition to the standard one — the ``Desomnia_<version>_linux-<arch>-native.zip`` asset on the `GitHub Releases <https://github.com/mad0x20wizard/Desomnia/releases>`_ page. It is compiled ahead of time into a single self-contained binary that **does not require the .NET Runtime**, so you can skip the runtime step under `Prerequisites`_ above and simply place the binary. It also uses considerably less memory — around 48 MB instead of ~130 MB — which makes it a good fit for always-on devices such as a Raspberry Pi acting as a Wake-on-LAN or Sleep Proxy. See :doc:`/modules/network/performance` for the reasoning.
 
 .. include:: ./native/constraints.rst
 

@@ -14,7 +14,7 @@ To install Desomnia, pick the method that fits your platform and preferences:
   | Native deployment, with all features available. Installs required dependencies, helps with service registration.
   | Update to newer versions easily.
 :doc:`Native packages </installation/packages>` – 🐧 Linux
-  | Native ``.deb`` / ``.rpm`` deployment for Debian, Ubuntu, Raspberry Pi OS, Fedora and openSUSE, with limited features available. Bundles the low-memory native build; no .NET runtime required.
+  | Native ``.deb`` / ``.rpm`` deployment for Debian, Ubuntu, Raspberry Pi OS, Fedora and openSUSE, with all features available except runtime plugin loading. Bundles the low-memory native build; no .NET runtime required.
   | Registers the service and ships a ready-to-run default configuration — a good fit for headless servers and single-board computers.
   | Update to newer versions easily via the package repository.
 :doc:`Docker </installation/docker>` – 🐧 Linux

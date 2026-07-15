@@ -282,14 +282,16 @@ jobs:
 
       - name: Stage default configuration
         # The Dockerfile COPYs monitor.xml from the build context root; the context is runner.temp/context,
-        # not the repo, so the default config has to be placed there explicitly.
-        run: cp packaging/monitor.xml ${{ runner.temp }}/context/monitor.xml
+        # not the repo, so the default config has to be placed there explicitly. In the repo the file is
+        # named monitor-proxy.xml (to set it apart from the monitor-host.xml variant); it is staged under
+        # its runtime name here.
+        run: cp packaging/defaults/monitor-proxy.xml ${{ runner.temp }}/context/monitor.xml
 
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
         with:
-          file: ./Dockerfile
+          file: ./packaging/Dockerfile
           target: standard   # the framework-dependent, multi-arch, plugin-capable flavour
           context: ${{ runner.temp }}/context
           platforms: ${{ matrix.platform }}
@@ -356,9 +358,11 @@ jobs:
 
   build-linux-native-docker:
     name: Build native Docker image
-    # The NativeAOT daemon is linux-arm64 only, so this is a single-arch image -- no push-by-digest /
-    # manifest-merge dance is needed; we build and push the tags directly. Built natively on an arm64
-    # runner. The image reuses the same `linux-arm64-native` binary the release artifact ships.
+    # The native image is published for linux-arm64 only (the NativeAOT daemon itself also exists for
+    # x64, but the image targets the SBC/proxy use case), so this is a single-arch image -- no
+    # push-by-digest / manifest-merge dance is needed; we build and push the tags directly. Built
+    # natively on an arm64 runner. The image reuses the same `linux-arm64-native` binary the release
+    # artifact ships.
     runs-on: ubuntu-24.04-arm
     needs: [ build-linux-native ]
 
@@ -381,8 +385,9 @@ jobs:
           path: ${{ runner.temp }}/context
 
       - name: Stage default configuration
-        # See the note in build-linux-docker: the Dockerfile COPYs monitor.xml from the context root.
-        run: cp packaging/monitor.xml ${{ runner.temp }}/context/monitor.xml
+        # See the note in build-linux-docker: the Dockerfile COPYs monitor.xml from the context root;
+        # the repo file monitor-proxy.xml is staged under its runtime name.
+        run: cp packaging/defaults/monitor-proxy.xml ${{ runner.temp }}/context/monitor.xml
 
       - name: Docker meta
         id: meta
@@ -402,7 +407,7 @@ jobs:
       - name: Build and push (native, linux/arm64)
         uses: docker/build-push-action@v6
         with:
-          file: ./Dockerfile
+          file: ./packaging/Dockerfile
           target: native
           context: ${{ runner.temp }}/context
           platforms: linux/arm64

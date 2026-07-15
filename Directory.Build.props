@@ -10,7 +10,7 @@
     DESOMNIA_AOT compile symbol across ALL projects, so AOT-incompatible code paths can fall back to
     AOT-safe equivalents (e.g. Autofac strongly-typed Meta<T, TMetadata>, which needs MakeGenericMethod
     over value-type metadata properties), and it enables the trim/AOT analyzers. Because PublishAot is
-    only set during `dotnet publish`, normal builds stay warning-free. See AOT-FEASIBILITY.md.
+    only set during `dotnet publish`, normal builds stay warning-free.
   -->
   <PropertyGroup Condition="'$(PublishAot)' == 'true'">
     <DefineConstants>$(DefineConstants);DESOMNIA_AOT</DefineConstants>

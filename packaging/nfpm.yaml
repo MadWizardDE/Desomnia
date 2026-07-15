@@ -30,8 +30,8 @@ description: |
   and system sleep, so idle machines can suspend and still wake on demand.
   This package installs the ahead-of-time compiled, self-contained native
   daemon: no .NET runtime required, low memory footprint. Runtime plugin
-  loading and managing the host's own sleep are not available in this build;
-  use the archive, Docker or Homebrew installation for those.
+  loading is not available in this build; use the archive, Docker or
+  Homebrew installation for that.
 
 contents:
   # The AOT daemon binary. The mode here is authoritative regardless of the
@@ -47,11 +47,25 @@ contents:
     file_info:
       mode: 0644
 
-  # Example configuration. Marked as a config file so a local copy is never
-  # overwritten on upgrade. Its parent /etc/desomnia is created implicitly.
-  - src: packaging/monitor.xml
+  # Default configuration (zero-configuration Sleep Proxy). Marked as a config file so a
+  # local copy is never overwritten on upgrade. Its parent /etc/desomnia is created
+  # implicitly. On first install, postinstall.sh may swap this pristine default for the
+  # sleep-capable-host variant below -- see the role switch there.
+  - src: packaging/defaults/monitor-proxy.xml
     dst: /etc/desomnia/monitor.xml
     type: "config|noreplace"
+    file_info:
+      mode: 0644
+
+  # Both role templates, shipped for reference and for the postinstall role switch:
+  # the pristine proxy default (also used to detect an untouched monitor.xml) and the
+  # sleep-capable-host variant. Copy one over /etc/desomnia/monitor.xml to change roles.
+  - src: packaging/defaults/monitor-proxy.xml
+    dst: /usr/share/desomnia/monitor-proxy.xml
+    file_info:
+      mode: 0644
+  - src: packaging/defaults/monitor-host.xml
+    dst: /usr/share/desomnia/monitor-host.xml
     file_info:
       mode: 0644
 

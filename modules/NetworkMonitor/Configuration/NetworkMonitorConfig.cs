@@ -90,7 +90,7 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal HandoffType        Handoff                     { get; set; } = HandoffType.None;
         internal TimeSpan           HandoffDuration             { get; set; } = TimeSpan.FromDays(1);
         internal TimeSpan           HandoffTimeout              { get; set; } = TimeSpan.FromSeconds(5);
-        internal int                HandoffRetry                { get; set; } = 0;
+        internal int                HandoffRetry                { get; set; } = 2;
         internal ushort?            HandoffMTU                  { get; set; }
 
         internal string?            HandoffPassword             { get; set; }

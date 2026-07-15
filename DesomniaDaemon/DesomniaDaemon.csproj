@@ -26,7 +26,13 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
-    <PackageReference Include="Tmds.DBus" Version="0.94.1" />
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.94.2" />
+    <PackageReference Include="Tmds.DBus.Generator" Version="0.94.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- D-Bus proxies are generated at compile time from introspection XML (AOT-safe, no Reflection.Emit). -->
+    <AdditionalFiles Include="DBus\Protocol\org.freedesktop.login1.Manager.xml" Namespace="MadWizard.Desomnia.Daemon.DBus.Generated" DBusGeneratorMode="Proxy" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,11 +1,12 @@
-﻿using Tmds.DBus;
+using System.Runtime.InteropServices;
 
 namespace MadWizard.Desomnia.Daemon.DBus.Interface
 {
-    // D-Bus proxy interface for org.freedesktop.login1.Interface (systemd-logind).
+    // D-Bus interface for org.freedesktop.login1.Manager (systemd-logind).
+    // Implemented by Login1Manager over a compile-time generated proxy (see DBus/Introspection).
     // see: https://www.freedesktop.org/software/systemd/man/latest/org.freedesktop.login1.html
-    [DBusInterface("org.freedesktop.login1.Manager")]
-    public interface ILogin1Manager : IDBusObject
+    [DBusService("org.freedesktop.login1", "/org/freedesktop/login1")]
+    public interface ILogin1Manager
     {
         const ulong SD_LOGIND_ROOT_CHECK_INHIBITORS = 0x01;
         const ulong SD_LOGIND_SKIP_INHIBITORS       = 0x10;
@@ -23,7 +24,7 @@ namespace MadWizard.Desomnia.Daemon.DBus.Interface
         Task ScheduleShutdownAsync(string type, ulong usec);
 
         // Returns a Unix fd whose lifetime IS the inhibitor lock — close it to release.
-        Task<CloseSafeHandle> InhibitAsync(string what, string who, string why, string mode);
+        Task<SafeHandle> InhibitAsync(string what, string who, string why, string mode);
 
         // a(ssssuu): what, who, why, mode, uid, pid
         Task<(string what, string who, string why, string mode, uint uid, uint pid)[]> ListInhibitorsAsync();

@@ -2,11 +2,11 @@ using Autofac;
 using MadWizard.Desomnia.Daemon.Configuration;
 using MadWizard.Desomnia.Daemon.DBus;
 using MadWizard.Desomnia.Daemon.DBus.Interface;
+using MadWizard.Desomnia.Daemon.DBus.Interface.Adapter;
 using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Power.Manager;
 using Microsoft.Extensions.Configuration.Xml;
-using System.Runtime.CompilerServices;
 
 namespace MadWizard.Desomnia.Daemon
 {
@@ -20,15 +20,14 @@ namespace MadWizard.Desomnia.Daemon
         protected override void Load(ContainerBuilder builder)
         {
             // Implementing Power-Manager
-            if (Config.UseDBus && HasSystemDBus() && RuntimeFeature.IsDynamicCodeSupported)
+            if (Config.UseDBus && HasSystemDBus())
             {
                 builder.RegisterType<DBusManager>()
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();
 
-                // TODO: this is only a quick fix
-                builder.Register<ILogin1Manager>(ctx => ctx.Resolve<DBusManager>().LoginManager);
+                builder.RegisterDBusService<ILogin1Manager, Login1Manager>();
 
                 builder.RegisterType<DBusPowerManager>()
                     .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.WatchOperation))
