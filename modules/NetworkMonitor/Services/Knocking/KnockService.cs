@@ -60,7 +60,7 @@ namespace MadWizard.Desomnia.Network.Knocking
         public async Task DoSinglePacketAuthorization(string methodName, IPAddress source, IPEndPoint target, IPPort knock, SharedSecret secret)
         {
             if (!Methods.TryGetValue(methodName, out var method))
-                throw new InvalidOperationException($"Unknown knock method: {methodName}");
+                throw new InvalidOperationException($"Unknown knock method '{methodName}'");
 
             // LATER: replace passthorugh secret
             // LATER: resolve public IP

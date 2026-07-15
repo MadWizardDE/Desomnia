@@ -29,6 +29,8 @@ namespace MadWizard.Desomnia.Network.Context
 
         internal IEnumerable<NetworkHostContext> CreateDynamicFilterHosts()
         {
+            List<NetworkHostContext> created = []; // eager on purpose: callers may discard the result
+
             var contexts = ((IEnumerable<FilterContext>)[this])
                 .Concat(_hostContexts).Concat(_hostContexts.SelectMany(ctx => ctx))
                 .Concat(_knockContexts).ToList();
@@ -44,11 +46,13 @@ namespace MadWizard.Desomnia.Network.Context
                         Name = host
                     };
 
-                    yield return CreateDynamicHost(new TypedParameter(typeof(NetworkHostInfo), config));
+                    created.Add(CreateDynamicHost(new TypedParameter(typeof(NetworkHostInfo), config)));
                 }
 
                 ctx.Scope?.Resolve<IEnumerable<PacketFilterRule>>(); // the rules should now be resolvable
             }
+
+            return created;
         }
 
         private void CreateLocalHost()

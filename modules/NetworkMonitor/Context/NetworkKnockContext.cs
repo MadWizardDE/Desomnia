@@ -19,7 +19,11 @@ namespace MadWizard.Desomnia.Network.Context
     {
         readonly IList<ILifetimeScope> _scopes = [];
 
-        public IEnumerable<KnockStanza> Stanzas => field ??= _scopes.Select(scope => scope.Resolve<KnockStanza>());
+        /// <summary>
+        /// Resolved lazily, because the stanza filters may depend on dynamic hosts which are only
+        /// created after construction — but materialized, so the scopes are resolved exactly once.
+        /// </summary>
+        public IEnumerable<KnockStanza> Stanzas => field ??= [.. _scopes.Select(scope => scope.Resolve<KnockStanza>())];
 
         readonly NetworkSegment _targetNetwork;
         readonly NetworkHostRange _targetRange;
@@ -27,6 +31,12 @@ namespace MadWizard.Desomnia.Network.Context
         public NetworkKnockContext(ILifetimeScope parent, NetworkMonitorConfig network, DynamicHostRangeInfo config) : base(parent, "knock")
         {
             var port = new IPPort(config.KnockProtocol ?? network.KnockProtocol, config.KnockPort ?? network.KnockPort);
+
+            var method = config.KnockMethod ?? network.KnockMethod;
+
+            // Fail here, while the caller can still discard this context, instead of on first stanza resolution.
+            if (!parent.IsRegisteredWithName<IKnockDetector>(method))
+                throw new InvalidOperationException($"Unknown knock method '{method}'");
 
             _targetNetwork = parent.Resolve<NetworkSegment>();
             _targetRange = parent.ResolveNamed<NetworkHostRange>(config.Name!);
@@ -41,7 +51,7 @@ namespace MadWizard.Desomnia.Network.Context
                         .WithParameter(TypedParameter.From(label))
                         .WithParameter(TypedParameter.From(port))
                         .WithParameter(TypedParameter.From(BuildSharedSecret(secret)))
-                        .WithParameter(TypedNamedResolvedParameter<IKnockDetector>.FindBy(config.KnockMethod ?? network.KnockMethod))
+                        .WithParameter(TypedNamedResolvedParameter<IKnockDetector>.FindBy(method))
                         .WithParameter(TypedParameter.From(config.KnockTimeout ?? network.KnockTimeout))
                         .SingleInstance()
                         .AsSelf();
