@@ -132,8 +132,12 @@ Thanks to its open architecture, Desomnia can be extended with plugins. A variet
 -  **Firewall Knock Operator** – 🪐 *Platform-independent*
 
    Enhances Desomnia's Single Packet Authorization framework with strong cryptographic authentication, to allow you to temporarily authorise remote clients with dynamic IP addresses from the internet to wake hosts on your local network.
-   
+
    🚧 This plugin aims to be fully interoperable with `fwknop <https://github.com/mrash/fwknop>`__, the established open-source SPA tool. A future version will also allow you to configure the local system firewall, providing a full drop-in replacement for the tool's original use case.
+
+-  **FRITZ!Box Router** – 🪐 *Platform-independent*
+
+   Integrates Desomnia with AVM FRITZ!Box routers: hosts and their MAC addresses are resolved from the box's device table (even while they sleep, when they are absent from the ARP cache), VPN clients are detected automatically, and LAN port speeds can be switched on demand. Routers are found by themselves via zero-conf discovery — a FRITZ!Box on the network is enough, no configuration required.
 
 Observability
 -------------

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using Refit;
 using System.ServiceProcess;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Service.Duo.Manager
 {
@@ -18,6 +19,8 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
         public required ILogger<DuoManager> Logger { get; set; }
 
         public required ISessionManager SessionManager { private get; init; }
+
+        public required Func<DuoInstanceInfo, RegistryKey, DuoInstance> CreateInstance { private get; init; }
 
         internal IDuoWebManager? API;
 
@@ -47,6 +50,9 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             Logger.LogInformation("Service is running at: '{path}' ({version}) -> PID {pid}", servicePath, serviceVersion, servicePID);
 
             API = RestService.For<IDuoWebManager>("http://localhost:" + Port);
+
+            foreach (var stale in Instances)  // externally owned — dispose the replaced generation
+                stale.Dispose();
 
             Instances = LoadInstances();
 
@@ -112,7 +118,7 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 info.OnStop ??= config.OnInstanceStopped;
                 info.OnLogout ??= config.OnInstanceLogout;
 
-                var instance = new DuoInstance(info, instancesKey.OpenSubKey(name!, writable: true)!);
+                var instance = CreateInstance(info, instancesKey.OpenSubKey(name!, writable: true)!);
 
                 instance.Session = SessionManager.FirstOrDefault(instance.HasInitiated);
 

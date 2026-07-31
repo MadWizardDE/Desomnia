@@ -33,7 +33,7 @@ function ShouldConfigureVirtualMachines(): Boolean;
 begin
   if ShouldConfigureDesomnia then
   begin
-    Result := (GetArrayLength(VirtualProviders) > 0) and IsComponentSelected('plugins\HyperVSupport');
+    Result := (GetArrayLength(VirtualProviders) > 0) and IsComponentSelected('vms\HyperVSupport');
 
     if not SettingsControls.ModeTimeoutRadioBox.Checked then
       Result := False;

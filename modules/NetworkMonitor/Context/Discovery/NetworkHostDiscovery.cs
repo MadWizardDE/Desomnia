@@ -98,7 +98,12 @@ namespace MadWizard.Desomnia.Network.Context
 
         internal NetworkHostContext CreateHost(params Parameter[] parameters)
         {
-            var context = Scope.Resolve<NetworkHostContext>(parameters);
+            return CreateHost<NetworkHostContext>(parameters);
+        }
+
+        internal T CreateHost<T>(params Parameter[] parameters) where T : NetworkHostContext
+        {
+            var context = Scope.Resolve<T>(parameters);
 
             Network.AddHost(context.Host);
 

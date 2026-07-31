@@ -47,6 +47,13 @@ text
 
 The text node of the ``<Process>`` will be parsed as a regular expression and matched against the name of the process.
 
+If the expression contains a path separator — a ``/``, or a ``\\`` matching a literal backslash — it is matched against the full path of the executable instead. Nothing else changes the choice: a ``.`` is read as the regular-expression wildcard it is, so ``chrome.*`` still matches by name.
+
+.. code:: xml
+
+  <Process name="Browser">chrome|firefox</Process>
+  <Process name="Games">/usr/games/.*</Process>
+
 watchChildren
 +++++++++++++
 

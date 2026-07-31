@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Network.Filter;
+using MadWizard.Desomnia.Network.Manager;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -16,7 +17,7 @@ namespace MadWizard.Desomnia.Network
         public ILogger<NetworkDevice> Logger { private get; init; }
 
         public  string              Name => Device.Description ?? Device.Name;
-        public  NetworkInterface    Interface   { get; internal set; }
+        public  INetworkInterface   Interface   { get; }
         private ILiveDevice         Device      { get; init; }
 
         public bool IsCapturing => Device.Started;
@@ -33,14 +34,13 @@ namespace MadWizard.Desomnia.Network
 
         public IEnumerable<IDevicePacketFilter> Filters { private get; init; } = [];
 
-        public PhysicalAddress PhysicalAddress => Interface.GetPhysicalAddress() ?? PhysicalAddress.None;
+        public PhysicalAddress PhysicalAddress => Interface.PhysicalAddress;
 
         public IEnumerable<IPAddress> IPAddresses
         {
             get
             {
                 IEnumerable<IPAddress> pcapAddresses = [];
-                IEnumerable<IPAddress> niAddresses = [];
 
                 if (Device is LibPcapLiveDevice pcap)
                 {
@@ -49,9 +49,7 @@ namespace MadWizard.Desomnia.Network
                         .Select(address => address.Addr?.ipAddress!);
                 }
 
-                niAddresses = Interface.GetIPProperties().UnicastAddresses
-                    .Where(unicast => unicast.Address is not null)
-                    .Select(unicast => unicast.Address);
+                var niAddresses = Interface.Addresses.Select(unicast => unicast.Address);
 
                 return pcapAddresses.Concat(niAddresses).Select(IPAddressExt.RemoveScopeId).Distinct();
             }
@@ -65,10 +63,8 @@ namespace MadWizard.Desomnia.Network
         {
             get
             {
-                if (IPv6Addresses.Any())
+                if (IPv6Addresses.Any() && Interface.IPv6ScopeIndex is int scopeId)
                 {
-                    int scopeId = Interface.GetIPProperties().GetIPv6Properties().Index;
-
                     return new IPAddress(IPAddressExt.LinkLocalMulticast.GetAddressBytes(), scopeId);
                 }
 
@@ -83,7 +79,7 @@ namespace MadWizard.Desomnia.Network
 
         private bool _shouldBeCapturing;
 
-        public NetworkDevice(ILogger<NetworkDevice> logger, NetworkInterface @interface, ILiveDevice device)
+        public NetworkDevice(ILogger<NetworkDevice> logger, INetworkInterface @interface, ILiveDevice device)
         {
             Logger = logger;
 

@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Network.Configuration.Services;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Neighborhood.Options;
@@ -58,8 +59,8 @@ namespace MadWizard.Desomnia.Network.Context
                 {
                     args.Instance.ShouldHandoffToSleepProxy = info.Handoff;
 
-                    args.Instance.AddEventAction(nameof(NetworkServiceWatch.Demand), info.OnDemand);
-                    args.Instance.AddEventAction(nameof(NetworkServiceWatch.Idle), info.OnIdle);
+                    ((IEventSystem)args.Instance)[nameof(NetworkServiceWatch.Demand)].AddAction(info.OnDemand);
+                    ((IEventSystem)args.Instance)[nameof(NetworkServiceWatch.Idle)].AddAction(info.OnIdle);
                 });
 
                 RegisterServiceFilter(builder, info);

@@ -7,13 +7,13 @@ namespace MadWizard.Desomnia.PowerRequest
 {
     public class Module : Desomnia.ConfigurableModule<ModuleConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, ModuleConfig config)
         {
-            if (Config.PowerRequestMonitor is PowerRequestMonitorConfig config)
+            if (config.PowerRequestMonitor is PowerRequestMonitorConfig monitor)
             {
                 builder.RegisterType<PowerRequestMonitor>()
                     .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(IPowerManager))))
-                    .WithParameter(TypedParameter.From(Config.PowerRequestMonitor.RequestFilterRule))
+                    .WithParameter(TypedParameter.From(monitor.RequestFilterRule))
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();

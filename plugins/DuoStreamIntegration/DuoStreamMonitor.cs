@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Service.Duo.Manager;
 using MadWizard.Desomnia.Session;
 using Microsoft.Extensions.Logging;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Service.Duo
 {

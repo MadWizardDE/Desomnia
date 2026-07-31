@@ -1,4 +1,6 @@
-﻿using MadWizard.Desomnia.Service;
+﻿using Autofac;
+using MadWizard.Desomnia.Power.Source;
+using MadWizard.Desomnia.Service;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -9,22 +11,20 @@ namespace MadWizard.Desomnia.Power.Manager
 {
     // see: https://learn.microsoft.com/en-us/windows/win32/power/system-power-states
 
-    public class PowerManager : IPowerManager
+    public partial class PowerManager(WindowsService? service = null) : PollingPowerSource, IPowerManager, IPowerSource, IStartable, IDisposable
     {
         public required ILogger<PowerManager> Logger { private get; init; }
 
         private bool _hasShutdownPrivilege = false;
 
-        public PowerManager(WindowsService? service = null)
-        {
-            if (service != null)
-            {
-                service.PowerStatusChanged += PowerStatusChanged;
-            }
-        }
-
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
+
+        #region Power Status lifecycle
+        void IStartable.Start()
+        {
+            service?.PowerStatusChanged += PowerStatusChanged;
+        }
 
         private void PowerStatusChanged(object? sender, PowerBroadcastStatus status)
         {
@@ -39,6 +39,29 @@ namespace MadWizard.Desomnia.Power.Manager
                 case PowerBroadcastStatus.ResumeSuspend:
                     ResumeSuspended?.Invoke(this, EventArgs.Empty);
                     break;
+            }
+        }
+
+        void IDisposable.Dispose()
+        {
+            service?.PowerStatusChanged -= PowerStatusChanged;
+        }
+        #endregion
+
+        public override PowerSource Source
+        {
+            get
+            {
+                if (!GetSystemPowerStatus(out SYSTEM_POWER_STATUS status))
+                    return PowerSource.Unknown;
+
+                return status.ACLineStatus switch
+                {
+                    0 => PowerSource.Battery,
+                    1 => PowerSource.AC,
+
+                    _ => PowerSource.Unknown, // 255 = unknown status
+                };
             }
         }
 
@@ -96,9 +119,14 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(PowerRequestType type, string reason)
         {
-            return new PowerRequest(PowerRequestsType.SystemRequired, reason);
+            return new PowerRequest(type switch
+            {
+                PowerRequestType.Display => PowerRequestsType.DisplayRequired,
+
+                _ => PowerRequestsType.SystemRequired,
+            }, reason);
         }
 
         async IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken token)
@@ -341,5 +369,21 @@ namespace MadWizard.Desomnia.Power.Manager
         }
         #endregion
 
+        #region API: Power-Status
+        [LibraryImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS status);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SYSTEM_POWER_STATUS
+        {
+            public byte ACLineStatus;
+            public byte BatteryFlag;
+            public byte BatteryLifePercent;
+            public byte SystemStatusFlag;
+            public int BatteryLifeTime;
+            public int BatteryFullLifeTime;
+        }
+        #endregion
     }
 }

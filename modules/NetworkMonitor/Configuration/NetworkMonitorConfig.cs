@@ -3,6 +3,7 @@ using MadWizard.Desomnia.Configuration.Converter;
 using MadWizard.Desomnia.Network.Configuration.Converter;
 using MadWizard.Desomnia.Network.Configuration.Filter;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
+using MadWizard.Desomnia.Network.Configuration.Interfaces;
 using MadWizard.Desomnia.Network.Configuration.Knocking;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Knocking.Secrets;
@@ -23,22 +24,23 @@ namespace MadWizard.Desomnia.Network.Configuration
         internal const string NAMLESS_PREFIX = "NetworkMonitor#";
 
         // Network-Identification
-        public required string  Name            { get; init; }
+        public required string  Name                { get; init; }
 
-        public string?          Label           { get => !Name.StartsWith(NAMLESS_PREFIX, StringComparison.OrdinalIgnoreCase) ? Name : null; }
+        public string?          Label               { get => !Name.StartsWith(NAMLESS_PREFIX, StringComparison.OrdinalIgnoreCase) ? Name : null; }
 
-        public string?          Interface       { get; set; }
-        public IPNetwork?       Network         { get; set; }
+        public string?          Interface           { get; set; }
+        public IPNetwork?       Network             { get; set; }
+        public string?          SSID                { get; set; }
 
-        public bool             UseBPF          { get; set; } = true;
+        public bool             UseBPF              { get; set; } = true;
 
-        public WakeOnLANMode?   AllowWakeOnLAN  { get; set; } = DefaultWakeOnLANMode();
+        public WakeOnLANMode?   AllowWakeOnLAN      { get; set; } = DefaultWakeOnLANMode();
 
         // Actions
-        public DelayedAction?   OnIdle          { get; set; }
-        public DelayedAction?   OnDemand        { get; set; }
-        public DelayedAction?   OnConnect       { get; set; }
-        public NamedAction?     OnDisconnect    { get; set; }
+        public DelayedActionInfo?   OnIdle          { get; set; }
+        public DelayedActionInfo?   OnDemand        { get; set; }
+        public DelayedActionInfo?   OnConnect       { get; set; }
+        public ActionInfo?          OnDisconnect    { get; set; }
 
         // Options
         #region Network :: AutoDiscoveryOptions
@@ -160,6 +162,34 @@ namespace MadWizard.Desomnia.Network.Configuration
             UDPPorts = this.WatchUDPPort != null ? [this.WatchUDPPort.Value] : [],
         };
         #endregion
+
+        #region Network :: RouterOptions
+        /*
+         * Network-wide router defaults ("Router" prefix — the unprefixed names are taken by the
+         * host-level options above). A NetworkRouterInfo overrides them only where it sets a value
+         * explicitly; see NetworkRouterInfo.MakeRouterOptions.
+         */
+        internal bool               RouterAllowWake             { get; set; } = false;
+        internal bool               RouterAllowWakeOnLAN        { get; set; } = true;
+
+        internal TimeSpan           RouterVPNTimeout            { get; set; } = TimeSpan.FromMilliseconds(DEFAULT_TIMEOUT_MS);
+
+        /// <summary>Tthe configuration deliberately opens this network to requests from
+        /// outside it: a single-instance <see cref="ForeignHostFilterRule"/> or
+        /// <see cref="EveryHostFilterRule"/> is that opt-in. Their presence makes proxy-waking the
+        /// sensible default for an otherwise-unconfigured router (zero-config remote access).</summary>
+
+        internal bool?              RouterAllowWakeByProxy
+        {
+            get => field ?? ForeignHostFilterRule != null || EveryHostFilterRule != null; set;
+        }
+        #endregion
+
+        /// <summary>
+        /// Interfaces to keep blocked while this network is being monitored — the blocks are
+        /// lifted when this monitor shuts down. See <see cref="NetworkInterfaceBlockInfo"/>.
+        /// </summary>
+        public IList<NetworkInterfaceBlockInfo> NetworkInterfaceBlock { get; private set; } = [];
 
         // Hosts
         public LocalHostInfo?                   LocalHost   { get; private set; }

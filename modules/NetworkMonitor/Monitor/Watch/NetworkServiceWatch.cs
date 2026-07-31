@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Neighborhood;
 using PacketDotNet;
 
@@ -17,7 +18,7 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public bool CanTriggerDemand(EthernetPacket trigger)
         {
-            return IsIdle && HasEventHandlers(nameof(Demand)) && Service.Accepts(trigger);
+            return IsIdle && ((IEventSystem)this)[nameof(Demand)].HasHandlers && Service.Accepts(trigger);
         }
 
         protected internal override void ReportNetworkTraffic(EthernetPacket packet)

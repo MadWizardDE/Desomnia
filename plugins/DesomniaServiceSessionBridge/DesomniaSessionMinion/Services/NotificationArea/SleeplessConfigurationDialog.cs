@@ -1,24 +1,12 @@
-﻿using BrightIdeasSoftware;
-using DesomniaSessionMinion.Tools;
-using MadWizard.Desomnia.Pipe;
+﻿using DesomniaSessionMinion.Tools;
 using MadWizard.Desomnia.Pipe.Messages;
-using ObjectListViewDemo;
-using ObjectListViewDemo.Models;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using static System.Windows.Forms.AxHost;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace MadWizard.Desomnia.Minion
 {
@@ -28,7 +16,9 @@ namespace MadWizard.Desomnia.Minion
         {
             InitializeComponent();
 
-            treeListViewTokens.ContextMenu = CreateContextMenu();
+            // .NET 10's obsolete Control.ContextMenu stub shadows any extension property, so this
+            // is the one place that cannot keep the classic assignment syntax.
+            treeListViewTokens.SetContextMenu(CreateContextMenu());
 
             //SetWindowTheme(treeViewTokens.Handle, "Explorer", null);
 
@@ -45,7 +35,11 @@ namespace MadWizard.Desomnia.Minion
 
             context.Popup += (sender, args) =>
             {
+                // Clear() detaches without disposing; free the previous popup's items
+                var staleItems = context.MenuItems.Cast<MenuItem>().ToArray();
                 context.MenuItems.Clear();
+                foreach (var staleItem in staleItems)
+                    staleItem.Dispose();
 
                 var itemRefresh = context.MenuItems.Add("Aktualisieren");
 

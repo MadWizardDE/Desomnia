@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Autofac.Core;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
@@ -13,13 +14,13 @@ namespace MadWizard.Desomnia.Network.Context
         private static void RegisterRouterDiscovery(ContainerBuilder builder, NetworkMonitorConfig config)
         {
             // Router/Options-Discovery
-            builder.RegisterType<DefaultGatewayDetector>()
+            builder.RegisterType<DefaultGatewayDetector>().WithOrder(1)
                 .WithParameter(TypedParameter.From(config.AutoDetect))
                 .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
                 .AsImplementedInterfaces()
                 .SingleInstance()
                 .AsSelf();
-            builder.RegisterType<RouterAdvertismentDetector>()
+            builder.RegisterType<RouterAdvertismentDetector>().WithOrder(2)
                 .WithParameter(TypedParameter.From(config.AutoDetect))
                 .WithParameter(TypedParameter.From(config.MakeAutoDiscoveryOptions()))
                 .AsImplementedInterfaces()
@@ -27,31 +28,62 @@ namespace MadWizard.Desomnia.Network.Context
                 .AsSelf();
         }
 
+        public async Task<T> CreateRouter<T>(NetworkRouterInfo info, params Parameter[] parameters) where T : NetworkRouterContext
+        {
+            foreach (var configVPNClient in info.VPNClient)
+            {
+                configVPNClient.AutoDetect ??= Config.AutoDetect;
+
+                configVPNClient.AutoDetect &= ~AutoDiscoveryType.MAC; // this can never work
+
+                CreateHost(new TypedParameter(typeof(NetworkHostInfo), configVPNClient));
+            }
+
+            // Bind by the declared base type (router contexts take a NetworkRouterInfo) as well as
+            // the runtime type — TypedParameter matches exactly, so a derived info like
+            // FRITZBoxRouterInfo would otherwise not satisfy a `NetworkRouterInfo config` parameter.
+            var ctx = CreateHost<T>([ .. parameters,
+                new TypedParameter(typeof(NetworkMonitorConfig), Config),
+                new TypedParameter(typeof(NetworkRouterInfo), info), // TODO ugly
+                new TypedParameter(info.GetType(), info),
+            ]);
+
+            await ctx.DiscoverAddresses();
+
+            return ctx;
+        }
+
+        public async Task<T> CreateDynamicRouter<T>(NetworkRouterInfo info) where T : NetworkRouterContext
+        {
+            var ctx = await CreateRouter<T>(info);
+
+            Scope.Resolve<NetworkJanitor>().MakeHostEligibleForSweeping(ctx);
+
+            return ctx;
+        }
+
         internal async Task DiscoverRouters()
         {
             Logger.LogDebug("Discovering routers...");
 
-            // register static routers
+            // register static routers from the configuration — always
             foreach (var configRouter in Config.Router)
             {
-                foreach (var configVPNClient in configRouter.VPNClient)
-                {
-                    configVPNClient.AutoDetect ??= Config.AutoDetect;
-
-                    configVPNClient.AutoDetect &= ~AutoDiscoveryType.MAC; // this can never work
-
-                    CreateHost(new TypedParameter(typeof(NetworkHostInfo), configVPNClient));
-                }
-
-                var router = CreateHost(new TypedParameter(typeof(NetworkRouterInfo), configRouter));
-
-                await router.DiscoverAddresses();
+                await CreateRouter<NetworkRouterContext>(configRouter);
             }
 
-            // register dynamic routers
+            var discoveries = Scope.Resolve<IOrderedCollection<IRouterDiscovery>>();
+
+            // let discoverers create their statically-configured routers — always
+            foreach (var discovery in discoveries)
+            {
+                await discovery.ConfigureRouters(Network);
+            }
+
+            // active router lookup (default gateway, NDP advertisements, DNS-SD) — only on opt-in
             if (Config.AutoDetect.HasFlag(AutoDiscoveryType.Router))
             {
-                if (Scope.ResolveOptional<IRouterDiscovery>() is IRouterDiscovery discovery)
+                foreach (var discovery in discoveries)
                 {
                     await discovery.DiscoverRouters(Network);
                 }

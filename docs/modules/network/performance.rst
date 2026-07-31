@@ -67,6 +67,6 @@ Use it when Desomnia runs on a memory-constrained 64-bit device — whether as a
 
 - **64-bit Linux only.** The native build targets ``linux-x64`` and ``linux-arm64``; 32-bit systems and other platforms use the standard build.
 - **A recent system.** It requires *glibc 2.35 or newer* — Debian 12 "Bookworm", Ubuntu 22.04, Raspberry Pi OS (Bookworm) and later. On older systems, use the standard build.
-- **No dynamic plugins.** Plugins cannot be loaded at runtime; the :doc:`Firewall Knock Operator </plugins/fko>` is built in, but other plugins are unavailable in this build.
+- **No dynamic plugins.** Plugins cannot be loaded at runtime; the :doc:`Firewall Knock Operator </plugins/fko>` and the :doc:`FRITZ!Box </plugins/fritzbox>` plugin are built in, but other plugins are unavailable in this build.
 
 Everything else — packet capture, the Berkeley Packet Filter whitelist described above, the Sleep Proxy, and :doc:`local sleep management </guides/sleep>` via ``systemd-logind`` — behaves exactly as in the standard build.

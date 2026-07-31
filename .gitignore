@@ -342,3 +342,5 @@ healthchecksdb
 launchSettings.json
 
 .claude
+# Vendored WinFormsLegacyControls fork (own git repository, future standalone GitHub project)
+libs/WinFormsLegacyControls/

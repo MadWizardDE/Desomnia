@@ -10,6 +10,8 @@
     <SupportedOSPlatformVersion>8.0</SupportedOSPlatformVersion>
 	<RollForward>LatestMajor</RollForward>
 	<LangVersion>preview</LangVersion>
+	<!-- LibraryImport (source-generated P/Invoke marshalling) requires unsafe code -->
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -40,6 +42,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DesomniaCore\DesomniaCore.csproj" />
+    <ProjectReference Include="..\modules\DisplayMonitor\DisplayMonitor.csproj" />
     <ProjectReference Include="..\modules\NetworkMonitor\NetworkMonitor.csproj" />
     <ProjectReference Include="..\modules\NetworkSessionMonitor\NetworkSessionMonitor.csproj" />
     <ProjectReference Include="..\modules\PowerRequestMonitor\PowerRequestMonitor.csproj" />

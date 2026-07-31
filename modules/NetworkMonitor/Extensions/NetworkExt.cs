@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Neighborhood;
+﻿using MadWizard.Desomnia.Network.Manager;
+using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Watch;
 using PacketDotNet;
 using System.Net;
@@ -23,11 +24,9 @@ namespace MadWizard.Desomnia.Network
             return host.LastWoken != null && (DateTime.Now - host.LastWoken) < duration;
         }
 
-        public static bool IsDefaultGateway(this NetworkRouter router, NetworkInterface ni)
+        public static bool IsDefaultGateway(this NetworkRouter router, INetworkInterface ni)
         {
-            var gatewayIPs = ni.GetIPProperties().GatewayAddresses.Select(ga => ga.Address);
-
-            return router.IPAddresses.Any(gatewayIPs.Contains);
+            return router.IPAddresses.Any(ip => ni.Gateways.Any(gateway => gateway.Address.RemoveScopeId().Equals(ip)));
         }
 
         public static bool HasSeenVPNClients(this NetworkRouter router, TimeSpan? duration = null)

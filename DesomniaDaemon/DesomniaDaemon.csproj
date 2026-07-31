@@ -9,6 +9,8 @@
     <RootNamespace>MadWizard.Desomnia.Daemon</RootNamespace>
     <LangVersion>preview</LangVersion>
 	<RollForward>LatestMajor</RollForward>
+	<!-- LibraryImport (source-generated P/Invoke marshalling) requires unsafe code -->
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
     <!-- Memory footprint tuning (see AOT analysis). Measure RSS before/after. -->
     <!-- Drops the ICU data mapping; safe for a daemon that does no culture-aware formatting. -->
@@ -46,6 +48,8 @@
   <ItemGroup Condition="'$(PublishAot)' == 'true'">
     <ProjectReference Include="..\plugins\FirewallKnockOperator\FirewallKnockOperator.csproj" />
     <TrimmerRootAssembly Include="FirewallKnockOperator" />
+    <ProjectReference Include="..\plugins\FRITZBoxRouter\FRITZBoxRouter.csproj" />
+    <TrimmerRootAssembly Include="FRITZBoxRouter" />
   </ItemGroup>
 
   <!--

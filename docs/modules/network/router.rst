@@ -15,11 +15,18 @@ Setting ``allowWake="true"`` permits any packet originating from the router to t
 allowWakeByProxy
 ----------------
 
-:default: ``false``
+:default: *automatic*
 
 Setting ``allowWakeByProxy="true"`` permits packets **forwarded** by the router — those carrying a source IP different from the router's own — to trigger wake-ups. The router itself still cannot initiate a wake-up on its own.
 
 This is the appropriate setting for VPN deployments where the router acts as a VPN gateway: the VPN client's source IP is preserved in the forwarded packet, and Desomnia can match it against configured hosts and filters.
+
+When the attribute is not set — neither on the router nor network-wide (see below) — Desomnia decides automatically: it defaults to ``false``, unless the network declares a ``<ForeignHostFilterRule>`` or ``<EveryHostFilterRule>``. Either of those rules is a deliberate opt-in to processing requests from outside the network, so proxy wake-up is then enabled without further configuration. This is what makes zero-config remote access work: an auto-detected router forwards external requests as soon as such a filter rule exists.
+
+Network-wide defaults
+---------------------
+
+Each of the router attributes can also be set on the ``<NetworkMonitor>`` element itself, prefixed with ``router…`` — e.g. ``routerAllowWake``, ``routerAllowWakeByProxy``, ``routerAllowWakeOnLAN``, ``routerVPNTimeout``. These provide the default for every router of that network (including auto-detected ones); a ``<Router>`` element overrides them only where it sets the corresponding attribute explicitly.
 
 VPN client presence detection
 ------------------------------
@@ -61,6 +68,7 @@ The following pages document specific router models and their compatibility with
      - | Built-in IPsec and WireGuard VPN; proxy ARP for VPN clients
        | ARP answered for VPN clients regardless of connection state — use ``<VPNClient>`` with ping
        | No static ARP entries — remote unicast WoL not supported; use promiscuous proxy instead
+       | Dedicated :doc:`plugin </plugins/fritzbox>` — zero-conf discovery, MACs of sleeping hosts, automatic VPN clients
 
 .. admonition:: Help expand this list
 

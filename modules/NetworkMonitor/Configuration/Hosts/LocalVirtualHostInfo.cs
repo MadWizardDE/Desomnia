@@ -6,7 +6,7 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
     {
         public LocalVirtualHostInfo()
         {
-            OnMagicPacket = new NamedAction("wake");
+            OnMagicPacket = new ActionInfo("wake");
         }
     }
 }

@@ -31,6 +31,12 @@ namespace Microsoft.Extensions.Configuration.Xml
         internal readonly HashSet<string> CollectionElements = new(StringComparer.OrdinalIgnoreCase);
         internal readonly Dictionary<string, CollectionNameBuilder> CollectionNameBuilders = new(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>
+        /// When set (by the EnvironmentMonitor), the provider loads this stream instead
+        /// of the file contents. Path stays pointed at the file for error reporting.
+        /// </summary>
+        internal Func<Stream>? EffectiveConfiguration { get; set; }
+
         public delegate string CollectionNameBuilder(XElement element, uint nr);
 
         public ExtendedXmlConfigurationSource(string path, bool optional = false, bool reloadOnChange = false)
@@ -163,6 +169,14 @@ namespace Microsoft.Extensions.Configuration.Xml
     class CustomXmlConfigurationProvider(ExtendedXmlConfigurationSource source) : XmlConfigurationProvider(source)
     {
         internal const string NAME_ATTRIBUTE_NAME = "name";
+
+        public override void Load()
+        {
+            if (source.EffectiveConfiguration is { } effective)
+                Load(effective());
+            else
+                base.Load(); // stock file loading
+        }
 
         public override void Load(Stream stream)
         {

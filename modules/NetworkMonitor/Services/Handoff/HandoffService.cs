@@ -28,23 +28,30 @@ namespace MadWizard.Desomnia.Network.Handoff
 
         private async Task HandoffLocalWatches()
         {
-            var watches = monitor.OfType<LocalHostWatch>().Where(watch => watch.HandoffPending);
+            var watches = monitor.OfType<LocalHostWatch>().Where(watch => watch.HandoffPending).ToList();
 
-            if (watches.Where(watch => watch is not LocalVirtualHostWatch) is var watchesPhysical && watchesPhysical.Any())
+            try
             {
-                Logger.LogDebug("Attempt to handoff local watch...");
-
-                foreach (var watch in watchesPhysical)
+                if (watches.Where(watch => watch is not LocalVirtualHostWatch) is var watchesPhysical && watchesPhysical.Any())
                 {
-                    await HandoffLocalWatch(watch);
+                    Logger.LogDebug("Attempt to handoff local watch...");
+
+                    foreach (var watch in watchesPhysical)
+                    {
+                        await HandoffLocalWatch(watch);
+                    }
+                }
+
+                if (watches.OfType<LocalVirtualHostWatch>() is var watchesVirtual && watchesVirtual.Any())
+                {
+                    Logger.LogDebug("Attempt to handoff {Count} local virtual watch(es)...", watchesVirtual.Count());
+
+                    await Task.WhenAll(watchesVirtual.Select(HandoffLocalWatch));
                 }
             }
-
-            if (watches.OfType<LocalVirtualHostWatch>() is var watchesVirtual && watchesVirtual.Any())
+            catch
             {
-                Logger.LogDebug("Attempt to handoff {Count} local virtual watch(es)...", watchesVirtual.Count());
-
-                await Task.WhenAll(watchesVirtual.Select(HandoffLocalWatch));
+                await Task.WhenAll(watches.Select(ReclaimLocalWatch)); throw; // reclaim all watches, before aborting
             }
         }
 

@@ -15,20 +15,10 @@ namespace MadWizard.Desomnia.Ressource
             }
         }
 
-        protected override IEnumerable<UsageToken> InspectResource(TimeSpan interval)
-        {
-            var resources = Scope.Resolve<IEnumerable<T>>();
-
-            foreach (var monitor in this.ToList())
-                if (!resources.Contains(monitor))
-                    this.StopTracking(monitor);
-
-            foreach (var monitor in resources)
-                if (!this.Contains(monitor))
-                    this.StartTracking(monitor);
-
-            return base.InspectResource(interval);
-        }
+        // the sync-on-inspect re-resolution that used to live here was the brittle
+        // seam (spec §7.2): dynamically born resources dangled until the first
+        // inspection — and forever with timeout="". Nested-scope actors are handed
+        // over explicitly by their scope owner now (NetworkInspectionBridge).
 
         public override void Dispose()
         {

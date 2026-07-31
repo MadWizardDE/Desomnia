@@ -1,6 +1,7 @@
-﻿using MadWizard.Desomnia.Process;
+using MadWizard.Desomnia.Processes;
 using MadWizard.Desomnia.Session.Configuration;
 using MadWizard.Desomnia.Session.Manager;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Session
 {
@@ -19,73 +20,75 @@ namespace MadWizard.Desomnia.Session
             }
         }
 
+        [EventOpposite(nameof(SessionDemand))]
         public event EventInvocation? SessionIdle;
         public event EventInvocation? SessionDemand;
+
         public event EventInvocation? SessionConsoleConnected;
         public event EventInvocation? SessionRemoteConnected;
+
+        [EventOpposite(nameof(SessionConsoleConnected), nameof(SessionRemoteConnected))]
         public event EventInvocation? SessionDisconnected;
 
         public SessionProcessWatch(SessionProcessWatchInfo info) : base(info)
         {
-            AddEventAction(nameof(SessionIdle), info.OnSessionIdle);
-            AddEventAction(nameof(SessionDemand), info.OnSessionDemand);
-            AddEventAction(nameof(SessionConsoleConnected), info.OnSessionConsoleConnect);
-            AddEventAction(nameof(SessionRemoteConnected), info.OnSessionRemoteConnect);
-            AddEventAction(nameof(SessionDisconnected), info.OnSessionDisconnect);
+            SessionIdle.AddAction(info.OnSessionIdle);
+            SessionDemand.AddAction(info.OnSessionDemand);
+            SessionConsoleConnected.AddAction(info.OnSessionConsoleConnect);
+            SessionRemoteConnected.AddAction(info.OnSessionRemoteConnect);
+            SessionDisconnected.AddAction(info.OnSessionDisconnect);
         }
 
         #region SessionWatch events
-        protected override void StartTrackingBy(ResourceMonitor monitor, bool adopt)
+        protected override void OnAttachedTo(EventMetaObject parent)
         {
-            base.StartTrackingBy(monitor, adopt);
+            if (parent is ResourceMonitor monitor)
+            {
+                monitor.Idle += SessionWatch_Idle;
+                monitor.Demand += SessionWatch_Demand;
+            }
+        }
 
-            monitor.Idle += SessionWatch_Idle;
-            monitor.Demand += SessionWatch_Demand;
+        protected override void OnDetachedFrom(EventMetaObject parent)
+        {
+            if (parent is ResourceMonitor monitor)
+            {
+                monitor.Demand -= SessionWatch_Demand;
+                monitor.Idle -= SessionWatch_Idle;
+            }
         }
 
         private async Task SessionWatch_Idle(Event data)
         {
-            CancelEventAction(nameof(SessionDemand));
-
-            TriggerEvent(nameof(SessionIdle));
+            await SessionIdle.TriggerEventAsync();                 // cancels SessionDemand's pending (annotation)
         }
 
         private async Task SessionWatch_Demand(Event data)
         {
-            CancelEventAction(nameof(SessionIdle));
-
-            TriggerEvent(nameof(SessionDemand));
-        }
-
-        protected override void StopTrackingBy(ResourceMonitor monitor)
-        {
-            monitor.Demand -= SessionWatch_Demand;
-            monitor.Idle -= SessionWatch_Idle;
-
-            base.StopTrackingBy(monitor);
+            await SessionDemand.TriggerEventAsync();
         }
         #endregion
 
         #region Session events
         private void Session_Connected(object? sender, EventArgs e)
         {
-            if (Session.IsConnected)
-            {
-                CancelEventAction(nameof(SessionDisconnected));
+            // cancellation of SessionDisconnected's pending happens per triggered event
+            // (annotation) — the old IsConnected pre-gate was aesthetic and is gone (§9.3)
+            if (Session.IsConsoleConnected)
+                SessionConsoleConnected.TriggerEvent();
+            if (Session.IsRemoteConnected)
+                SessionRemoteConnected.TriggerEvent();
 
-                if (Session.IsConsoleConnected)
-                    TriggerEvent(nameof(SessionConsoleConnected));
-                if (Session.IsRemoteConnected)
-                    TriggerEvent(nameof(SessionRemoteConnected));
-            }
+            // defensive: a transitional WTS state can report Connected before the
+            // protocol is classified — neither event fires then, but the pending
+            // disconnect action must still be aborted (matches the old behavior)
+            if (!Session.IsConsoleConnected && !Session.IsRemoteConnected)
+                SessionDisconnected.Cancel();
         }
 
         private void Session_Disconnected(object? sender, EventArgs e)
         {
-            CancelEventAction(nameof(SessionConsoleConnected));
-            CancelEventAction(nameof(SessionRemoteConnected));
-
-            TriggerEvent(nameof(SessionDisconnected));
+            SessionDisconnected.TriggerEvent();
         }
         #endregion
 

@@ -1,8 +1,8 @@
 ﻿using Autofac;
-using MadWizard.Desomnia.Process.Configuration;
+using MadWizard.Desomnia.Processes.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace MadWizard.Desomnia.Process
+namespace MadWizard.Desomnia.Processes
 {
     public class ProcessMonitor(ProcessMonitorConfig config) : ResourceMonitor<ProcessWatch>, IStartable
     {
@@ -12,8 +12,8 @@ namespace MadWizard.Desomnia.Process
 
         void IStartable.Start()
         {
-            AddEventAction(nameof(Idle), config.OnIdle);
-            AddEventAction(nameof(Demand), config.OnDemand);
+            GetEvent(nameof(Idle)).AddAction(config.OnIdle);
+            GetEvent(nameof(Demand)).AddAction(config.OnDemand);
 
             foreach (var info in config.Process)
             {

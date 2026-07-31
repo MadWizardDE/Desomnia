@@ -93,6 +93,11 @@ namespace MadWizard.Desomnia.Minion
                         .SingleInstance()
                         .AutoActivate()
                         ;
+                    builder.RegisterType<DisplayRequestService>()
+                        .SingleInstance()
+                        .AsSelf()
+                        .AutoActivate()
+                        ;
                     builder.RegisterType<NotificationAreaController>()
                         .AsImplementedInterfaces()
                         .SingleInstance()

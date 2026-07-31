@@ -1,15 +1,15 @@
 ﻿using Autofac;
 using Autofac.Core;
-using MadWizard.Desomnia.Process.Configuration;
-using MadWizard.Desomnia.Process.Manager;
+using MadWizard.Desomnia.Processes.Configuration;
+using MadWizard.Desomnia.Processes.Manager;
 
-namespace MadWizard.Desomnia.Process
+namespace MadWizard.Desomnia.Processes
 {
     public class Module : Desomnia.ConfigurableModule<ModuleConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, ModuleConfig config)
         {
-            var manager = Config.ProcessMonitor as ProcessManagerConfig;
+            var manager = config.ProcessMonitor as ProcessManagerConfig;
 
             // fallback, if no better ProcessManager is available
             builder.RegisterType<PollingProcessManager>().As<ProcessManager>().AsImplementedInterfaces().AsSelf()
@@ -17,10 +17,10 @@ namespace MadWizard.Desomnia.Process
                 .OnlyIf(reg => !reg.IsRegistered(new TypedService(typeof(IProcessManager))))
                 .SingleInstance();
 
-            if (Config.ProcessMonitor is ProcessMonitorConfig config)
+            if (config.ProcessMonitor is ProcessMonitorConfig monitor)
             {
                 builder.RegisterType<ProcessMonitor>()
-                    .WithParameter(new TypedParameter(typeof(ProcessMonitorConfig), config))
+                    .WithParameter(new TypedParameter(typeof(ProcessMonitorConfig), monitor))
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();

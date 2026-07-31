@@ -30,7 +30,7 @@ namespace MadWizard.Desomnia.Network.Context
                 else if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Lazy))
                 {
                     // SleepProxyDetector has to be called first, so that the HandoffService can find any proxy
-                    reg.As<INetworkService>().WithMetadata<INetworkService.Metadata>(meta => meta.For(m => m.Order, -1));
+                    reg.As<INetworkService>().WithOrder(-1);
 
                     if (config.SleepProxyDiscovery.HasFlag(SleepProxyDiscoveryType.Fast))
                     {
@@ -49,14 +49,17 @@ namespace MadWizard.Desomnia.Network.Context
         {
             Logger.LogDebug("Discovering services...");
 
-            if (Scope.ResolveOptional<IServiceDiscovery>() is IServiceDiscovery discovery)
+            foreach (var discovery in Scope.Resolve<IEnumerable<IServiceDiscovery>>())
             {
                 await discovery.DiscoverServices(Network);
             }
 
             foreach (var ctx in _hostContexts.Where(ctx => ctx.Auto.HasFlag(AutoDiscoveryType.Service)))
             {
-                if (ctx.Watch is not null && Scope.ResolveOptional<IWatchedServiceDiscovery>() is IWatchedServiceDiscovery discoveryHost)
+                if (ctx.Watch is null)
+                    continue;
+
+                foreach (var discoveryHost in Scope.Resolve<IEnumerable<IWatchedServiceDiscovery>>())
                 {
                     await discoveryHost.DiscoverServices(ctx.Watch);
                 }

@@ -1,5 +1,8 @@
 ﻿using Autofac;
+using Autofac.Core;
 using Autofac.Features.Metadata;
+using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Network.Bridges;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Context.Parameters;
@@ -36,43 +39,42 @@ namespace MadWizard.Desomnia.Network.Context
         public NetworkSegment   Network     { get => field ??= Scope.Resolve<NetworkSegment>(); }
         public NetworkMonitor   Monitor     { get => field ??= Scope.Resolve<NetworkMonitor>(); }
 
-        public NetworkInterface Interface
+        public INetworkInterface Interface => Device.Interface;
+
+        internal bool IsSuspended { get; private set; }
+
+        internal void Suspend()
         {
-            get => Device.Interface;
-
-            set
+            if (!IsSuspended)
             {
-                Device.Interface = value;
+                IsSuspended = true;
 
-                if (IsSuspended)
-                {
-                    IsSuspended = false;
-
-                    Monitor.ResumeMonitoring();
-                }
+                Monitor.SuspendMonitoring();
             }
         }
 
-        internal bool IsSuspended
+        /// <summary>Resumes a suspended context on its still-present interface.</summary>
+        internal void Resume()
         {
-            get => field;
-
-            set
+            if (IsSuspended)
             {
-                if (field != value)
-                {
-                    if (field = value)
-                    {
-                        Monitor.SuspendMonitoring();
-                    }
-                }
+                IsSuspended = false;
+
+                Monitor.ResumeMonitoring();
             }
         }
+
+        /// <summary>
+        /// Lifts the suspension WITHOUT restarting capture — for a context whose interface
+        /// did not survive the sleep: the following configuration pass shuts it down, and
+        /// resuming capture on the dead device first would only trip the restart-on-error loop.
+        /// </summary>
+        internal void EndSuspension() => IsSuspended = false;
 
         private readonly IList<NetworkHostContext> _hostContexts = [];
         private readonly IList<NetworkKnockContext> _knockContexts = [];
 
-        public NetworkContext(ILifetimeScope parent, NetworkMonitorConfig config, NetworkInterface @interface) : base(parent)
+        public NetworkContext(ILifetimeScope parent, NetworkMonitorConfig config, INetworkInterface @interface) : base(parent)
         {
             Config = config;
 
@@ -94,10 +96,10 @@ namespace MadWizard.Desomnia.Network.Context
                     .PropertiesAutowired(PropertyWiringOptions.AllowCircularDependencies)
                     .OnActivated(args =>
                     {
-                        args.Instance.AddEventAction(nameof(NetworkMonitor.Idle), config.OnIdle);
-                        args.Instance.AddEventAction(nameof(NetworkMonitor.Demand), config.OnDemand);
-                        args.Instance.AddEventAction(nameof(NetworkMonitor.Connected), config.OnConnect);
-                        args.Instance.AddEventAction(nameof(NetworkMonitor.Disconnected), config.OnDisconnect);
+                        ((IEventSystem)args.Instance)[nameof(NetworkMonitor.Idle)].AddAction(config.OnIdle);
+                        ((IEventSystem)args.Instance)[nameof(NetworkMonitor.Demand)].AddAction(config.OnDemand);
+                        ((IEventSystem)args.Instance)[nameof(NetworkMonitor.Connected)].AddAction(config.OnConnect);
+                        ((IEventSystem)args.Instance)[nameof(NetworkMonitor.Disconnected)].AddAction(config.OnDisconnect);
                     })
                     .SingleInstance()
                     .AsSelf();
@@ -115,6 +117,11 @@ namespace MadWizard.Desomnia.Network.Context
 
                 // Child Contexts
                 builder.RegisterType<NetworkHostContext>()
+                    .WithParameter(TypedParameter.From(config))
+                    .InstancePerDependency()
+                    .ExternallyOwned()
+                    .AsSelf();
+                builder.RegisterType<NetworkRouterContext>()
                     .WithParameter(TypedParameter.From(config))
                     .InstancePerDependency()
                     .ExternallyOwned()
@@ -138,7 +145,7 @@ namespace MadWizard.Desomnia.Network.Context
                 if (config.UseBPF)
                 {
                     builder.RegisterType<BerkeleyPacketFilter>()
-                        .WithMetadata<INetworkService.Metadata>(meta => meta.For(m => m.Order, 1))
+                        .WithOrder(1)
                         .AsImplementedInterfaces()
                         .InstancePerNetwork()
                         .AsSelf();

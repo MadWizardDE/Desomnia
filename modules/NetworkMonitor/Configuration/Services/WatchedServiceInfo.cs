@@ -86,8 +86,8 @@ namespace MadWizard.Desomnia.Network.Configuration.Services
         #endregion
 
         // Events
-        public NamedAction? OnDemand { get; set; }
-        public DelayedAction? OnIdle { get; set; }
+        public ActionInfo? OnDemand { get; set; }
+        public DelayedActionInfo? OnIdle { get; set; }
 
         // Filter-Rules
         public IList<HostFilterRuleInfo> HostFilterRule { get; set; } = [];

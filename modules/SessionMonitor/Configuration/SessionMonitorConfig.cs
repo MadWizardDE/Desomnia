@@ -8,8 +8,8 @@ namespace MadWizard.Desomnia.Session.Configuration
         where TConfig : SessionMonitorConfig<TConfig, TDesc>
         where TDesc : SessionDescriptor
     {
-        public DelayedAction? OnIdle { get; set; }
-        public DelayedAction? OnDemand { get; set; }
+        public DelayedActionInfo? OnIdle { get; set; }
+        public DelayedActionInfo? OnDemand { get; set; }
 
         public delegate void ConfigureWithDescriptior(TConfig config, TDesc desc);
 
@@ -58,16 +58,16 @@ namespace MadWizard.Desomnia.Session.Configuration
         };
         #endregion
 
-        public ScheduledAction? OnIdle { get; set; }
-        public ScheduledAction? OnLogin { get; set; }
-        public ScheduledAction? OnRemoteLogin { get; set; }
-        public ScheduledAction? OnConsoleLogin { get; set; }
-        public ScheduledAction? OnRemoteConnect { get; set; }
-        public ScheduledAction? OnConsoleConnect { get; set; }
-        public ScheduledAction? OnDisconnect { get; set; }
-        public ScheduledAction? OnUnlock { get; set; }
-        public ScheduledAction? OnLock { get; set; }
-        public ScheduledAction? OnLogout { get; set; }
+        public ScheduledActionInfo? OnIdle { get; set; }
+        public ScheduledActionInfo? OnLogin { get; set; }
+        public ScheduledActionInfo? OnRemoteLogin { get; set; }
+        public ScheduledActionInfo? OnConsoleLogin { get; set; }
+        public ScheduledActionInfo? OnRemoteConnect { get; set; }
+        public ScheduledActionInfo? OnConsoleConnect { get; set; }
+        public ScheduledActionInfo? OnDisconnect { get; set; }
+        public ScheduledActionInfo? OnUnlock { get; set; }
+        public ScheduledActionInfo? OnLock { get; set; }
+        public ScheduledActionInfo? OnLogout { get; set; }
 
         public IList<SessionProcessWatchInfo> Process { get; set; } = [];
     }

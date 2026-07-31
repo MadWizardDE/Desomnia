@@ -1,4 +1,5 @@
 ﻿using MadWizard.Desomnia.Power.Manager;
+using MadWizard.Desomnia.Power.Source;
 using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia.Power.Guard
@@ -6,6 +7,8 @@ namespace MadWizard.Desomnia.Power.Guard
     internal class GuardedPowerManager(IPowerManager manager, Lazy<IEnumerable<IPowerTransitionGuard>> guards) : IPowerManager
     {
         public required ILogger<GuardedPowerManager> Logger { private get; init; }
+
+        PowerSource IPowerManager.Source => manager.Source;
 
         event EventHandler IPowerManager.Suspended
         {
@@ -63,7 +66,7 @@ namespace MadWizard.Desomnia.Power.Guard
         }
         #endregion
 
-        Task<IPowerRequest> IPowerManager.CreateRequest(string reason) => manager.CreateRequest(reason);
+        Task<IPowerRequest> IPowerManager.CreateRequest(PowerRequestType type, string reason) => manager.CreateRequest(type, reason);
 
         IAsyncEnumerator<IPowerRequest> IAsyncEnumerable<IPowerRequest>.GetAsyncEnumerator(CancellationToken cancellationToken) => manager.GetAsyncEnumerator(cancellationToken);
     }

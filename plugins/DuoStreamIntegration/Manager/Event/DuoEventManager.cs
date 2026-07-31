@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using MadWizard.Desomnia.Process.Manager;
+using MadWizard.Desomnia.Processes.Manager;
 using MadWizard.Desomnia.Service.Duo.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.Eventing.Reader;

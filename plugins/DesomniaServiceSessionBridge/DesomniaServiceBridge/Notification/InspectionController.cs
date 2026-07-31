@@ -3,7 +3,7 @@ using Autofac.Core.Registration;
 using MadWizard.Desomnia.Network;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Pipe.Messages;
-using MadWizard.Desomnia.Process;
+using MadWizard.Desomnia.Processes;
 using MadWizard.Desomnia.Session;
 using MadWizard.Desomnia.Session.Manager;
 using Microsoft.Extensions.Logging;

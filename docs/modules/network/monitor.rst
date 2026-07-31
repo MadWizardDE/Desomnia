@@ -22,6 +22,7 @@ For environments with virtual machines, the :doc:`virtual machines <virtual>` pa
    
    auto
    interface
+   blocking
    ipv6
    knocking
    promiscuous

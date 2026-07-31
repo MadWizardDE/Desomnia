@@ -1,4 +1,4 @@
-﻿namespace MadWizard.Desomnia.Process.Manager
+﻿namespace MadWizard.Desomnia.Processes.Manager
 {
     public abstract class ListenerAwareProcessManager : ProcessManager
     {

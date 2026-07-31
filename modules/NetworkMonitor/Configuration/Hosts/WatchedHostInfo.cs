@@ -81,15 +81,15 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         #endregion
 
         // Events
-        public NamedAction?         OnServiceDemand         { get; set; }
-        public NamedAction?         OnDemand                { get; set; } = new NamedAction("wake");
-        public DelayedAction?       OnIdle                  { get; set; }
+        public ActionInfo?          OnServiceDemand         { get; set; }
+        public ActionInfo?          OnDemand                { get; set; } = new ActionInfo("wake");
+        public DelayedActionInfo?   OnIdle                  { get; set; }
 
-        public DelayedAction?       OnStart                 { get; set; }
-        public DelayedAction?       OnSuspend               { get; set; }
-        public DelayedAction?       OnStop                  { get; set; }
+        public DelayedActionInfo?   OnStart                 { get; set; }
+        public DelayedActionInfo?   OnSuspend               { get; set; }
+        public DelayedActionInfo?   OnStop                  { get; set; }
 
-        public NamedAction?         OnMagicPacket           { get; set; }
+        public ActionInfo?          OnMagicPacket           { get; set; }
 
         // Services
         public IList<WatchedServiceInfo> Service { get; set; } = [];

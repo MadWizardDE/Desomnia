@@ -1,4 +1,4 @@
-﻿using MadWizard.Desomnia.Configuration;
+﻿using MadWizard.Desomnia.Events;
 using System.Diagnostics;
 
 namespace MadWizard.Desomnia
@@ -10,33 +10,31 @@ namespace MadWizard.Desomnia
      * 
      * Actions can be triggered manually or scheduled to be triggered after a certain delay.
      */
-    public abstract class Resource : Actor, IInspectable
+    public abstract class Resource : EventMetaObject, IInspectable
     {
-        protected readonly ISet<ResourceMonitor> Monitors = new HashSet<ResourceMonitor>();
-
-        //public bool IsTrackedBy(object monitor) => Monitors.Contains(monitor);
-        //public bool IsTrackedBy<T>() => Monitors.OfType<T>().Any();
+        /// <summary>The monitors tracking this resource — a view over the engine's
+        /// parent edges (ServiceFilterWatch aggregates filter rules through it).</summary>
+        protected IEnumerable<ResourceMonitor> Monitors => Parents.OfType<ResourceMonitor>();
 
         public bool IsIdle { get; private set; } = true;
 
-        public event EventInvocation? Idle;
+        [EventOpposite(nameof(Demand))]                       // symmetric: either side's trigger
+        public event EventInvocation? Idle;                   // aborts the other's pending action
         public event EventInvocation? Demand;
 
         protected internal virtual void StartTrackingBy(ResourceMonitor monitor, bool adopt)
         {
             if (adopt)
             {
-                Monitors.Add(monitor);
+                AttachParent(monitor);
             }
         }
 
         private void TriggerIdle(Event @event)
         {
-            CancelEventAction(nameof(Demand));
-
             IsIdle = true;
 
-            TriggerEvent(@event);
+            Idle.TriggerEvent(@event); // opposite-cancel is pipeline-enforced — a VETOED event cancels nothing (§9.3)
         }
 
         protected void TriggerDemand(Event? eventObj = null)
@@ -46,8 +44,6 @@ namespace MadWizard.Desomnia
 
         protected virtual async Task TriggerDemandAsync(Event? @event = null)
         {
-            CancelEventAction(nameof(Idle));
-
             if (@event == null || @event.Type != nameof(Demand))
             {
                 @event = new Event(nameof(Demand));
@@ -55,7 +51,7 @@ namespace MadWizard.Desomnia
 
             IsIdle = false;
 
-            await TriggerEventAsync(@event);
+            await Demand.TriggerEventAsync(@event);
         }
 
         public virtual IEnumerable<UsageToken> Inspect(TimeSpan interval) // TODO: maybe async?
@@ -82,35 +78,10 @@ namespace MadWizard.Desomnia
 
         protected internal virtual void StopTrackingBy(ResourceMonitor monitor)
         {
-            Monitors.Remove(monitor);
+            DetachParent(monitor);
         }
 
-        #region Action/Error-Bubbling
-        protected override async Task<bool> HandleEventAction(Event eventObj, NamedAction action)
-        {
-            if (!await base.HandleEventAction(eventObj, action))
-            {
-                foreach (var monitor in Monitors)
-                    if (await monitor.HandleEventAction(eventObj, action))
-                        return true;
-
-                return false;
-            }
-
-            return true;
-        }
-
-        protected override bool HandleActionError(ActionError error)
-        {
-            if (!base.HandleActionError(error))
-            {
-                foreach (var monitor in Monitors)
-                    if (monitor.HandleActionError(error))
-                        return true;
-            }
-
-            return false;
-        }
-        #endregion
+        // the hand-wired action/error bubbling that used to live here is gone —
+        // the engine walks the parent edges and falls back to the root (§6.3)
     }
 }

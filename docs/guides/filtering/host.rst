@@ -73,12 +73,12 @@ Allowing external connections
 
 By default, Desomnia ignores traffic that has been routed through your gateway — requests originating from outside your local network. This is intentional: without additional controls, the internet would be free to trigger wake-ups via any open port on your router.
 
-If you want to allow specific external sources — such as a known static IP address at your workplace — to trigger wake-ups, set ``allowWakeByProxy="true"`` on your router declaration and add a ``<ForeignHostFilterRule>``:
+If you want to allow specific external sources — such as a known static IP address at your workplace — to trigger wake-ups, add a ``<ForeignHostFilterRule>``:
 
 .. code:: xml
 
    <NetworkMonitor watchMode="promiscuous">
-     <Router name="gateway" MAC="B0:F2:08:0A:D1:14" IPv4="192.168.1.1" allowWakeByProxy="true" />
+     <Router name="gateway" MAC="B0:F2:08:0A:D1:14" IPv4="192.168.1.1" />
 
      <ForeignHostFilterRule>
        <HostFilterRule IPv4="203.0.113.42" type="MustNot" />
@@ -86,6 +86,8 @@ If you want to allow specific external sources — such as a known static IP add
 
      <RemoteHost name="server" MAC="00:1A:2B:3C:4D:5E" IPv4="192.168.1.10" />
    </NetworkMonitor>
+
+Declaring a ``<ForeignHostFilterRule>`` (or ``<EveryHostFilterRule>``) is a deliberate opt-in to requests from outside the network, so it automatically enables proxy wake-up on the declared routers — no ``allowWakeByProxy="true"`` needed (set ``allowWakeByProxy="false"`` explicitly to override).
 
 Desomnia automatically infers your local subnet from the network interface and protects it from interference — local devices continue to function as configured.
 

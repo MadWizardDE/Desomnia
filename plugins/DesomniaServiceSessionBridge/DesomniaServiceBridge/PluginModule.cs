@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core;
 using Autofac.Core.Resolving.Pipeline;
+using MadWizard.Desomnia.Power.Manager;
 using MadWizard.Desomnia.Service.Bridge.Configuration;
 using MadWizard.Desomnia.Service.Bridge.Notification;
 using MadWizard.Desomnia.Session.Manager;
@@ -9,14 +10,16 @@ namespace MadWizard.Desomnia.Service.Bridge
 {
     public class PluginModule : Desomnia.ConfigurableModule<BridgeConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, BridgeConfig config)
         {
+            builder.RegisterDecorator<BridgedPowerManager, IPowerManager>();
+
             builder.RegisterType<NotificationAreaController>()
                 .AsImplementedInterfaces().AsSelf()
                 .SingleInstance();
 
             builder.RegisterType<SessionBridge>()
-                .WithParameter(TypedParameter.From(Config))
+                .WithParameter(TypedParameter.From(config))
                 .AsImplementedInterfaces().AsSelf()
                 .SingleInstance();
 

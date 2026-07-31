@@ -4,6 +4,7 @@ $plugins = @(
     @{ Name = "DuoStreamIntegration";   Framework = "net$env:VERSION_NET-windows8.0" }
     @{ Name = "HyperVSupport";          Framework = "net$env:VERSION_NET-windows8.0" }
     @{ Name = "FirewallKnockOperator";  Framework = "net$env:VERSION_NET" }
+    @{ Name = "FRITZBoxRouter";         Framework = "net$env:VERSION_NET" }
 )
 
 foreach ($plugin in $plugins)

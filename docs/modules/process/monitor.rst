@@ -7,7 +7,7 @@ The Process Monitor watches running OS processes and reports system activity as 
 
 Optionally, a CPU threshold (``minCPU``) can be configured so that processes that are running but idle — sitting in the background with negligible CPU usage — do not prevent sleep. When CPU use drops below the threshold, the ``onIdle`` event fires for that group; ``onStart`` and ``onStop`` fire when the first process in a group appears or the last one exits.
 
-The :doc:`available actions <actions>` cover forceful process termination with an optional graceful shutdown timeout. The :doc:`configuration reference <config>` documents all attributes. On Windows, Desomnia uses the ETW API for near real-time process event notifications instead of polling; the :doc:`performance <performance>` page explains the difference and how to configure the poll interval if needed.
+The :doc:`available actions <actions>` cover forceful process termination with an optional graceful shutdown timeout. The :doc:`configuration reference <config>` documents all attributes. How Desomnia learns about process changes differs per platform — ETW event notifications on Windows, a native kernel enumeration on macOS and Linux, and generic polling elsewhere; the :doc:`performance <performance>` page explains the difference and how to configure the poll interval if needed.
 
 .. toctree::
    actions

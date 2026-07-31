@@ -1,57 +1,40 @@
-﻿using Autofac;
 using MadWizard.Desomnia;
-using MadWizard.Desomnia.Logging;
-using MadWizard.Desomnia.Network.Logging;
 using Microsoft.Extensions.Hosting;
-using NLog;
 
-//await MadWizard.Desomnia.Test.Debugger.UntilAttached();
+if (!Environment.IsPrivilegedProcess)
+    throw new NotSupportedException("The application must be run with root privileges.");
 
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
+using var mutex = new SystemMutex("MadWizard.Desomnia", true);
 
-string configPath = new ConfigDetector().Lookup();
-
-try
+using (var builder = new DesomniaLaunchDaemonBuilder(args))
 {
-    if (!Environment.IsPrivilegedProcess)
-        throw new NotSupportedException("The application must be run with root privileges.");
+    builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
 
-    ConfigFileWatcher watcher;
+    builder.RegisterModule<MadWizard.Desomnia.LaunchDaemon.PlatformModule>();
 
-    do
-    {
-        using (new SystemMutex("MadWizard.Desomnia", true)) using (watcher = new(configPath) { EnableRaisingEvents = false })
-        {
-            var builder = new MadWizard.Desomnia.ApplicationBuilder();
+    builder.RegisterModule<MadWizard.Desomnia.Display.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Processes.Module>();
 
-            builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
-            builder.RegisterModule<MadWizard.Desomnia.LaunchDaemon.PlatformModule>();
-            builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
+#if DESOMNIA_AOT
+    // Plugins can't be loaded dynamically under AOT; statically include the ones we ship.
+    builder.RegisterModule<MadWizard.Desomnia.Network.FirewallKnockOperator.PluginModule>();
+    builder.RegisterModule<MadWizard.Desomnia.Network.FRITZ.PluginModule>();
+#else
+    // TEST
+    // builder.RegisterModule<MadWizard.Desomnia.Network.FRITZ.PluginModule>();
 
-            builder.RegisterPluginModules();
+    builder.RegisterPluginModules();
+#endif
 
-            builder.LoadConfiguration(configPath);
-
-            builder.Build().RunAsync(watcher.Token).Wait();
-        }
-    }
-    while (watcher.HasChanged);
-
-    return 0;
-}
-catch (Exception)
-{
-    throw;
+    builder.Build().Run();
 }
 
-class DesomniaLaunchDaemonBuilder : MadWizard.Desomnia.ApplicationBuilder
+return Environment.ExitCode;
+
+class DesomniaLaunchDaemonBuilder(string[] args) : MadWizard.Desomnia.ApplicationBuilder(args)
 {
-    /**
-     * On macOS the StandardOut is written directly to file,
-     * so we have to include the timestamp explicitly.
-     */
+    /// On macOS the StandardOut is written directly to file, so we have to include the timestamp explicitly.
     protected override string DefaultLogConsoleLayout => "${longdate} " + base.DefaultLogConsoleLayout;
 }

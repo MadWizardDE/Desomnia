@@ -6,12 +6,16 @@
     <Nullable>enable</Nullable>
 	  <LangVersion>preview</LangVersion>
 
-	  <RootNamespace>MadWizard.Desomnia.Process</RootNamespace>
+	  <RootNamespace>MadWizard.Desomnia.Processes</RootNamespace>
     <AssemblyName>DesomniaProcessMonitor</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ProcessMonitor.Tests" />
   </ItemGroup>
 
 </Project>

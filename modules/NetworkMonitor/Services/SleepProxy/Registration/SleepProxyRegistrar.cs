@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Network.SleepProxy.Registration
 {

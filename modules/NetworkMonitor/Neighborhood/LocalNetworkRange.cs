@@ -10,7 +10,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public override bool Contains(IPAddress ip)
         {
-            foreach (var unicast in Device.Interface.GetIPProperties().UnicastAddresses)
+            foreach (var unicast in Device.Interface.Addresses)
             {
                 if (unicast.Address.AddressFamily != ip.AddressFamily)
                     continue;
@@ -24,7 +24,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
         public override IEnumerator<IPAddressRange> GetEnumerator()
         {
-            return Device.Interface.GetIPProperties().UnicastAddresses
+            return Device.Interface.Addresses
                 .Select(u => new IPAddressRange(u.Address, u.PrefixLength))
                 .Distinct().GetEnumerator();
         }

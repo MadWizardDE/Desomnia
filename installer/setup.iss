@@ -100,9 +100,12 @@ Name: "DesomniaService"; Description: "Desomnia Service"; Types: full minimal du
 Name: "DesomniaService\NetworkMonitor"; Description: "Network Monitoring"; Types: full server duo custom; Flags: disablenouninstallwarning;
 Name: "plugins"; Description: "Additional Features"; Types: full custom; Flags: disablenouninstallwarning;
 Name: "plugins\DuoStreamIntegration"; Description: "DuoStream Integration"; Types: full duo server custom; Flags: disablenouninstallwarning; Check: IsDuoInstalled
-Name: "plugins\HyperVSupport"; Description: "Hyper-V Support"; Types: full server custom; Flags: disablenouninstallwarning; Check: HasVMProvider('HyperV')
 Name: "plugins\FirewallKnockOperator"; Description: "Firewall Knock Operator"; Types: full custom; Flags: disablenouninstallwarning;
 Name: "plugins\DesomniaServiceBridge"; Description: "Interactive Taskbar Icon"; Types: full custom; Flags: disablenouninstallwarning; Check: IsBridgeReady
+Name: "routers"; Description: "Router Support"; Types: full custom; Flags: disablenouninstallwarning;
+Name: "routers\FRITZBoxRouter"; Description: "FRITZ!Box"; Types: full custom; Flags: disablenouninstallwarning;
+Name: "vms"; Description: "Virtual Machine Support"; Types: full server custom; Flags: disablenouninstallwarning; Check: HasVMProvider('HyperV')
+Name: "vms\HyperVSupport"; Description: "Microsoft Hyper-V"; Types: full server custom; Flags: disablenouninstallwarning; Check: HasVMProvider('HyperV')
 
 
 [Languages]
@@ -125,10 +128,11 @@ Source: "build\components\service\x64\*"; DestDir: "{app}"; Components: Desomnia
 Source: "build\components\service\arm64\*"; DestDir: "{app}"; Components: DesomniaService; Flags: ignoreversion recursesubdirs createallsubdirs; Check: IsARM64
 
 Source: "build\components\plugins\DuoStreamIntegration\*"; DestDir: "{app}\plugins\DuoStreamIntegration"; Components: plugins\DuoStreamIntegration; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "build\components\plugins\HyperVSupport\*"; DestDir: "{app}\plugins\HyperVSupport"; Components: plugins\HyperVSupport; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "build\components\plugins\FirewallKnockOperator\*"; DestDir: "{app}\plugins\FirewallKnockOperator"; Components: plugins\FirewallKnockOperator; Flags: ignoreversion recursesubdirs createallsubdirs
-
 Source: "build\components\plugins\DesomniaServiceBridge\*"; DestDir: "{app}\plugins\DesomniaServiceBridge"; Components: plugins\DesomniaServiceBridge; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+
+Source: "build\components\plugins\FRITZBoxRouter\*"; DestDir: "{app}\plugins\FRITZBoxRouter"; Components: routers\FRITZBoxRouter; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "build\components\plugins\HyperVSupport\*"; DestDir: "{app}\plugins\HyperVSupport"; Components: vms\HyperVSupport; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [INI]
 Filename: {tmp}\prefs.ini; Section: "config:monitor.xml"; Key: "SHA256"; String: "?";

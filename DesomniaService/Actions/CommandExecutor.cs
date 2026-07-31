@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Process.Manager;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Processes.Manager;
 using MadWizard.Desomnia.Session.Manager;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
@@ -7,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace MadWizard.Desomnia.Service.Actions
 {
-    class CommandExecutor : Actor
+    class CommandExecutor : ActionProvider
     {
         private const string SYSTEM_PROFILE_PATH = @"C:\WINDOWS\system32\config\systemprofile";
 

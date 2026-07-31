@@ -69,7 +69,7 @@ namespace MadWizard.Desomnia.Network.Filter
 
         private NetworkRouter? SentByRouter(EthernetPacket packet)
         {
-            return Network.OfType<NetworkRouter>().Where(router => router.HasAddress(ip: packet.FindSourceIPAddress())).FirstOrDefault();
+            return Network.OfType<NetworkRouter>().FirstOrDefault(router => router.HasAddress(ip: packet.FindSourceIPAddress()));
         }
 
         public async Task<bool> HasAnyVPNClientConnected(NetworkRouter router)

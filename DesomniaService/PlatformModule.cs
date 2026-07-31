@@ -1,10 +1,14 @@
 ﻿using Autofac;
 using Autofac.Core;
+using MadWizard.Desomnia.Display.Manager;
+using MadWizard.Desomnia.Environments;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Network;
+using MadWizard.Desomnia.Network.Bridges;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.NetworkSession.Manager;
 using MadWizard.Desomnia.Power.Manager;
-using MadWizard.Desomnia.Process.Manager;
+using MadWizard.Desomnia.Processes.Manager;
 using MadWizard.Desomnia.Service.Actions;
 using MadWizard.Desomnia.Service.Configuration;
 using MadWizard.Desomnia.Session.Manager;
@@ -15,14 +19,42 @@ namespace MadWizard.Desomnia.Service
     {
         private static string HostsFilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", "etc", "hosts");
 
-        protected override void Load(ContainerBuilder builder)
+        protected override void LoadOnce(ContainerBuilder builder)
         {
             builder.RegisterType<PowerManager>()
                 .AsImplementedInterfaces()
                 .SingleInstance()
                 .AsSelf();
 
-            if (Config.ProcessMonitor?.PollInterval is not TimeSpan)
+            builder.RegisterType<PowerSourceCondition>()
+                .Named<IEnvironmentCondition>("power");
+
+            // takes over from the platform-neutral matcher the NetworkMonitor module registers
+            // with PreserveExistingDefaults (its LoadOnce runs after this one), so conditions
+            // and the application match interfaces by their display name and SSID as well
+            builder.RegisterType<WindowsInterfaceMatcher>().As<InterfaceMatcher>()
+                .InstancePerDependency();
+
+            // like the display manager: persistent, created only on first demand, recorded
+            // so a config-less rebuild can re-attach — and on this platform additionally the
+            // keeper of adapters it disabled, which Windows drops from the BCL enumeration
+            builder.RegisterType<WindowsNetworkInterfaceManager>()
+                .As<INetworkInterfaceManager>()
+                .SingleInstance()
+                .AsSelf();
+
+            // the display manager lives in the persistent container, so it survives a
+            // configuration rebuild (the same problem as macOS, ahead of Windows soft-disconnect);
+            // created only on first demand, and recorded so a config-less rebuild can re-attach
+            builder.RegisterType<WindowsDisplayManager>()
+                .As<IDisplayManager>()
+                .SingleInstance()
+                .AsSelf();
+        }
+
+        protected override void Load(ContainerBuilder builder, ServiceConfig config)
+        {
+            if (config.ProcessMonitor?.PollInterval is not TimeSpan)
             {
                 builder.RegisterType<TraceEventProcessManager>()
                     .AsImplementedInterfaces()
@@ -31,7 +63,7 @@ namespace MadWizard.Desomnia.Service
                     .AsSelf();
             }
 
-            // Options mappings
+            // Address mappings
             builder.RegisterType<HostsManager>()
                 .WithParameter(TypedParameter.From(HostsFilePath))
                 .AsImplementedInterfaces()
@@ -41,6 +73,7 @@ namespace MadWizard.Desomnia.Service
                 .InstancePerNetwork()
                 .AsSelf();
 
+            // Wake-on-LAN adapter
             builder.RegisterComposite<WindowsWakeOnLANManager, IWakeOnLANManager>();
             {
                 builder.RegisterType<CIMNetAdapterPowerManagement>()
@@ -74,13 +107,13 @@ namespace MadWizard.Desomnia.Service
             builder.RegisterType<CommandExecutor>()
                 .AsImplementedInterfaces()
                 .SingleInstance()
-                .As<Actor>();
+                .As<ActionProvider>();
 
             builder.RegisterType<TerminalServicesBroadcaster>()
                 .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(TerminalServicesManager))))
                 .AsImplementedInterfaces()
                 .SingleInstance()
-                .As<Actor>();
+                .As<ActionProvider>();
         }
     }
 }

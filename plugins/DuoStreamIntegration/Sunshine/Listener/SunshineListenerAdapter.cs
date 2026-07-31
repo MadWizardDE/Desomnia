@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Service.Duo.Manager;
 using Microsoft.Extensions.Logging;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Service.Duo.Sunshine.Listener
 {

@@ -28,7 +28,27 @@ namespace MadWizard.Desomnia.Network.Naming
 
         public IEnumerable<IPAddress> Addresses => _addresses.Keys;
 
-        public IReadOnlyList<string>? Text { get; internal set; } = null;
+        public IReadOnlyList<string>? Text 
+        {
+            get;
+
+            internal set
+            {
+                field = value;
+
+                Properties = new Dictionary<string, string>();
+
+                foreach (var text in value ?? [])
+                {
+                    if (text.Split('=') is [var key, var val])
+                    {
+                        Properties[key] = val;
+                    }
+                }
+            }
+        } = null;
+
+        public IDictionary<string, string> Properties { get; private set; } = new Dictionary<string, string>();
 
         public DateTime Expires { get; private set; }
 

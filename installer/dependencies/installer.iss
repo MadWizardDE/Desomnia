@@ -64,8 +64,6 @@ begin
 
     if IsComponentSelected('DesomniaService\NetworkMonitor') then
       Dependency_AddNpcap;
-    if IsComponentSelected('plugins\DesomniaServiceBridge') then
-      Dependency_AddDotNet48;
   end;
 
   Result := True;

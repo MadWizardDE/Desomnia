@@ -6,9 +6,9 @@ namespace MadWizard.Desomnia.Network.Traefik
 {
     public class PluginModule : Desomnia.ConfigurableModule<ModuleConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, ModuleConfig config)
         {
-            foreach (var network in Config.NetworkMonitor)
+            foreach (var network in config.NetworkMonitor)
             {
                 builder.RegisterType<NetworkPluginModule>().As<Desomnia.Network.PluginModule>()
                     .WithMetadata<Network.PluginModule.Metadata>(meta => meta.For(m => m.Name, network.Name))
