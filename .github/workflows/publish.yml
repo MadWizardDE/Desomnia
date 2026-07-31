@@ -607,8 +607,11 @@ jobs:
     name: Create Homebrew release
     runs-on: ubuntu-latest
 
-    # Building macOS bottles is expensive, so we only update the Homebrew formula for stable releases.
-    if: ${{ ! (contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta')) }}
+    # Building macOS bottles is expensive, so stable releases always update the Homebrew formula
+    # while prereleases only do so on demand: set the repository variable HOMEBREW_PRERELEASE to
+    # "true" to include them. An undefined variable evaluates to an empty string, so prereleases
+    # are skipped unless the variable exists AND is set to exactly "true".
+    if: ${{ ! (contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta')) || vars.HOMEBREW_PRERELEASE == 'true' }}
 
     steps:
       - name: Update Homebrew formula
