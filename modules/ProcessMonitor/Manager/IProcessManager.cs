@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace MadWizard.Desomnia.Process.Manager
+namespace MadWizard.Desomnia.Processes.Manager
 {
     public interface IProcessManager : IIEnumerable<IProcess>
     {

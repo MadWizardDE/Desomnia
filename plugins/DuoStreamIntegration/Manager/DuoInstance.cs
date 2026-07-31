@@ -4,6 +4,7 @@ using MadWizard.Desomnia.Service.Duo.Sunshine;
 using MadWizard.Desomnia.Session.Manager;
 using Microsoft.Win32;
 using Nito.AsyncEx;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Service.Duo.Manager
 {
@@ -16,13 +17,13 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
 
         public DuoInstance(DuoInstanceInfo info, RegistryKey key)
         {
-            AddEventAction(nameof(Demand), info.OnDemand);
-            AddEventAction(nameof(Idle), info.OnIdle);
+            GetEvent(nameof(Demand)).AddAction(info.OnDemand);
+            GetEvent(nameof(Idle)).AddAction(info.OnIdle);
 
-            AddEventAction(nameof(Login), info.OnLogin);
-            AddEventAction(nameof(Started), info.OnStart);
-            AddEventAction(nameof(Stopped), info.OnStop);
-            AddEventAction(nameof(Logout), info.OnLogout);
+            Login.AddAction(info.OnLogin);
+            Started.AddAction(info.OnStart);
+            Stopped.AddAction(info.OnStop);
+            Logout.AddAction(info.OnLogout);
 
             Key = key;
 
@@ -71,9 +72,9 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                     if (field != null)
                     {
                         if (value == true)
-                            TriggerEvent(nameof(Started));
+                            Started.TriggerEvent();
                         else if (value == false)
-                            TriggerEvent(nameof(Stopped));
+                            Stopped.TriggerEvent();
                     }
                 }
 
@@ -92,14 +93,14 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
                 {
                     field = value;
 
-                    TriggerEvent(nameof(Logout));
+                    Logout.TriggerEvent();
                 }
 
                 if (field == null && value != null)
                 {
                     field = value;
 
-                    TriggerEvent(nameof(Login));
+                    Login.TriggerEvent();
                 }
             }
         }
@@ -129,15 +130,15 @@ namespace MadWizard.Desomnia.Service.Duo.Manager
             }
         }
 
-        protected override Task TriggerEventAsync(Event @event)
+        protected override bool OnEventTriggering(Event @event)
         {
             if (@event.Type == nameof(Idle) && IsRunning != true)
-                return Task.CompletedTask; // only trigger "Idle" events if the instance is running
+                return false; // only trigger "Idle" events if the instance is running
 
             if (@event.Type == nameof(Demand) && (IsRunning == true || @event is InspectionEvent))
-                return Task.CompletedTask; // only trigger "Demand" events if the instance is NOT running
+                return false; // only trigger "Demand" events if the instance is NOT running
 
-            return base.TriggerEventAsync(@event);
+            return base.OnEventTriggering(@event);
         }
 
         public override void StopTracking(NetworkServiceWatch watch)

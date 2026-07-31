@@ -8,18 +8,18 @@ namespace MadWizard.Desomnia.Session
 {
     public class Module : Desomnia.ConfigurableModule<ModuleConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, ModuleConfig config)
         {
-            if (Config.SessionMonitor is SessionMonitorConfig config)
+            if (config.SessionMonitor is SessionMonitorConfig monitor)
             {
                 builder.RegisterType<SessionMonitor>()
                     .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(ISessionManager))))
-                    .WithParameter(new TypedParameter(typeof(SessionMonitorConfig), config))
+                    .WithParameter(new TypedParameter(typeof(SessionMonitorConfig), monitor))
                     .AsImplementedInterfaces()
                     .SingleInstance()
                     .AsSelf();
 
-                if (config.RegisterWithSleepProxy)
+                if (monitor.RegisterWithSleepProxy)
                 {
                     // Add SMB port to SleepProxyRegistration
                     builder.ComponentRegistryBuilder.Registered += (sender, args) =>

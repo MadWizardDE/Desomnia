@@ -84,16 +84,6 @@ namespace MadWizard.Desomnia.Session.Manager
 
         private WTSINFO WTSInfo => QuerySessionInformation<WTSINFO>(Id, WTS_INFO_CLASS.WTSSessionInfo);
 
-        public virtual void Dispose()
-        {
-            if (_token != 0)
-            {
-                CloseHandle(_token);
-
-                _token = 0;
-            }
-        }
-
         internal static T? QuerySessionInformation<T>(uint sid, WTS_INFO_CLASS info)
         {
             if (!WTSQuerySessionInformation(0, sid, info, out nint buffer, out int bytes))
@@ -123,6 +113,16 @@ namespace MadWizard.Desomnia.Session.Manager
             else
             {
                 return default;
+            }
+        }
+
+        public virtual void Dispose()
+        {
+            if (_token != 0)
+            {
+                CloseHandle(_token);
+
+                _token = 0;
             }
         }
 

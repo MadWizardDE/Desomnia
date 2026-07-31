@@ -1,3 +1,4 @@
+using MadWizard.Desomnia.Power.Source;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
@@ -19,6 +20,8 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
+
+        public PowerSource Source => SysfsPowerSource.Read();
 
         private string[] AvailablePowerStates => File.ReadAllText(SysPowerState).Split(' ');
 
@@ -93,7 +96,7 @@ namespace MadWizard.Desomnia.Power.Manager
                 throw new Exception($"'${ShutdownCommand}' exited with code {process.ExitCode}.");
         }
 
-        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(PowerRequestType type, string reason)
         {
             throw new NotSupportedException($"Sleep inhibition is not supported by this system.");
         }

@@ -1,100 +1,57 @@
-﻿using Autofac;
+using Autofac;
 using MadWizard.Desomnia;
-using MadWizard.Desomnia.Logging;
-using MadWizard.Desomnia.Network.Logging;
-using MadWizard.Desomnia.Service;
 using MadWizard.Desomnia.Service.Windows;
 using Microsoft.Extensions.Hosting;
-using NLog;
 using System.Diagnostics;
 using System.Reflection;
 
-//await MadWizard.Desomnia.Test.Debugger.UntilAttached();;
+if (!Environment.IsPrivilegedProcess)
+    throw new NotSupportedException("The application must be run with elevated privileges.");
 
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkRealmLayoutRenderer>()); // FIXME
+using var mutex = new SystemMutex("MadWizard.Desomnia", true);
 
-if (Process.GetCurrentProcess().IsWindowsService() is bool isRunningAsService && isRunningAsService)
+DesomniaWindowsBuilder builder;
+
+if (Environment.IsWindowsService)
 {
-    Directory.SetCurrentDirectory(DesomniaServiceBuilder.ProgramDataDir);
+    builder = new DesomniaWindowsServiceBuilder()
+    {
+        AutoReload = true // reload configuration on change
+    };
+
+    builder.RegisterModule<WindowsServiceModule>();
 }
-
-string configPath = new ConfigDetector().Lookup();
-
-const string EVENT_LOG_NAME = "Application";
-const string EVENT_LOG_SOURCE = "Desomnia";
+else
+{
+    builder = new DesomniaWindowsBuilder(args);
+}
 
 try
 {
-    if (!Environment.IsPrivilegedProcess)
-        throw new NotSupportedException("The application must be run with elevated privileges.");
+    builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
 
-    if (!EventLog.SourceExists(EVENT_LOG_SOURCE))
-    {
-        EventLog.CreateEventSource(EVENT_LOG_SOURCE, EVENT_LOG_NAME);
-    }
+    builder.RegisterModule<MadWizard.Desomnia.Service.PlatformModule>();
 
-    ConfigFileWatcher watcher;
+    builder.RegisterModule<MadWizard.Desomnia.Display.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.NetworkSession.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Processes.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Session.Module>();
 
-    do
-    {
-        using (new SystemMutex("MadWizard.Desomnia", true)) using (watcher = new(configPath) { EnableRaisingEvents = isRunningAsService })
-        {
-            var builder = new DesomniaServiceBuilder(isRunningAsService);
+    builder.RegisterPluginModules();
 
-            if (isRunningAsService)
-            {
-                builder.RegisterModule<WindowsServiceModule>();
-            }
+    builder.Build().Run();
 
-            builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
-
-            builder.RegisterModule<MadWizard.Desomnia.Service.PlatformModule>();
-
-            builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.NetworkSession.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.Session.Module>();
-
-            builder.RegisterPluginModules();
-
-            builder.LoadConfiguration(configPath);
-
-            IHost host = builder.Build();
-
-            var service = host.Services.GetService(typeof(WindowsService)) as WindowsService;
-
-            host.RunAsync(watcher.Token).Wait();
-
-            /*
-             * Once the SCM has been notifed about the service stop, there is no turning back.
-             * Therefore we must schedule the service to restart itself after having stopped gracefully.
-             */
-            if (watcher.HasChanged && service is not null)
-            {
-                EventLog.WriteEntry(EVENT_LOG_SOURCE, $"Configuration file changed. Restarting...",
-                    EventLogEntryType.Information, eventID: 1234);
-
-                service.ScheduleSelfRestart();
-
-                return -1;
-            }
-        }
-    }
-    while (watcher.HasChanged);
-
-    return 0;
+    return Environment.ExitCode;
 }
 catch (Exception ex)
 {
-    if (isRunningAsService)
+    if (builder is DesomniaWindowsServiceBuilder srv)
     {
         try
         {
-            EventLog.WriteEntry(EVENT_LOG_SOURCE, $"{ex}", EventLogEntryType.Error);
+            srv.WriteErrorToEventLog(ex);
 
             return 1;
         }
@@ -106,12 +63,45 @@ catch (Exception ex)
 
     throw;
 }
-
-class DesomniaServiceBuilder(bool service) : MadWizard.Desomnia.ApplicationBuilder
+finally
 {
-    internal static string ProgramDir => new FileInfo(Assembly.GetExecutingAssembly().Location).Directory!.FullName;
-    internal static string ProgramDataDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Desomnia");
+    builder.Dispose();
+}
 
-    protected override string   DefaultLogPath      => service ? Path.Combine(ProgramDataDir, "logs") : base.DefaultLogPath;
-    protected override string[] DefaultPluginsPaths => service ? [Path.Combine(ProgramDataDir, "plugins"), Path.Combine(ProgramDir, "plugins"), ] : base.DefaultPluginsPaths;
+class DesomniaWindowsBuilder(params string[] args) : MadWizard.Desomnia.ApplicationBuilder(args)
+{
+
+}
+
+class DesomniaWindowsServiceBuilder : DesomniaWindowsBuilder
+{
+    const string EVENT_LOG_NAME = "Application";
+    const string EVENT_LOG_SOURCE = "Desomnia";
+
+    static string ProgramDir => new FileInfo(Assembly.GetExecutingAssembly().Location).Directory!.FullName;
+    static string ProgramDataDir => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Desomnia");
+
+    protected override string[] DefaultConfigPaths  => [Path.Combine(ProgramDataDir, "config")];
+    protected override string[] DefaultPluginsPaths => [Path.Combine(ProgramDataDir, "plugins"), Path.Combine(ProgramDir, "plugins")];
+    protected override string   DefaultLogPath      =>  Path.Combine(ProgramDataDir, "logs");
+
+    internal DesomniaWindowsServiceBuilder() : base()
+    {
+        Directory.SetCurrentDirectory(ProgramDataDir);
+
+        CreateEventLog();
+    }
+
+    private static void CreateEventLog()
+    {
+        if (!EventLog.SourceExists(EVENT_LOG_SOURCE))
+        {
+            EventLog.CreateEventSource(EVENT_LOG_SOURCE, EVENT_LOG_NAME);
+        }
+    }
+
+    internal void WriteErrorToEventLog(Exception ex)
+    {
+        EventLog.WriteEntry(EVENT_LOG_SOURCE, $"{ex}", EventLogEntryType.Error);
+    }
 }

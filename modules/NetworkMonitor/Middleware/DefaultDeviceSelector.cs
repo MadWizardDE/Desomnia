@@ -1,7 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core.Resolving.Pipeline;
+using MadWizard.Desomnia.Network.Manager;
 using SharpPcap;
-using System.Net.NetworkInformation;
 
 namespace MadWizard.Desomnia.Network.Middleware
 {
@@ -11,8 +11,8 @@ namespace MadWizard.Desomnia.Network.Middleware
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
-            var @interface = context.FirstParameterOfType<NetworkInterface>()!;
-            
+            var @interface = context.FirstParameterOfType<INetworkInterface>()!;
+
             if (context.FirstParameterOfType<ILiveDevice>() is null)
             {
                 var device = FindDeviceByID(@interface) ?? throw new FileNotFoundException($"Network interface with name \"{@interface.Name}\" not found.");
@@ -23,11 +23,11 @@ namespace MadWizard.Desomnia.Network.Middleware
             next(context);
         }
 
-        private static ILiveDevice? FindDeviceByID(NetworkInterface @interface)
+        private static ILiveDevice? FindDeviceByID(INetworkInterface @interface)
         {
             CaptureDeviceList.Instance.Refresh();
 
-            return CaptureDeviceList.Instance.Where(device => device.Name.Contains(@interface.Id)).FirstOrDefault();
+            return CaptureDeviceList.Instance.Where(device => device.Name.Contains(@interface.Identity.Id)).FirstOrDefault();
         }
     }
 }

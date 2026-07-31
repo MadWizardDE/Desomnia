@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace MadWizard.Desomnia.Process.Manager
+namespace MadWizard.Desomnia.Processes.Manager
 {
     /**
      * Fallback, if OS doesn't support event-based process start/stop notifications.
@@ -62,6 +62,14 @@ namespace MadWizard.Desomnia.Process.Manager
                 catch (TaskCanceledException)
                 {
                     break; // stop polling
+                }
+                catch (Exception ex)
+                {
+                    // One bad poll must not end the loop. An enumeration that fails – transiently,
+                    // or because the platform is not allowed to ask – would otherwise leave the
+                    // task faulted and every process watch frozen on its last known roster, with
+                    // nothing but this log line to say so.
+                    Logger.LogWarning(ex, "Failed to refresh the process list");
                 }
             }
         }

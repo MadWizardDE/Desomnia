@@ -1,14 +1,14 @@
 ﻿using Autofac;
 using MadWizard.Desomnia.Configuration;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Power.Manager;
 using MadWizard.Desomnia.Ressource;
 using Microsoft.Extensions.Logging;
-
 using Timer = System.Timers.Timer;
 
 namespace MadWizard.Desomnia
 {
-    public class SystemMonitor(SystemMonitorConfig config, IPowerManager power, ActionManager actionManager) : DynamicResourceMonitor<IInspectable>, IStartable, IDisposable
+    public class SystemMonitor(SystemMonitorConfig config, IPowerManager power) : DynamicResourceMonitor<IInspectable>, IStartable, IDisposable
     {
         public required ILogger<SystemMonitor> Logger { protected get; init; }
 
@@ -18,8 +18,9 @@ namespace MadWizard.Desomnia
         public event EventInvocation? Resume;
 
         private IPowerRequest? Request { get; set; }
+        private IPowerRequest? DisplayRequest { get; set; }
 
-        public bool MaySleep => config.OnSuspend?.Name == "sleep";
+        public bool MaySleep => config.OnSuspend?.Command?.Function == "sleep";
 
         public bool Sleepless
         {
@@ -36,7 +37,7 @@ namespace MadWizard.Desomnia
 
                 SleeplessChanged?.Invoke(this, EventArgs.Empty);
             }
-        } = config.OnDemand?.Name == "sleepless";
+        } = config.OnDemand?.Command?.Function == "sleepless";
 
         public DateTime? SleeplessUntil
         {
@@ -65,14 +66,15 @@ namespace MadWizard.Desomnia
 
         public override void Start()
         {
-            if (config.OnSuspendTimeout is DelayedAction delayed && !delayed.HasDelay)
+            if (config.OnSuspendTimeout is DelayedActionInfo delayed && !delayed.HasDelay)
                 throw new ArgumentException("onSuspendTimeout must have a delay set", nameof(config.OnSuspendTimeout));
 
-            AddEventAction(nameof(Idle), config.OnIdle);
-            AddEventAction(nameof(Demand), config.OnDemand);
-            AddEventAction(nameof(Suspend), config.OnSuspend);
-            AddEventAction(nameof(SuspendTimeout), config.OnSuspendTimeout);
-            AddEventAction(nameof(Resume), config.OnResume);
+            GetEvent(nameof(Idle)).AddAction(config.OnIdle);      // inherited from Resource —
+            GetEvent(nameof(Demand)).AddAction(config.OnDemand);  // string-keyed by necessity
+
+            Suspend.AddAction(config.OnSuspend);
+            SuspendTimeout.AddAction(config.OnSuspendTimeout);
+            Resume.AddAction(config.OnResume);
 
             power.Suspended += PowerManager_Suspended;
             power.ResumeSuspended += PowerManager_ResumeSuspended;
@@ -82,13 +84,13 @@ namespace MadWizard.Desomnia
 
         private void PowerManager_Suspended(object? sender, EventArgs e)
         {
-            CancelEventAction(nameof(Idle));
-            CancelEventAction(nameof(SuspendTimeout));
+            GetEvent(nameof(Idle)).CancelActions();            // imperative by design: an OS callback,
+            GetEvent(nameof(SuspendTimeout)).CancelActions();  // not a trigger-time relation (§6.5)
         }
 
         private void PowerManager_ResumeSuspended(object? sender, EventArgs e)
         {
-            TriggerEvent(nameof(Resume));
+            Resume.TriggerEvent();
         }
 
         public override IEnumerable<UsageToken> Inspect(TimeSpan interval)
@@ -115,17 +117,17 @@ namespace MadWizard.Desomnia
         [ActionHandler("sleep")]
         internal async Task HandleActionSleep()
         {
-            TriggerEvent(nameof(Suspend));
+            Suspend.TriggerEvent();
 
             try
             {
-                TriggerEvent(nameof(SuspendTimeout));
+                SuspendTimeout.TriggerEvent();
 
                 await power.Suspend();
             }
             catch (OperationCanceledException)
             {
-                CancelEventAction(nameof(SuspendTimeout));
+                SuspendTimeout.Cancel();
             }
         }
 
@@ -139,32 +141,34 @@ namespace MadWizard.Desomnia
 
             if (SleeplessOnDemand != false || eventRef.Tokens.OfType<SleeplessToken>().Any())
             {
-                Request = await power.CreateRequest($"{reason}");
+                Request = await power.CreateRequest(PowerRequestType.System, $"{reason}");
+
+                if (config.KeepDisplayAwake)
+                {
+                    try
+                    {
+                        DisplayRequest = await power.CreateRequest(PowerRequestType.Display, $"{reason}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // deliberately warns on every cycle — users should notice and take action
+                        Logger.LogWarning(ex, "Failed to keep display awake");
+                    }
+                }
             }
         }
 
-        protected override async Task<bool> HandleEventAction(Event eventObj, NamedAction action)
-        {
-            if (!await base.HandleEventAction(eventObj, action))
-            {
-                if (await actionManager.TryHandleEventAction(eventObj, action))
-                    return true;
-
-                return false;
-            }
-
-            return true;
-        }
-
-        protected override bool HandleActionError(ActionError error)
-        {
-            return actionManager.HandleActionError(error);
-        }
+        // unhandled actions and errors reach the ActionManager through the engine's
+        // root fallback now (§6.3) — the forwarding overrides that used to live here
+        // were the only path to the root, and a brittle one (spec §7.2)
 
         private void ClearPowerRequest()
         {
             Request?.Dispose();
             Request = null;
+
+            DisplayRequest?.Dispose();
+            DisplayRequest = null;
         }
 
         public override void Dispose()

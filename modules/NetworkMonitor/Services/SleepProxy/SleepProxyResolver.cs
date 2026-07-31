@@ -25,7 +25,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
 
         void IMulticastDNSResolver.Announce(DNSMessage announcement)
         {
-            Logger.LogInformation("Advertising Sleep Proxy via {Port} with metrics: '{Metrics}'", service.Port, service.Metrics);
+            Logger.LogInformation("Advertising as Sleep Proxy via {Port} with metrics: '{Metrics}'", service.Port, service.Metrics);
 
             announcement.AnswerWith(proxy, service, Instance);
         }
@@ -52,7 +52,7 @@ namespace MadWizard.Desomnia.Network.SleepProxy
         {
             goodbye.AnswerWith(proxy, service, Instance, AnswerOptions.Goodbye);
 
-            Logger.LogInformation("Stopped advertising Sleep Proxy");
+            Logger.LogInformation("Stopped advertising as Sleep Proxy");
         }
 
         /// <summary>

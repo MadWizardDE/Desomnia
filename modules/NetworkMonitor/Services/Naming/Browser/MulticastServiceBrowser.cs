@@ -19,7 +19,7 @@ namespace MadWizard.Desomnia.Network.Naming
     /// timeout. Discovery of <em>new</em> instances is driven by active <see cref="ServiceBrowseRequest"/>s;
     /// maintenance of existing ones is driven purely by reference liveness (weak references).
     /// </summary>
-    internal sealed class MulticastServiceBrowser : IMulticastDNSListener, IDisposable
+    public sealed class MulticastServiceBrowser : IMulticastDNSListener, IDisposable
     {
         private static readonly TimeSpan    MaintenanceInterval         = TimeSpan.FromSeconds(5);
         private static readonly int         MaintenanceErrorThreshold   = 5;

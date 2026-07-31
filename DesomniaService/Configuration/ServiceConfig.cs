@@ -1,4 +1,4 @@
-﻿using MadWizard.Desomnia.Process.Configuration;
+﻿using MadWizard.Desomnia.Processes.Configuration;
 
 namespace MadWizard.Desomnia.Service.Configuration
 {

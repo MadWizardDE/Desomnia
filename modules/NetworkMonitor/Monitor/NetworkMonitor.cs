@@ -1,5 +1,6 @@
-﻿using Autofac.Features.Metadata;
+﻿using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Neighborhood;
 using MadWizard.Desomnia.Network.Watch;
 using MadWizard.Desomnia.Power.Guard;
@@ -16,13 +17,18 @@ namespace MadWizard.Desomnia.Network
 
         public required WatchOptions Options { get; init; }
 
-        public required NetworkDevice   Device  { private get; init; }
-        public required NetworkSegment  Network { private get; init; }
+        public required NetworkDevice   Device  { internal get; init; }
+        public required NetworkSegment  Network { get; init; }
         public required NetworkJanitor  Janitor { private get; init; }
 
-        public IEnumerable<Meta<INetworkService, INetworkService.Metadata>> Services { private get; init; } = [];
+        /// <summary>
+        /// The monitored interface — declared as event context so that action handlers
+        /// (plugins, URL actions) can act on it for any event triggered on this monitor.
+        /// </summary>
+        [EventContext]
+        public INetworkInterface Interface => Device.Interface;
 
-        private IEnumerable<INetworkService> OrderedServices => Services.OrderBy(s => s.Metadata.Order).Select(s => s.Value);
+        public IOrderedCollection<INetworkService> Services { private get; init; } = [];
 
         public event EventInvocation? Connected;
         public event EventInvocation? Disconnected;
@@ -46,7 +52,7 @@ namespace MadWizard.Desomnia.Network
         {
             if (transition == PowerTransition.Suspend)
             {
-                foreach (var service in OrderedServices)
+                foreach (var service in Services)
                 {
                     await service.BeforeSuspend();
                 }
@@ -58,10 +64,8 @@ namespace MadWizard.Desomnia.Network
             Device.StartCapture();
             Device.EthernetCaptured += HandlePacket;
 
-            foreach (var service in OrderedServices)
+            foreach (var service in Services)
                 await service.Startup();
-
-            TriggerEvent(nameof(Connected));
 
             Janitor.StartSweeping();
 
@@ -71,7 +75,19 @@ namespace MadWizard.Desomnia.Network
         internal async Task StartWatch()
         {
             foreach (var watch in this)
+            {
                 await watch.StartWatch();
+            }
+        }
+
+        internal async Task TriggerAfterStartup()
+        {
+            foreach (var service in Services)
+            {
+                await service.AfterStartup();
+            }
+
+            Connected.TriggerEvent();
         }
 
         internal void ResumeMonitoring()
@@ -80,7 +96,7 @@ namespace MadWizard.Desomnia.Network
 
             Device.StartCapture();
 
-            foreach (var service in OrderedServices)
+            foreach (var service in Services)
                 service.Resume();
         }
 
@@ -88,7 +104,7 @@ namespace MadWizard.Desomnia.Network
         {
             using (Network.Mutex.Lock())
             {
-                foreach (var service in OrderedServices)
+                foreach (var service in Services)
                 {
                     service.ProcessPacket(packet);
                 }
@@ -97,7 +113,7 @@ namespace MadWizard.Desomnia.Network
 
         internal void SuspendMonitoring()
         {
-            foreach (var service in OrderedServices.Reverse())
+            foreach (var service in Services.Reverse())
                 service.Suspend();
 
             Device.StopCapture();
@@ -109,16 +125,41 @@ namespace MadWizard.Desomnia.Network
         {
             Janitor.StopSweeping();
 
+            // per-participant teardown is guarded: one failing watch (handoff/WoL on a
+            // dead interface) must not skip the remaining watches or the services'
+            // Shutdown seam — plugins orphan their event handles there, and a skipped
+            // orphaning wedges those events on the disposed monitor
             foreach (var watch in this)
-                await watch.StopWatch(reason == NetworkShutdownReason.ApplicationShutdown);
+            {
+                var gracefully = reason == NetworkShutdownReason.ApplicationShutdown
+                    || reason == NetworkShutdownReason.InterfaceShutdown;
 
-            foreach (var service in OrderedServices.Reverse())
-                await service.Shutdown(reason);
+                try
+                {
+                    await watch.StopWatch(gracefully);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Failed to stop {watch} cleanly");
+                }
+            }
+
+            foreach (var service in Services.Reverse())
+            {
+                try
+                {
+                    await service.Shutdown(reason);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Failed to shut down {service} cleanly");
+                }
+            }
 
             Device.EthernetCaptured -= HandlePacket;
             Device.StopCapture();
 
-            TriggerEvent(nameof(Disconnected));
+            Disconnected.TriggerEvent();
 
             Logger.LogDebug($"Monitoring of '{Name}' has been stopped.");
         }

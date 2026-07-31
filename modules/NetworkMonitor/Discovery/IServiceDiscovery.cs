@@ -6,15 +6,4 @@ namespace MadWizard.Desomnia.Network.Discovery
     {
         Task DiscoverServices(NetworkSegment network);
     }
-
-    internal class CompositeServiceDiscovery(IEnumerable<IServiceDiscovery> discoverers) : IServiceDiscovery
-    {
-        public async Task DiscoverServices(NetworkSegment network)
-        {
-            foreach (var discoverer in discoverers)
-            {
-                await discoverer.DiscoverServices(network);
-            }
-        }
-    }
 }

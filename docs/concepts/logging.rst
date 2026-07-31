@@ -36,7 +36,7 @@ This is an example configuration for debugging purposes. It splits events from d
         <rules>
             <logger name="Program" minlevel="Info" writeTo="console" />
 
-            <logger name="MadWizard.Desomnia.Process.*" writeTo="process" finalMinLevel="Debug" />
+            <logger name="MadWizard.Desomnia.Processes.*" writeTo="process" finalMinLevel="Debug" />
 
             <logger name="MadWizard.Desomnia.Network.*" minlevel="Info" writeTo="console" />
 
@@ -88,7 +88,7 @@ Here is a description of common logger namespaces:
 Program
     Startup and configuration errors.
 
-MadWizard.Desomnia.Process.*
+MadWizard.Desomnia.Processes.*
     Everything related to the :doc:`/modules/process/monitor`. 
     
     .. attention::

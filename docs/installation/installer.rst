@@ -18,6 +18,7 @@ The installer includes all available plugins from the main repository. The follo
 * :doc:`/plugins/duo/plugin` – requires **Duo** to be installed
 * :doc:`/plugins/hyperv` – requires the **Hyper-V Platform** feature to be enabled
 * :doc:`/plugins/fko`
+* :doc:`/plugins/fritzbox`
 
 Configuration wizard
 --------------------

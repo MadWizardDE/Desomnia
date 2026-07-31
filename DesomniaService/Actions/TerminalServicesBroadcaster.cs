@@ -1,8 +1,9 @@
-﻿using MadWizard.Desomnia.Session.Manager;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Session.Manager;
 
 namespace MadWizard.Desomnia.Service.Actions
 {
-    class TerminalServicesBroadcaster : Actor
+    class TerminalServicesBroadcaster : ActionProvider
     {
         public required TerminalServicesManager Manager { private get; init; }
 

@@ -1,27 +1,42 @@
 ﻿using Autofac;
+using Autofac.Core;
+using MadWizard.Desomnia.Environments;
 using MadWizard.Desomnia.Network.Address;
+using MadWizard.Desomnia.Network.Bridges;
 using MadWizard.Desomnia.Network.Configuration;
+using MadWizard.Desomnia.Network.Configuration.Interfaces;
 using MadWizard.Desomnia.Network.Context;
+using MadWizard.Desomnia.Network.Context.Bridges;
 using MadWizard.Desomnia.Network.Datagram;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Demand.Detector;
-using MadWizard.Desomnia.Network.Discovery;
+using MadWizard.Desomnia.Network.Environments;
 using MadWizard.Desomnia.Network.Filter;
 using MadWizard.Desomnia.Network.Handoff;
 using MadWizard.Desomnia.Network.Knocking;
 using MadWizard.Desomnia.Network.Knocking.Methods;
+using MadWizard.Desomnia.Network.Logging;
 using MadWizard.Desomnia.Network.Manager;
 using MadWizard.Desomnia.Network.Manager.Guard;
 using MadWizard.Desomnia.Network.Middleware;
 using MadWizard.Desomnia.Network.Reachability;
 using MadWizard.Desomnia.Power.Guard;
 using Microsoft.Extensions.Configuration.Xml;
+using NLog;
+using NLog.Config;
 using System.ComponentModel;
 
 namespace MadWizard.Desomnia.Network
 {
-    public class Module : Desomnia.ConfigurableModule<ModuleConfig>
+    public class Module : ConfigurableModule<ModuleConfig<NetworkMonitorConfig>>
     {
+        protected override void ConfigureLogging(ISetupExtensionsBuilder builder)
+        {
+            builder.RegisterLayoutRenderer<NetworkHostLayoutRenderer>();
+            builder.RegisterLayoutRenderer<NetworkLayoutRenderer>(); 
+            builder.RegisterLayoutRenderer<NetworkRealmLayoutRenderer>();
+        }
+
         protected override void ConfigureConfigurationSource(ExtendedXmlConfigurationSource source)
         {
             base.ConfigureConfigurationSource(source); // derives collection element names from the config type
@@ -30,138 +45,173 @@ namespace MadWizard.Desomnia.Network
                   .AddCollectionNameBuilder("NetworkMonitor", (element, nr) => NetworkMonitorConfig.NAMLESS_PREFIX + nr);
         }
 
-        protected override void Load(ContainerBuilder builder)
+        protected override void LoadOnce(ContainerBuilder builder)
         {
-            if (Config.NetworkMonitor.Count > 0)
-            {
-                builder.RegisterType<DynamicNetworkObserver>()
-                    .WithParameter(TypedParameter.From(Config))
-                    .AsImplementedInterfaces()
-                    .SingleInstance()
-                    .AsSelf();
+            // The platform-neutral interface matcher, registered as a fallback: the platform hosts
+            // load BEFORE this module (see the RegisterModule order in their Program), so a host
+            // that brings its own matcher has already claimed the default, and
+            // PreserveExistingDefaults leaves it that claim. Persistent, because the environment
+            // conditions below consume it before any application container exists; the application
+            // resolves it through the bridge, a fresh instance per request.
+            builder.RegisterType<InterfaceMatcher>()
+                .PreserveExistingDefaults()
+                .InstancePerDependency()
+                .AsSelf();
 
-                // Composites //
+            // the environment conditions of this module, keyed by their attribute; a platform
+            // host may take these over the same way (its LoadOnce ran first), and the injected
+            // matcher is the default one - i.e. the platform's, where one exists
+            builder.RegisterType<NetworkCondition>()
+                .Named<IEnvironmentCondition>("network")
+                .PreserveExistingDefaults();
+            builder.RegisterType<InterfaceCondition>()
+                .Named<IEnvironmentCondition>("interface")
+                .PreserveExistingDefaults();
+            builder.RegisterType<SSIDCondition>()
+                .Named<IEnvironmentCondition>("ssid")
+                .PreserveExistingDefaults();
 
-                builder.RegisterComposite<CompositeWatchedServiceDiscovery, IWatchedServiceDiscovery>();
-                builder.RegisterComposite<CompositeServiceDiscovery, IServiceDiscovery>();
-                builder.RegisterComposite<CompositeRouterDiscovery, IRouterDiscovery>();
-                builder.RegisterComposite<CompositeIPAddressDiscovery, IIPAddressDiscovery>();
-                builder.RegisterComposite<CompositePhysicalAddressDiscovery, IPhysicalAddressDiscovery>();
-                builder.RegisterComposite<CompositeVirtualMachineManager, IVirtualMachineManager>();
+            // no "ssid" here - there is no wireless information to be had without the
+            // platform underneath it, so only a platform host can register that condition
+        }
 
-                // Knock-Methods
-                builder.RegisterType<PlainTextKnockMethod>()
-                    .Named<IKnockMethod>("plain")
-                    .Named<IKnockDetector>("plain")
-                    .AsImplementedInterfaces()
-                    .SingleInstance();
+        protected override void Load(ContainerBuilder builder, ModuleConfig<NetworkMonitorConfig> config)
+        {
+            // Registered whether or not the configuration mentions networks: the observer
+            // is the sole desired-state arbiter for interface blocks, and a configuration
+            // that dropped every monitor still needs one round to release the intents a
+            // predecessor asserted (it never CREATES the manager for that — see its
+            // CreationTracker gate). Gated on the platform manager, which every platform
+            // host registers persistently.
+            builder.RegisterType<DynamicNetworkObserver>()
+                .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(INetworkInterfaceManager))))
+                .WithParameter(new TypedParameter(typeof(IEnumerable<NetworkMonitorConfig>), config.NetworkMonitor))
+                .WithParameter(new TypedParameter(typeof(IEnumerable<NetworkInterfaceBlockInfo>), config.NetworkInterfaceBlock))
+                .AsImplementedInterfaces()
+                .SingleInstance()
+                .AsSelf();
 
-                // Network Context //
+            // Composites //
 
-                builder.RegisterType<NetworkContext>()
-                    .InstancePerOwned<NetworkContext>()
-                    .AsSelf();
+            builder.RegisterComposite<CompositeVirtualMachineManager, IVirtualMachineManager>();
 
-                // Global Network Filters //
+            // Knock-Methods
+            builder.RegisterType<PlainTextKnockMethod>()
+                .Named<IKnockMethod>("plain")
+                .Named<IKnockDetector>("plain")
+                .AsImplementedInterfaces()
+                .SingleInstance();
 
-                builder.RegisterType<TrafficFilterRequest>()
-                    .InstancePerDependency()
-                    .AsSelf();
-                builder.RegisterType<LocalPacketFilter>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork();
+            // Network Context //
 
-                // Packet Filters //
+            builder.RegisterType<NetworkContext>()
+                .InstancePerOwned<NetworkContext>()
+                .AsSelf();
 
-                builder.RegisterType<RouterFilter>()
-                    .As<IPacketFilter>()
-                    .InstancePerNetwork();
-                builder.RegisterType<PacketRuleFilter>()
-                    .As<IPacketFilter>()
-                    .InstancePerMatchingLifetimeScope(
-                        MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag,
-                        MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag);
+            // Global Network Filters //
 
-                builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
+            builder.RegisterType<TrafficFilterRequest>()
+                .InstancePerDependency()
+                .AsSelf();
+            builder.RegisterType<LocalPacketFilter>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
 
-                // Network Services //
+            // Packet Filters //
 
-                // The application-wide keeper of OS-level UDP sockets: DatagramServices registered
-                // with SocketMetadata are linked to it at construction (see DefaultDatagramSocket),
-                // and their socket closes again with its last user.
-                builder.RegisterType<UDPSocketService>()
-                    .SingleInstance()
-                    .AsSelf();
+            builder.RegisterType<RouterFilter>()
+                .As<IPacketFilter>()
+                .InstancePerNetwork();
+            builder.RegisterType<PacketRuleFilter>()
+                .As<IPacketFilter>()
+                .InstancePerMatchingLifetimeScope(
+                    MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag,
+                    MatchingScopeLifetimeTags.NetworkServiceLifetimeScopeTag);
 
-                // Safeguard around the platform neighbour cache: track installed mappings, suppress
-                // deletes of entries already removed, and purge any leftovers when the network
-                // scope is disposed.
-                builder.RegisterDecorator<GuardedLocalAddressMapping, ILocalAddressMapping>();
+            builder.RegisterComposite<CompositePacketFilter, IPacketFilter>();
 
-                builder.RegisterType<AddressMappingService>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
-                builder.RegisterType<ReachabilityService>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
-                builder.RegisterType<ReachabilityCache>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
-                builder.RegisterType<DemandService>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
-                builder.RegisterType<HandoffService>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
-                builder.RegisterType<KnockService>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork()
-                    .AsSelf();
+            // Network Services //
+
+            // The application-wide keeper of OS-level UDP sockets: DatagramServices registered
+            // with SocketMetadata are linked to it at construction (see DefaultDatagramSocket),
+            // and their socket closes again with its last user.
+            builder.RegisterType<UDPSocketService>()
+                .SingleInstance()
+                .AsSelf();
+
+            // Safeguard around the platform neighbour cache: track installed mappings, suppress
+            // deletes of entries already removed, and purge any leftovers when the network
+            // scope is disposed.
+            builder.RegisterDecorator<GuardedLocalAddressMapping, ILocalAddressMapping>();
+
+            builder.RegisterType<AddressMappingService>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
+            builder.RegisterType<ReachabilityService>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
+            builder.RegisterType<ReachabilityCache>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
+            builder.RegisterType<DemandService>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
+            builder.RegisterType<HandoffService>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
+            builder.RegisterType<KnockService>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork()
+                .AsSelf();
 
 
-                // Demand Triggers //
+            // Demand Triggers //
 
-                builder.RegisterType<DemandByIP>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork();
-                builder.RegisterType<DemandByARP>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork();
-                builder.RegisterType<DemandByNDP>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork();
-                builder.RegisterType<DemandByWOL>()
-                    .AsImplementedInterfaces()
-                    .InstancePerNetwork();
+            builder.RegisterType<DemandByIP>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
+            builder.RegisterType<DemandByARP>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
+            builder.RegisterType<DemandByNDP>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
+            builder.RegisterType<DemandByWOL>()
+                .AsImplementedInterfaces()
+                .InstancePerNetwork();
 
-                // --- Request Scope ---- //
+            // --- Request Scope ---- //
 
-                builder.RegisterType<DemandRequest>()
-                    .InstancePerRequest()
-                    .AsSelf();
+            builder.RegisterType<DemandRequest>()
+                .InstancePerRequest()
+                .AsSelf();
 
-                // Make NetworkMonitors dynamically available
-                builder.RegisterServiceMiddleware<IEnumerable<IInspectable>>(new DynamicNetworkMonitors<IInspectable>());
-                builder.RegisterServiceMiddleware<IEnumerable<IPowerTransitionGuard>>(new DynamicNetworkMonitors<IPowerTransitionGuard>());
-                builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors<NetworkMonitor>());
-            }
+            // Make NetworkMonitors dynamically available. NOTE: the IInspectable
+            // bridge is gone — inspection membership is handed over explicitly by
+            // the NetworkInspectionBridge at MonitoringStarted/Stopped (§7.2); the
+            // power-transition and monitor-enumeration bridges stay (GuardedPowerManager,
+            // FRITZBoxOperator).
+            builder.RegisterServiceMiddleware<IEnumerable<IPowerTransitionGuard>>(new DynamicNetworkMonitors<IPowerTransitionGuard>());
+            builder.RegisterServiceMiddleware<IEnumerable<NetworkMonitor>>(new DynamicNetworkMonitors<NetworkMonitor>());
+
+            builder.RegisterType<SystemMonitorBridge>()
+                .OnlyIf(reg => reg.IsRegistered(new TypedService(typeof(INetworkInterfaceManager)))) // it injects the observer, gated the same way
+                .As<IStartable>()
+                .SingleInstance();
         }
     }
 
     public abstract class PluginModule : Autofac.Module
     {
-        //public virtual void Build(ContainerBuilder builder) { }
-
         public class Metadata
         {
             [DefaultValue(null)]
             public string? Name { get; set; }
         }
     }
-
 }

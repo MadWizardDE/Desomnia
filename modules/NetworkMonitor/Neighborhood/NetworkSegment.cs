@@ -92,7 +92,7 @@ namespace MadWizard.Desomnia.Network.Neighborhood
 
             if (domainName.EndsWith(LocalZone, comparision))
                 return true;
-            if (domainName.EndsWith(Device.Interface.GetIPProperties().DnsSuffix, comparision))
+            if (Device.Interface.DNSSuffix is string suffix && domainName.EndsWith(suffix, comparision))
                 return true;
 
             return false;

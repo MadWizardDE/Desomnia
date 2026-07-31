@@ -16,7 +16,9 @@ which makes it a good fit for an always-on :doc:`Wake-on-LAN proxy </guides/wol-
 .. note::
 
    Because this is the native build, plugins cannot be loaded at runtime: the
-   :doc:`Firewall Knock Operator </plugins/fko>` is built in, but other plugins are not. If you
+   :doc:`Firewall Knock Operator </plugins/fko>` and the
+   :doc:`FRITZ!Box </plugins/fritzbox>` plugin are built in, but other
+   plugins are not. If you
    need additional plugins, install the full build via :doc:`Homebrew </installation/homebrew>`,
    the :doc:`archive </installation/manually>`, or :doc:`Docker </installation/docker>` instead.
    Everything else — including :doc:`local sleep management </guides/sleep>` via

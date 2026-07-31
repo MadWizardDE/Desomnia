@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Globalization;
 
-namespace MadWizard.Desomnia.Process.Configuration
+namespace MadWizard.Desomnia.Processes.Configuration
 {
     [TypeConverter(typeof(CPUThresholdConverter))]
     public readonly struct CPUThreshold

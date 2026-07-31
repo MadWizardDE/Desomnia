@@ -22,7 +22,7 @@ Start with the :doc:`wol-proxy` guide if you have not done so already. Then decl
      </RemoteHost>
    </NetworkMonitor>
 
-``allowWakeByProxy="true"`` permits packets forwarded by the router — those carrying a source IP different from the router's own — to trigger wake-ups. Without it, Desomnia blocks all externally-originating traffic by default.
+``allowWakeByProxy="true"`` permits packets forwarded by the router — those carrying a source IP different from the router's own — to trigger wake-ups. Without it, Desomnia blocks all externally-originating traffic by default. The attribute can be omitted once the configuration declares a ``<ForeignHostFilterRule>`` or ``<EveryHostFilterRule>`` (as in the caution below): either rule is a deliberate opt-in to external requests, so proxy wake-up is then enabled automatically.
 
 .. caution::
 

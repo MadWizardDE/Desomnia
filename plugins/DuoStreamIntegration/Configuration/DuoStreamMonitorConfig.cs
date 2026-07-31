@@ -4,26 +4,26 @@ namespace MadWizard.Desomnia.Service.Duo.Configuration
 {
     public class DuoStreamMonitorConfig
     {
-        public required string ServiceName { get; set; } = "DuoService";
+        public required string ServiceName              { get; set; } = "DuoService";
 
-        public DelayedAction? OnIdle                { get; set; }
-        public DelayedAction? OnDemand              { get; set; }
+        public TimeSpan PollInterval                    { get; set; } = TimeSpan.FromSeconds(1);
 
-        public DelayedAction? OnInstanceDemand      { get; set; }
+        public bool UseFallback                         { get; set; } = false;
+        public bool UsePolling                          { get; set; } = false;
 
-        public DelayedAction? OnInstanceIdle        { get; set; }
+        public DelayedActionInfo? OnIdle                { get; set; }
+        public DelayedActionInfo? OnDemand              { get; set; }
 
-        public DelayedAction? OnInstanceLogin       { get; set; }
-        public DelayedAction? OnInstanceStarted     { get; set; }
-        public DelayedAction? OnInstanceStopped     { get; set; }
-        public DelayedAction? OnInstanceLogout      { get; set; }
+        public DelayedActionInfo? OnInstanceDemand      { get; set; }
 
-        public IList<DuoInstanceInfo> Instance      { get; private set; } = [];
+        public DelayedActionInfo? OnInstanceIdle        { get; set; }
 
-        public bool UseFallback                     { get; set; } = false;
-        public bool UsePolling                      { get; set; } = false;
+        public DelayedActionInfo? OnInstanceLogin       { get; set; }
+        public DelayedActionInfo? OnInstanceStarted     { get; set; }
+        public DelayedActionInfo? OnInstanceStopped     { get; set; }
+        public DelayedActionInfo? OnInstanceLogout      { get; set; }
 
-        public TimeSpan PollInterval { get; set; } = TimeSpan.FromSeconds(1);
+        public IList<DuoInstanceInfo> Instance { get; private set; } = [];
 
         internal DuoInstanceInfo? this[string name] => Instance.FirstOrDefault(i => i.Name == name);
     }

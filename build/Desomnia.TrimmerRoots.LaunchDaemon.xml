@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LaunchDaemon-only trimmer / NativeAOT roots (referenced by DesomniaLaunchDaemon in addition to the
+  shared Desomnia.TrimmerRoots.xml). "desomniad" is the entry assembly (see AssemblyName in
+  DesomniaLaunchDaemon.csproj - the same name the Linux daemon uses, hence the separate descriptor).
+
+  DisplayMonitor is macOS-only in the AOT closure: its configuration types are constructed reflectively
+  by the binder, and DisplayMatcher / Resolution / PreventIdleType resolve their TypeConverters through
+  TypeDescriptor (Activator.CreateInstance on the converter), so both need to survive trimming.
+
+  The statically-linked plugins (FirewallKnockOperator, FRITZBoxRouter) are rooted via
+  PublishAot-conditional TrimmerRootAssembly entries in the csproj instead.
+-->
+<linker>
+  <assembly fullname="desomniad" preserve="all" />
+  <assembly fullname="DesomniaDisplayMonitor" preserve="all" />
+</linker>

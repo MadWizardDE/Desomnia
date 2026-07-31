@@ -50,6 +50,17 @@
    :caption: Plugins
 
    /plugins/fko
-   /plugins/hyperv
    /plugins/duo/plugin
 ..   /plugins/bridge
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Router Plugins
+
+   /plugins/fritzbox
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Hypervisor Plugins
+
+   /plugins/hyperv

@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Network.Address;
 using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Demand;
@@ -13,7 +14,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Timers;
-
 using PingOptions = MadWizard.Desomnia.Network.Configuration.Options.PingOptions;
 using Timer = System.Timers.Timer;
 
@@ -131,7 +131,7 @@ namespace MadWizard.Desomnia.Network.Watch
                 Logger.LogDebug($"Received UnMagic Packet from \"{Host.Name}\", " +
                     $"triggered by {packet.SourceHardwareAddress.ToHexString()}");
 
-                _ = TriggerEventAsync(nameof(UnMagicPacket));
+                _ = UnMagicPacket.TriggerEventAsync();
             }
             else
             {

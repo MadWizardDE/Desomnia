@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Session.Configuration;
 using MadWizard.Desomnia.Session.Manager;
 
@@ -21,9 +22,18 @@ namespace MadWizard.Desomnia.Session
         public event EventInvocation? ConsoleLogin;
         public event EventInvocation? RemoteConnect;
         public event EventInvocation? ConsoleConnect;
+
+        // NEW behavior (release-noted, spec §9.3): a delayed onDisconnect is aborted by a
+        // reconnect and vice versa; lock/unlock likewise — expected by analogy with
+        // Idle/Demand, never implemented before
+        [EventOpposite(nameof(ConsoleConnect), nameof(RemoteConnect))]
         public event EventInvocation? Disconnect;
+
         public event EventInvocation? Unlock;
+
+        [EventOpposite(nameof(Unlock))]
         public event EventInvocation? Lock;
+
         public event EventInvocation? Logout;
 
         public SessionWatch(ISession session)
@@ -37,14 +47,14 @@ namespace MadWizard.Desomnia.Session
         private void Session_Connected(object? sender, EventArgs e)
         {
             if (Session.IsConsoleConnected)
-                TriggerEvent(nameof(ConsoleConnect));
+                ConsoleConnect.TriggerEvent();
             else if (Session.IsRemoteConnected)
-                TriggerEvent(nameof(RemoteConnect));
+                RemoteConnect.TriggerEvent();
         }
 
-        private void Session_Disconnected(object? sender, EventArgs e) => TriggerEvent(nameof(Disconnect));
-        private void Session_Unlocked(object? sender, EventArgs e) => TriggerEvent(nameof(Unlock));
-        private void Session_Locked(object? sender, EventArgs e) => TriggerEvent(nameof(Lock));
+        private void Session_Disconnected(object? sender, EventArgs e) => Disconnect.TriggerEvent();
+        private void Session_Unlocked(object? sender, EventArgs e) => Unlock.TriggerEvent();
+        private void Session_Locked(object? sender, EventArgs e) => Lock.TriggerEvent();
 
         internal void ApplyConfiguration(SessionMonitorConfig config, SessionWatchDescriptor desc)
         {
@@ -53,16 +63,16 @@ namespace MadWizard.Desomnia.Session
 
             Clock += desc.MakeClockOptions(config);
 
-            AddEventAction(nameof(Idle), desc.OnIdle);
-            AddEventAction(nameof(Login), desc.OnLogin);
-            AddEventAction(nameof(RemoteLogin), desc.OnRemoteLogin);
-            AddEventAction(nameof(ConsoleLogin), desc.OnConsoleLogin);
-            AddEventAction(nameof(RemoteConnect), desc.OnRemoteConnect);
-            AddEventAction(nameof(ConsoleConnect), desc.OnConsoleConnect);
-            AddEventAction(nameof(Disconnect), desc.OnDisconnect);
-            AddEventAction(nameof(Unlock), desc.OnUnlock);
-            AddEventAction(nameof(Lock), desc.OnLock);
-            AddEventAction(nameof(Logout), desc.OnLogout);
+            GetEvent(nameof(Idle)).AddAction(desc.OnIdle);
+            Login.AddAction(desc.OnLogin);
+            RemoteLogin.AddAction(desc.OnRemoteLogin);
+            ConsoleLogin.AddAction(desc.OnConsoleLogin);
+            RemoteConnect.AddAction(desc.OnRemoteConnect);
+            ConsoleConnect.AddAction(desc.OnConsoleConnect);
+            Disconnect.AddAction(desc.OnDisconnect);
+            Unlock.AddAction(desc.OnUnlock);
+            Lock.AddAction(desc.OnLock);
+            Logout.AddAction(desc.OnLogout);
 
             foreach (var info in desc.Process)
             {
@@ -110,27 +120,27 @@ namespace MadWizard.Desomnia.Session
 
         internal void TriggerLogon()
         {
-            TriggerEvent(nameof(Login));
+            Login.TriggerEvent();
 
             if (Session.IsRemoteConnected)
             {
-                TriggerEvent(nameof(RemoteLogin));
+                RemoteLogin.TriggerEvent();
             }
             else if (Session.IsConsoleConnected)
             {
-                TriggerEvent(nameof(ConsoleLogin));
+                ConsoleLogin.TriggerEvent();
             }
         }
 
         internal void TriggerLogout()
         {
-            TriggerEvent(nameof(Logout)); 
+            Logout.TriggerEvent(); 
         }
 
         public override void Dispose()
         {
-            Session.Locked -= Session_Connected;
-            Session.Unlocked -= Session_Disconnected;
+            Session.Locked -= Session_Locked;
+            Session.Unlocked -= Session_Unlocked;
             Session.Disconnected -= Session_Disconnected;
             Session.Connected -= Session_Connected;
 

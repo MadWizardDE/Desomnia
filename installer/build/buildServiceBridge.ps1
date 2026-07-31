@@ -16,9 +16,14 @@ $publishBridge =
 
 Publish-Project -Source "$sourceParentDirectory\DesomniaServiceBridge" -Target $TargetDirectory -Parameters $publishBridge
 
-$publishMinion = 
+$publishMinion =
 @(
-    '/p:Configuration=Release'
+    '-c', 'Release',
+
+    '--no-self-contained',
+
+    '-p:DebugType=None',
+    '-p:DebugSymbols=false'
 )
 
-Publish-FrameworkProject -Source "$sourceParentDirectory\DesomniaSessionMinion" -Target "$TargetDirectory\minion" -Parameters $publishMinion
+Publish-Project -Source "$sourceParentDirectory\DesomniaSessionMinion" -Target "$TargetDirectory\minion" -Parameters $publishMinion

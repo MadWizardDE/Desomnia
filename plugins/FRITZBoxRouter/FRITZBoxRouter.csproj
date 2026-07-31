@@ -1,14 +1,26 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
-    <RootNamespace>MadWizard.Desomnia.Network.FRITZBox</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+    <RootNamespace>MadWizard.Desomnia.Network.FRITZ</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\modules\NetworkMonitor\NetworkMonitor.csproj" />
+    <!-- Host-provided assemblies: reference for compilation, never bundle into the plugin
+         (a second copy of Core/NetworkMonitor would break type identity across the load context). -->
+    <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
+
+    <ProjectReference Include="..\..\modules\NetworkMonitor\NetworkMonitor.csproj">
+      <Private>false</Private>
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>

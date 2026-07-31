@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using MadWizard.Desomnia.Process.Manager;
+using MadWizard.Desomnia.Processes.Manager;
 using MadWizard.Desomnia.Session.Configuration;
 using MadWizard.Desomnia.Session.Manager;
 using Microsoft.Extensions.Hosting;
@@ -22,26 +22,14 @@ namespace MadWizard.Desomnia.Session
         }
         private void SessionManager_UserLogout(object? sender, ISession session)
         {
-            foreach (var scope in _sessionScopes.Where(w => w.Key == session).Select(w => w.Value))
-            {
-                if (scope.Resolve<SessionWatch>() is SessionWatch watch)
-                {
-                    watch.TriggerLogout();
-
-                    this.StopTracking(watch);
-                }
-
-                _sessionScopes.Remove(session);
-
-                scope.Dispose();
-            }
+            UnTrackSession(session, true);
         }
         #endregion
 
         async Task IHostedService.StartAsync(CancellationToken cancellationToken)
         {
-            AddEventAction(nameof(Idle), config.OnIdle);
-            AddEventAction(nameof(Demand), config.OnDemand);
+            GetEvent(nameof(Idle)).AddAction(config.OnIdle);
+            GetEvent(nameof(Demand)).AddAction(config.OnDemand);
 
             foreach (ISession session in manager)
                 TrackSession(session);
@@ -52,6 +40,7 @@ namespace MadWizard.Desomnia.Session
             Logger.LogDebug("Startup complete");
         }
 
+        #region Session tracking
         private void TrackSession(ISession session, bool logon = false)
         {
             var scope = Scope.BeginLifetimeScope("Session", builder =>
@@ -78,6 +67,46 @@ namespace MadWizard.Desomnia.Session
             Scope.Disposer.AddInstanceForDisposal(scope);
 
             _sessionScopes[session] = scope;
+        }
+
+        private void UnTrackSession(ISession session, bool logoff = false)
+        {
+            if (_sessionScopes.TryGetValue(session, out var scope))
+            {
+                if (scope.Resolve<SessionWatch>() is SessionWatch watch)
+                {
+                    if (logoff)
+                    {
+                        watch.TriggerLogout();
+                    }
+
+                    this.StopTracking(watch);
+                }
+
+                _sessionScopes.Remove(session);
+
+                scope.Dispose();
+            }
+        }
+        #endregion
+
+        protected override IEnumerable<UsageToken> InspectResource(SessionWatch watch, TimeSpan interval)
+        {
+            try
+            {
+                return base.InspectResource(watch, interval);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not inspect session.");
+
+                if (!manager.Any(sesison => sesison == watch.Session))
+                {
+                    UnTrackSession(watch.Session);
+                }
+
+                return [];
+            }
         }
 
         async Task IHostedService.StopAsync(CancellationToken cancellationToken)

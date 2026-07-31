@@ -35,6 +35,7 @@ namespace MadWizard.Desomnia.Service.Bridge
 
         private void Minion_Terminated(object? sender, EventArgs e)
         {
+            Minion?.Dispose();
             Minion = null;
         }
 

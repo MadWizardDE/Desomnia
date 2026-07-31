@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Network.Configuration.Options;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Network.Configuration.Options;
 using MadWizard.Desomnia.Network.Demand;
 using MadWizard.Desomnia.Network.Manager;
 using Microsoft.Extensions.Logging;
@@ -96,15 +97,15 @@ namespace MadWizard.Desomnia.Network.Watch
         }
 
 
-        protected override Task TriggerEventAsync(Event @event)
+        protected override bool OnEventTriggering(Event @event)
         {
             if (@event.Type == nameof(Idle) && IsOnline != true)
-                return Task.CompletedTask; // only trigger "Idle" events if the VM is running
+                return false; // only trigger "Idle" events if the VM is running
 
             if (@event.Type == nameof(Demand) && (IsOnline == true || @event is InspectionEvent))
-                return Task.CompletedTask; // only trigger "Demand" events if the VM is NOT running
+                return false; // only trigger "Demand" events if the VM is NOT running
 
-            return base.TriggerEventAsync(@event);
+            return base.OnEventTriggering(@event);
         }
 
         private void VM_StateChanged(object? sender, VirtualMachineStateChangedEventArgs args)

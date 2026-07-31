@@ -21,4 +21,8 @@
     <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="NetworkMonitor.Tests" />
+  </ItemGroup>
+
 </Project>

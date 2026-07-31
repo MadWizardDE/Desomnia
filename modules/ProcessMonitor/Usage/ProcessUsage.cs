@@ -1,4 +1,4 @@
-﻿namespace MadWizard.Desomnia.Process
+﻿namespace MadWizard.Desomnia.Processes
 {
     public class ProcessUsage(string name) : UsageToken
     {

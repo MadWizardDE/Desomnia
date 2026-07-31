@@ -2,17 +2,11 @@
 using Microsoft.Diagnostics.Tracing.Parsers.Kernel;
 using Microsoft.Diagnostics.Tracing.Session;
 using Microsoft.Extensions.Logging;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 
-using NativeProcess = System.Diagnostics.Process;
-
-/**
- * Uses ETW (Event Trace for Windows) to get process start/stop notifications in near realtime.
- */
-namespace MadWizard.Desomnia.Process.Manager
+namespace MadWizard.Desomnia.Processes.Manager
 {
-    public partial class TraceEventProcessManager : ListenerAwareProcessManager, IDisposable
+    /// <summary>Uses ETW (Event Trace for Windows) to get process start/stop notifications in near realtime.</summary>
+    public class TraceEventProcessManager : Win32ProcessManager, IDisposable
     {
         TraceEventSession? _traceEventSession;
 
@@ -74,38 +68,6 @@ namespace MadWizard.Desomnia.Process.Manager
             }
         }
 
-        protected override int? FindParentProcessId(NativeProcess process)
-        {
-            try
-            {
-                var info = new PROCESS_BASIC_INFORMATION();
-
-                try
-                {
-                    if (NtQueryInformationProcess(process.Handle, 0, ref info, Marshal.SizeOf(info), out _) != 0)
-                        throw new Win32Exception();
-                }
-                catch (Win32Exception e) when (e.NativeErrorCode == 5)
-                {
-                    return null; // Zugriff verweigert
-                }
-
-                using var parent = NativeProcess.GetProcessById(info.InheritedFromUniqueProcessId.ToInt32());
-
-                /// Windows reuses PIDs which can actually lead to a situation
-                /// where two processes are parents of each other.
-                /// We need to check this!
-                if (parent.StartTime > process.StartTime)
-                    return null; // PID has been reused
-
-                return parent.Id;
-            }
-            catch (SystemException e) when (e is ArgumentException || e is InvalidOperationException)
-            {
-                return null;
-            }
-        }
-
         #region ETW callbacks
         private void ETW_Process()
         {
@@ -123,7 +85,12 @@ namespace MadWizard.Desomnia.Process.Manager
         {
             try
             {
-                TriggerStart(pid: data.ProcessID);
+                TriggerStart(new(data.ProcessID)
+                {
+                    Name = data.ProcessName,
+                    ParentId = data.ParentID,
+                    SessionId = data.SessionID,
+                });
             }
             catch (Exception ex)
             {
@@ -157,21 +124,5 @@ namespace MadWizard.Desomnia.Process.Manager
 
             UnsubscribeFromTraceEvents();
         }
-
-        #region Windows-API
-        [DllImport("ntdll.dll", SetLastError = true)]
-        private static extern int NtQueryInformationProcess(nint processHandle, int processInformationClass, ref PROCESS_BASIC_INFORMATION processInformation, int processInformationLength, out int returnLength);
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct PROCESS_BASIC_INFORMATION
-        {
-            internal nint Reserved1;
-            internal nint PebBaseAddress;
-            internal nint Reserved2_0;
-            internal nint Reserved2_1;
-            internal nint UniqueProcessId;
-            internal nint InheritedFromUniqueProcessId;
-        }
-        #endregion
     }
 }

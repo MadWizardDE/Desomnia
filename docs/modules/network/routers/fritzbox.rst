@@ -1,7 +1,16 @@
 FRITZ!Box
 =========
 
-The FRITZ!Box is a common consumer router/modem with built-in VPN support. It is the most widely tested router model with Desomnia.
+The FRITZ!Box is a common consumer router/modem with built-in VPN support. It is the most widely
+tested router model with Desomnia.
+
+.. seealso::
+
+   Desomnia ships a dedicated :doc:`FRITZ!Box plugin </plugins/fritzbox>` that talks to the box'
+   own APIs: it resolves host MAC addresses from the box (even while they sleep), discovers VPN
+   clients automatically, finds the box without any configuration, and can switch LAN port
+   speeds. This page documents the FRITZ!Box *hardware* behaviour that applies with or without
+   the plugin.
 
 Network model
 -------------
@@ -35,22 +44,16 @@ If you do not use ``allowWake="true"`` or ``allowWakeByProxy="true"``, declare t
 
 Desomnia pings each declared client before permitting the router to forward wake-up triggers. When at least one responds within ``vpnTimeout``, forwarded packets are allowed through. When none respond, they are blocked. See :doc:`../router` for a full description of ``<Router>`` attributes.
 
+.. note::
+
+   With the :doc:`FRITZ!Box plugin </plugins/fritzbox>`, neither the router's address nor the
+   individual ``<VPNClient>`` entries need to be declared — the box and its VPN peers are
+   discovered automatically.
+
 Wake-on-LAN from outside
 +++++++++++++++++++++++++
 
 The FRITZ!Box does not support static IP-to-MAC address mappings, so the :ref:`unicast WoL approach <vpn-unicast>` is not available. The recommended alternative is to run Desomnia in :doc:`promiscuous mode <../promiscuous>` on an always-on device inside the network. The VPN delivers the connection attempt into the local network; Desomnia sees it, sends the Magic Packet, and claims the sleeping host's IP to buffer the connection until the host wakes up. No static router configuration is required.
-
-Auto discovery
---------------
-
-🚧 This section describes upcoming features that are not yet available in the current release.
-
-A future version of Desomnia will include a FRITZ!Box integration that queries the router's ARP and DHCP tables directly, enabling:
-
-- **Automatic MAC address discovery**: MAC addresses for known hosts will be resolved from the router without manual configuration, including for hosts that are currently offline.
-- **VPN client discovery**: connected VPN clients will be detected automatically, removing the need to declare ``<VPNClient>`` entries individually.
-
-These features will make FRITZ!Box-based configurations significantly less verbose and will not require any changes on the router itself.
 
 Capability summary
 ------------------
@@ -67,7 +70,10 @@ Capability summary
      - Proxy ARP; clients assigned IPs in the local subnet
    * - Reliable VPN client presence detection
      - ✅ Yes (with ping)
-     - ARP alone is unreliable — always use ``<VPNClient>`` with ``vpnTimeout``
+     - ARP alone is unreliable — clients are confirmed via ICMP ping
+   * - Host MACs while hosts are asleep
+     - ✅ Yes (plugin)
+     - Read from the box' host table by the :doc:`plugin </plugins/fritzbox>` — no credentials required
    * - Static ARP / MAC mapping
      - ❌ No
      - Unicast WoL not supported; use promiscuous proxy instead

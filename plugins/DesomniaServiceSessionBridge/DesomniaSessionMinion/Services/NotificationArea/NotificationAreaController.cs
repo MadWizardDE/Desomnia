@@ -11,12 +11,10 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Net.Mime;
-using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Timer = System.Timers.Timer;
-using System.Windows.Input;
 
 namespace MadWizard.Desomnia.Minion
 {
@@ -123,12 +121,12 @@ namespace MadWizard.Desomnia.Minion
 
                 _notifyIcon.Click += NotifyIcon_Click;
                 _notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
+
+                // created once; the Popup handler rebuilds the items from Config on every open
+                _notifyIcon.ContextMenu = CreateContextMenu();
             }
 
             _notifyIcon.Icon = Config.SleeplessUntil != null ? Resources.Sleepless : Resources.Moon;
-
-            _notifyIcon.ContextMenu?.Dispose();
-            _notifyIcon.ContextMenu = CreateContextMenu();
         }
 
         private void NotifyIcon_Click(object sender, EventArgs args)
@@ -162,7 +160,11 @@ namespace MadWizard.Desomnia.Minion
 
             context.Popup += (sender, args) =>
             {
+                // Clear() detaches without disposing; free the previous popup's items (and their HBITMAPs)
+                var staleItems = context.MenuItems.Cast<MenuItem>().ToArray();
                 context.MenuItems.Clear();
+                foreach (var staleItem in staleItems)
+                    staleItem.Dispose();
 
                 context.MenuItems.AddRange(CreateSessionItems().ToArray());
 
@@ -255,7 +257,7 @@ namespace MadWizard.Desomnia.Minion
 
                 itemDisconnect.Click += (sender, args) => _pipeBroker.SendMessage(new ConnectToConsoleMessage(null));
 
-                GlobalHotKey.RegisterHotKey(ModifierKeys.Control | ModifierKeys.Alt, Key.Back, () => _pipeBroker.SendMessage(new ConnectToConsoleMessage(null)));
+                GlobalHotKey.RegisterHotKey(HotKeyModifiers.Control | HotKeyModifiers.Alt, Keys.Back, () => _pipeBroker.SendMessage(new ConnectToConsoleMessage(null)));
 
                 yield return itemDisconnect;
             }
@@ -386,6 +388,7 @@ namespace MadWizard.Desomnia.Minion
             if (_notifyIcon != null)
             {
                 _notifyIcon.Visible = false;
+                _notifyIcon.ContextMenu?.Dispose();
                 _notifyIcon.Dispose();
                 _notifyIcon = null;
             }

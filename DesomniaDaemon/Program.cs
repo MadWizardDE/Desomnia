@@ -1,90 +1,47 @@
-﻿using Autofac;
-using CommandLine;
 using MadWizard.Desomnia;
-using MadWizard.Desomnia.Daemon.Options;
-using MadWizard.Desomnia.Logging;
-using MadWizard.Desomnia.Network.Logging;
 using Microsoft.Extensions.Hosting;
-using NLog;
 
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<SleepTimeLayoutRenderer>("sleep-duration")); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkHostLayoutRenderer>()); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkLayoutRenderer>()); // FIXME
-LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NetworkRealmLayoutRenderer>()); // FIXME
+if (!Environment.IsPrivilegedProcess)
+    throw new NotSupportedException("The application must be run with root privileges.");
 
-bool debug = false;
-bool autoReload = false;
-string? autoReloadPath = null;
-Parser.Default.ParseArguments<CommandLineOptions>(args)
-    .WithParsed(options =>
-    {
-        debug = options.Debug;
-        autoReload = options.AutoReload;
-        autoReloadPath = options.AutoReloadPath;
-    })
-    .WithNotParsed(errors =>
-    {
-        Environment.Exit(1);
-    });
+using var mutex = new SystemMutex("MadWizard.Desomnia", true);
 
-if (debug)
+using (var builder = new DesomniaDaemonBuilder(args))
 {
-    await MadWizard.Desomnia.Test.Debugger.UntilAttached();
+    builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
+
+    builder.RegisterModule<MadWizard.Desomnia.Daemon.PlatformModule>();
+
+    builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
+    builder.RegisterModule<MadWizard.Desomnia.Processes.Module>();
+
+#if DESOMNIA_AOT
+    // Plugins can't be loaded dynamically under AOT; statically include the ones we ship.
+    builder.RegisterModule<MadWizard.Desomnia.Network.FirewallKnockOperator.PluginModule>();
+    builder.RegisterModule<MadWizard.Desomnia.Network.FRITZ.PluginModule>();
+#else
+    builder.RegisterPluginModules();
+#endif
+
+    builder.Build().Run();
 }
 
-const string FHS_CONFIG_PATH = "/etc/desomnia"; // Filesystem Hierarchy Standard
+return Environment.ExitCode;
 
-string configPath = new ConfigDetector(FHS_CONFIG_PATH).Lookup();
-
-try
+class DesomniaDaemonBuilder(string[] args) : MadWizard.Desomnia.ApplicationBuilder(args)
 {
-    if (!Environment.IsPrivilegedProcess)
-        throw new NotSupportedException("The application must be run with root privileges.");
+    // Filesystem Hierarchy Standard
+    const string FHS_CONFIG_PATH        = "/etc/desomnia";
+    const string FHS_LOG_PATH           = "/var/log/desomnia";
 
-    ConfigFileWatcher watcher;
+    const string FHS_CORE_PLUGINS_PATH  = "/usr/lib/desomnia/plugins";
+    const string FHS_USER_PLUGINS_PATH  = "/var/lib/desomnia/plugins";
 
-    do
-    {
-        using (new SystemMutex("MadWizard.Desomnia", true)) using (watcher = new(autoReloadPath ?? configPath) { EnableRaisingEvents = autoReload })
-        {
-            var builder = new DesomniaDaemonBuilder(useFHS: configPath.StartsWith(FHS_CONFIG_PATH));
+    internal bool UseFHS => ConfigPath.StartsWith(FHS_CONFIG_PATH);
 
-            builder.RegisterModule<MadWizard.Desomnia.CoreModule>();
+    protected override string[] DefaultConfigPaths  => [.. base.DefaultConfigPaths, FHS_CONFIG_PATH];
 
-            builder.RegisterModule<MadWizard.Desomnia.Daemon.PlatformModule>();
-
-            builder.RegisterModule<MadWizard.Desomnia.Network.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.PowerRequest.Module>();
-            builder.RegisterModule<MadWizard.Desomnia.Process.Module>();
-
-            #if DESOMNIA_AOT
-            // Plugins can't be loaded dynamically under AOT; statically include the ones we ship.
-            builder.RegisterModule<MadWizard.Desomnia.Network.FirewallKnockOperator.PluginModule>();
-            #else
-            builder.RegisterPluginModules();
-            #endif
-
-            builder.LoadConfiguration(configPath);
-
-            builder.Build().RunAsync(watcher.Token).Wait();
-        }
-    }
-    while (watcher.HasChanged);
-
-    return 0;
-}
-catch (Exception)
-{
-    throw;
-}
-
-class DesomniaDaemonBuilder(bool useFHS = false) : MadWizard.Desomnia.ApplicationBuilder
-{
-    const string FHS_LOG_PATH = "/var/log/desomnia";
-
-    const string FHS_CORE_PLUGINS_PATH = "/usr/lib/desomnia/plugins";
-    const string FHS_USER_PLUGINS_PATH = "/var/lib/desomnia/plugins";
-
-    protected override string DefaultLogPath => useFHS ? FHS_LOG_PATH : base.DefaultLogPath;
-    protected override string[] DefaultPluginsPaths => useFHS ? [FHS_CORE_PLUGINS_PATH, FHS_USER_PLUGINS_PATH] : base.DefaultPluginsPaths;
+    protected override string[] DefaultPluginsPaths => UseFHS ? [FHS_CORE_PLUGINS_PATH, FHS_USER_PLUGINS_PATH] : base.DefaultPluginsPaths;
+    protected override string   DefaultLogPath      => UseFHS ? FHS_LOG_PATH : base.DefaultLogPath;
 }

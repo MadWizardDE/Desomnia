@@ -1,11 +1,12 @@
 ﻿using MadWizard.Desomnia.Network.Configuration.Options;
+using MadWizard.Desomnia.Network.Manager;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
 namespace MadWizard.Desomnia.Network.Configuration.Hosts
 {
-    internal class DefaultGatewayInfo(NetworkInterface ni, AutoDiscoveryType auto) : NetworkRouterInfo
+    internal class DefaultGatewayInfo(INetworkInterface ni, AutoDiscoveryType auto) : NetworkRouterInfo
     {
         internal async Task TryLookupGatewayName()
         {
@@ -24,18 +25,17 @@ namespace MadWizard.Desomnia.Network.Configuration.Hosts
         {
             get
             {
-                foreach (var gateway in ni.GetIPProperties().GatewayAddresses)
+                foreach (var gateway in ni.Gateways)
                 {
-                    if (gateway.Address.AddressFamily == AddressFamily.InterNetwork)
-                        if (auto.HasFlag(AutoDiscoveryType.IPv4))
-                            yield return gateway.Address;
+                    var address = gateway.Address.RemoveScopeId();
 
-                    if (gateway.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                    if (address.AddressFamily == AddressFamily.InterNetwork)
+                        if (auto.HasFlag(AutoDiscoveryType.IPv4))
+                            yield return address;
+
+                    if (address.AddressFamily == AddressFamily.InterNetworkV6)
                         if (auto.HasFlag(AutoDiscoveryType.IPv6))
-                        {
-                            gateway.Address.ScopeId = 0; // ignore _scope id
-                            yield return gateway.Address;
-                        }
+                            yield return address;
                 }
             }
         }

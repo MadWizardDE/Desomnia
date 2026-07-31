@@ -9,7 +9,23 @@
     <AssemblyName>desomniad</AssemblyName>
     <LangVersion>preview</LangVersion>
 	<RollForward>LatestMajor</RollForward>
+	<!-- LibraryImport (source-generated P/Invoke marshalling) requires unsafe code -->
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- Memory footprint tuning (see AOT analysis). Measure RSS before/after. -->
+    <!-- Drops the ICU data mapping; safe for a daemon that does no culture-aware formatting
+         (all config parsing is ordinal/regex/integer, all matching is ASCII-identifier based). -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Workstation, non-concurrent GC: avoids Server GC's per-core heap reservations. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Preserve all Desomnia types/members under trimming + NativeAOT (reflective activation & config binding). -->
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.xml" />
+    <TrimmerRootDescriptor Include="..\build\Desomnia.TrimmerRoots.LaunchDaemon.xml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
@@ -17,8 +33,45 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DesomniaCore\DesomniaCore.csproj" />
+    <ProjectReference Include="..\modules\DisplayMonitor\DisplayMonitor.csproj" />
     <ProjectReference Include="..\modules\NetworkMonitor\NetworkMonitor.csproj" />
+    <ProjectReference Include="..\modules\PowerRequestMonitor\PowerRequestMonitor.csproj" />
     <ProjectReference Include="..\modules\ProcessMonitor\ProcessMonitor.csproj" />
+    <ProjectReference Include="..\plugins\FRITZBoxRouter\FRITZBoxRouter.csproj" />
   </ItemGroup>
+
+  <!-- AOT: statically link plugins that are otherwise loaded dynamically (RegisterPluginModules is skipped). -->
+  <ItemGroup Condition="'$(PublishAot)' == 'true'">
+    <ProjectReference Include="..\plugins\FirewallKnockOperator\FirewallKnockOperator.csproj" />
+    <TrimmerRootAssembly Include="FirewallKnockOperator" />
+    <!-- FRITZBoxRouter is referenced unconditionally above (it is registered in both flavours),
+         but under AOT it still has to be rooted for its reflectively bound configuration. -->
+    <TrimmerRootAssembly Include="FRITZBoxRouter" />
+  </ItemGroup>
+
+  <!--
+    AOT publish: optimize for size to shrink the binary and its resident code pages (RssFile).
+    All switches below are safe for a headless daemon (no debugger, no EventSource/ETW, no HTTP
+    distributed-tracing).
+  -->
+  <PropertyGroup Condition="'$(PublishAot)' == 'true'">
+    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
+    <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
+    <EventSourceSupport>false</EventSourceSupport>
+    <DebuggerSupport>false</DebuggerSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+  </PropertyGroup>
+
+  <!--
+    Deliberately NOT carried over from DesomniaDaemon: the GC hard limit (24 MiB) and ConserveMemory,
+    which were tuned against the Pi's closure. This build additionally carries DisplayMonitor and the
+    IOKit/CoreFoundation run loops, so the working set is not comparable. Measure first (footprint on
+    macOS: `footprint -p <pid>` or the RESIDENT SIZE column of `top -pid <pid>`), then tighten:
+
+    <ItemGroup Condition="'$(PublishAot)' == 'true'">
+      <RuntimeHostConfigurationOption Include="System.GC.HeapHardLimit" Value="25165824" Trim="false" />
+      <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="9" Trim="false" />
+    </ItemGroup>
+  -->
 
 </Project>

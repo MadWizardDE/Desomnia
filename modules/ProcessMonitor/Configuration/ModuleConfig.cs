@@ -1,4 +1,4 @@
-﻿namespace MadWizard.Desomnia.Process.Configuration
+﻿namespace MadWizard.Desomnia.Processes.Configuration
 {
     public class ModuleConfig
     {

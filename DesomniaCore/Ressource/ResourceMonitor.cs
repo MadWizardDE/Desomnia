@@ -1,4 +1,5 @@
-﻿using MadWizard.Desomnia.Ressource.Events;
+using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Ressource.Events;
 
 namespace MadWizard.Desomnia
 {
@@ -11,7 +12,10 @@ namespace MadWizard.Desomnia
         public event EventHandler<InspectableEventArgs<T>>? TrackingStarted;
         public event EventHandler<InspectableEventArgs<T>>? TrackingStopped;
 
-        readonly HashSet<T> _inspectables = [];
+        // mutated on observer threads (explicit hand-off, §7.2) while the inspection
+        // loop enumerates — guarded, with snapshot-on-enumerate
+        private readonly HashSet<T> _inspectables = [];
+        private readonly Lock _rosterLock = new();
 
         private bool ShouldTrackRessource(T inspectable)
         {
@@ -27,9 +31,17 @@ namespace MadWizard.Desomnia
 
         public virtual bool StartTracking(T inspectable, bool adopt = true)
         {
+            if (inspectable is EventMetaObject { IsEngineDisposed: true })
+                return false; // never adopt a corpse
+
             if (ShouldTrackRessource(inspectable))
             {
-                if (_inspectables.Add(inspectable))
+                bool added;
+
+                lock (_rosterLock)
+                    added = _inspectables.Add(inspectable);
+
+                if (added)
                 {
                     if (inspectable is Resource res)
                     {
@@ -49,14 +61,19 @@ namespace MadWizard.Desomnia
 
         public virtual void StopTracking(T inspectable)
         {
-            if (_inspectables.Remove(inspectable))
+            bool removed;
+
+            lock (_rosterLock)
+                removed = _inspectables.Remove(inspectable);
+
+            if (removed)
             {
                 if (inspectable is Resource res)
                 {
                     res.StopTrackingBy(this);
-
-                    TrackingStopped?.Invoke(this, new InspectableEventArgs<T>(inspectable));
                 }
+
+                TrackingStopped?.Invoke(this, new InspectableEventArgs<T>(inspectable));
             }
         }
 
@@ -66,13 +83,20 @@ namespace MadWizard.Desomnia
         {
             foreach (var inspectable in this)
                 if (ShouldInspectResource(inspectable))
-                    foreach (var token in inspectable.Inspect(interval))
+                {
+                    foreach (var token in InspectResource(inspectable, interval))
                         yield return token;
+                }
+        }
+
+        protected virtual IEnumerable<UsageToken> InspectResource(T inspectable, TimeSpan interval)
+        {
+            return inspectable.Inspect(interval);
         }
 
         public override void Dispose()
         {
-            foreach (var inspectable in this.ToArray())
+            foreach (var inspectable in this)
             {
                 this.StopTracking(inspectable);
             }
@@ -80,6 +104,21 @@ namespace MadWizard.Desomnia
             base.Dispose();
         }
 
-        IEnumerator<T> IEnumerable<T>.GetEnumerator() => _inspectables.GetEnumerator();
+        IEnumerator<T> IEnumerable<T>.GetEnumerator()
+        {
+            T[] snapshot;
+
+            lock (_rosterLock)
+            {
+                // roster disposal backstop (§7.1): members disposed without an explicit
+                // StopTracking (crash paths) are evicted lazily — a dead monitor must
+                // never be inspected again (its edges were already dropped by Dispose)
+                _inspectables.RemoveWhere(i => i is EventMetaObject { IsEngineDisposed: true });
+
+                snapshot = [.. _inspectables];
+            }
+
+            return ((IEnumerable<T>)snapshot).GetEnumerator();
+        }
     }
 }

@@ -1,4 +1,5 @@
 using MadWizard.Desomnia.Daemon.DBus.Interface;
+using MadWizard.Desomnia.Power.Source;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Tmds.DBus.Protocol;
@@ -16,6 +17,9 @@ namespace MadWizard.Desomnia.Power.Manager
 
         public event EventHandler? Suspended;
         public event EventHandler? ResumeSuspended;
+
+        // the power source is not a logind concept; sysfs is authoritative either way
+        public PowerSource Source => SysfsPowerSource.Read();
 
         private IDisposable? _sleepSignal;
 
@@ -147,13 +151,22 @@ namespace MadWizard.Desomnia.Power.Manager
             }
         }
 
-        async Task<IPowerRequest> IPowerManager.CreateRequest(string reason)
+        async Task<IPowerRequest> IPowerManager.CreateRequest(PowerRequestType type, string reason)
         {
+            // logind offers no display-blanking control (that is the display server's business) —
+            // an "idle" inhibitor, blocking logind's IdleAction, is the closest system-level analog.
+            var (what, operation) = type switch
+            {
+                PowerRequestType.Display => ("idle", InhibitionOperation.Idle),
+
+                _ => ("sleep", InhibitionOperation.Sleep),
+            };
+
             var request = new InhibitionRequest(InhibitionName, reason,
-                InhibitionOperation.Sleep,
+                operation,
                 InhibitionMode.Block)
             {
-                Handle = await LoginManager.InhibitAsync("sleep", InhibitionName, reason, "block")
+                Handle = await LoginManager.InhibitAsync(what, InhibitionName, reason, "block")
             };
 
             Logger.LogTrace("Created {request}", request);

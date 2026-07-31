@@ -13,14 +13,14 @@ namespace MadWizard.Desomnia.Service.Duo.Configuration
     {
         public required string Name { get; set; }
 
-        public NamedAction? OnDemand { get; set; }
+        public ActionInfo? OnDemand { get; set; }
 
-        public DelayedAction? OnIdle { get; set; }
+        public DelayedActionInfo? OnIdle { get; set; }
 
-        public DelayedAction? OnLogin { get; set; }
-        public DelayedAction? OnStart { get; set; }
-        public DelayedAction? OnStop { get; set; }
-        public DelayedAction? OnLogout { get; set; }
+        public DelayedActionInfo? OnLogin { get; set; }
+        public DelayedActionInfo? OnStart { get; set; }
+        public DelayedActionInfo? OnStop { get; set; }
+        public DelayedActionInfo? OnLogout { get; set; }
 
     }
 }

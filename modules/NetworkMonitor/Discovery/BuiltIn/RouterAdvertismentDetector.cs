@@ -22,6 +22,13 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
         private int _routerNr = 1;
 
+        // Serializes the check-and-create in RememberRouterAddress. Router advertisements now reach
+        // this detector via two concurrent, fire-and-forget paths — the solicitation capture hook in
+        // DiscoverRouters and the packet fan-out (INetworkService.ProcessPacket), which is active
+        // during discovery since StartMonitoring runs first — so without this an advertisement seen
+        // by both (or two advertisements racing) could create the same router twice and throw on AddHost.
+        private readonly SemaphoreSlim _routerLock = new(1, 1);
+
         async Task IRouterDiscovery.DiscoverRouters(NetworkSegment network)
         {
             if (Device.IPv6LinkLocalAddress != null)
@@ -74,6 +81,19 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
 
         private async Task RememberRouterAddress(PhysicalAddress mac, IPAddress ip, TimeSpan lifetime)
         {
+            await _routerLock.WaitAsync();
+            try
+            {
+                await RememberRouterAddressCore(mac, ip, lifetime);
+            }
+            finally
+            {
+                _routerLock.Release();
+            }
+        }
+
+        private async Task RememberRouterAddressCore(PhysicalAddress mac, IPAddress ip, TimeSpan lifetime)
+        {
             if (Network[mac] is not NetworkRouter router)
             {
                 if (Network[ip] is NetworkRouter routerByIP)
@@ -99,9 +119,9 @@ namespace MadWizard.Desomnia.Network.Discovery.BuiltIn
                         IPv6 = ip
                     };
 
-                    var context = NetworkContext.CreateDynamicHost(new TypedParameter(typeof(NetworkRouterInfo), config));
+                    var context = await NetworkContext.CreateDynamicRouter<NetworkRouterContext>(config);
 
-                    router = (context.Host as NetworkRouter)!;
+                    router = (NetworkRouter)context.Host;
 
                     Logger.LogDebug($"Dynamically found router '{router.Name}' at {router.PhysicalAddress?.ToHexString()}");
                 }

@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Autofac.Core.Resolving.Pipeline;
+using MadWizard.Desomnia.Network.Manager;
 using Microsoft.Extensions.Logging;
 using SharpPcap;
 using SharpPcap.LibPcap;
@@ -13,7 +14,7 @@ namespace MadWizard.Desomnia.Network.HyperV
 
         public void Execute(ResolveRequestContext context, Action<ResolveRequestContext> next)
         {
-            var @interface = context.FirstParameterOfType<NetworkInterface>();
+            var @interface = context.FirstParameterOfType<INetworkInterface>();
             var device = context.FirstParameterOfType<ILiveDevice>();
 
             if (@interface is not null && device is not null && device.MacAddress is PhysicalAddress mac)

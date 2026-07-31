@@ -2,6 +2,7 @@
 using MadWizard.Desomnia.Network.Neighborhood;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using MadWizard.Desomnia.Events;
 
 namespace MadWizard.Desomnia.Network.Watch
 {
@@ -17,9 +18,9 @@ namespace MadWizard.Desomnia.Network.Watch
 
         public event EventInvocation? MagicPacket;
 
-        public void TriggerStarted()    { Logger.LogDebug($"'{Host.Name}' changed state to: running");      TriggerEvent(nameof(Started)); }
-        public void TriggerSuspended()  { Logger.LogDebug($"'{Host.Name}' changed state to: suspended");    TriggerEvent(nameof(Suspended)); }
-        public void TriggerStopped()    { Logger.LogDebug($"'{Host.Name}' changed state to: stopped");      TriggerEvent(nameof(Stopped)); }
+        public void TriggerStarted()    { Logger.LogDebug($"'{Host.Name}' changed state to: running");      Started.TriggerEvent(); }
+        public void TriggerSuspended()  { Logger.LogDebug($"'{Host.Name}' changed state to: suspended");    Suspended.TriggerEvent(); }
+        public void TriggerStopped()    { Logger.LogDebug($"'{Host.Name}' changed state to: stopped");      Stopped.TriggerEvent(); }
 
         public NetworkServiceWatch? this[NetworkService? service] => this.Where(watch => watch.Service == service).FirstOrDefault();
 

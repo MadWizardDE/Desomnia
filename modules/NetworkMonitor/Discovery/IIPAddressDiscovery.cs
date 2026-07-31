@@ -7,15 +7,4 @@ namespace MadWizard.Desomnia.Network.Discovery
     {
         Task DiscoverIPAddresses(NetworkHost host, AddressFamily family);
     }
-
-    internal class CompositeIPAddressDiscovery(IEnumerable<IIPAddressDiscovery> discoverers) : IIPAddressDiscovery
-    {
-        public async Task DiscoverIPAddresses(NetworkHost host, AddressFamily family)
-        {
-            foreach (var discoverer in discoverers)
-            {
-                await discoverer.DiscoverIPAddresses(host, family);
-            }
-        }
-    }
 }

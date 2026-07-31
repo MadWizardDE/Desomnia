@@ -1,5 +1,6 @@
 ﻿using Autofac;
 using Autofac.Core;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Network.Configuration;
 using MadWizard.Desomnia.Network.Configuration.Hosts;
 using MadWizard.Desomnia.Network.Configuration.Options;
@@ -25,11 +26,15 @@ namespace MadWizard.Desomnia.Network.Context
 
         private readonly IList<NetworkServiceContext> _serviceContexts = [];
 
-        // Host
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkHostInfo config) : base(parent)
+        protected NetworkHostContext(ILifetimeScope parent, AutoDiscoveryType auto) : base(parent)
         {
-            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
+            Auto = auto;
+        }
 
+        // Host
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkHostInfo config) 
+            : this(parent, config.AutoDetect ?? configNetwork.AutoDetect)
+        {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterInstance(config).AsSelf();
@@ -42,27 +47,9 @@ namespace MadWizard.Desomnia.Network.Context
             });
         }
 
-        // Router
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, NetworkRouterInfo config) : base(parent)
-        {
-            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
-
-            Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
-            {
-                builder.RegisterInstance(config).AsSelf();
-
-                builder.RegisterType<NetworkRouter>().As<NetworkHost>()
-                    .WithParameter(new TypedParameter(typeof(string), config.Name))
-                    .WithParameter(NetworkHostsParameter.FindBy([.. config.VPNClient.Select(h => h.Name)]))
-                    .WithParameter(TypedParameter.From(config.Options))
-                    .OnActivated(args => ConfigureHost(args, config))
-                    .SingleInstance()
-                    .AsSelf();
-            });
-        }
-
         // LocalHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalHostInfo config) 
+            : base(parent)
         {
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
@@ -90,10 +77,9 @@ namespace MadWizard.Desomnia.Network.Context
         }
 
         // LocalVirtualHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalVirtualHostInfo config, IVirtualMachine vm) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, LocalVirtualHostInfo config, IVirtualMachine vm)
+            : this(parent, config.AutoDetect ?? configNetwork.AutoDetect)
         {
-            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
-
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterInstance(config).As<WatchedHostInfo>().AsSelf();
@@ -123,10 +109,9 @@ namespace MadWizard.Desomnia.Network.Context
         }
 
         // RemoteHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemotePhysicalHostInfo config) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemotePhysicalHostInfo config)
+            : this(parent, config.AutoDetect ?? configNetwork.AutoDetect)
         {
-            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
-
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterInstance(config).As<WatchedHostInfo>().As<RemoteHostInfo>().AsSelf();
@@ -158,10 +143,9 @@ namespace MadWizard.Desomnia.Network.Context
         }
 
         // RemoteVirtualHost
-        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemoteVirtualHostInfo config, RemotePhysicalHostInfo configPhysical) : base(parent)
+        public NetworkHostContext(ILifetimeScope parent, NetworkMonitorConfig configNetwork, RemoteVirtualHostInfo config, RemotePhysicalHostInfo configPhysical)
+            : this(parent, config.AutoDetect ?? configNetwork.AutoDetect)
         {
-            Auto = config.AutoDetect ?? configNetwork.AutoDetect;
-
             Scope = parent.BeginLifetimeScope(MatchingScopeLifetimeTags.NetworkHostLifetimeScopeTag, builder =>
             {
                 builder.RegisterInstance(config).As<WatchedHostInfo>().As<RemoteHostInfo>().AsSelf();
@@ -193,7 +177,7 @@ namespace MadWizard.Desomnia.Network.Context
             CreateStaticWatchedServices(config.Services);
         }
 
-        private static void ConfigureHost(IActivatedEventArgs<NetworkHost> args, NetworkHostInfo config)
+        protected static void ConfigureHost(IActivatedEventArgs<NetworkHost> args, NetworkHostInfo config)
         {
             var host = args.Instance;
 
@@ -265,14 +249,14 @@ namespace MadWizard.Desomnia.Network.Context
 
             if (watch is HostDemandWatch)
             {
-                watch.AddEventAction(nameof(HostDemandWatch.Demand), config.OnDemand);
-                watch.AddEventAction(nameof(HostDemandWatch.Idle), config.OnIdle);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.Demand)].AddAction(config.OnDemand);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.Idle)].AddAction(config.OnIdle);
 
-                watch.AddEventAction(nameof(HostDemandWatch.Started), config.OnStart);
-                watch.AddEventAction(nameof(HostDemandWatch.Suspended), config.OnSuspend);
-                watch.AddEventAction(nameof(HostDemandWatch.Stopped), config.OnStop);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.Started)].AddAction(config.OnStart);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.Suspended)].AddAction(config.OnSuspend);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.Stopped)].AddAction(config.OnStop);
 
-                watch.AddEventAction(nameof(HostDemandWatch.MagicPacket), config.OnMagicPacket);
+                ((IEventSystem)watch)[nameof(HostDemandWatch.MagicPacket)].AddAction(config.OnMagicPacket);
             }
         }
 

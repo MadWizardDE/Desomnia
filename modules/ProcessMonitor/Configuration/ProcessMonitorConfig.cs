@@ -1,6 +1,6 @@
 ﻿using MadWizard.Desomnia.Configuration;
 
-namespace MadWizard.Desomnia.Process.Configuration
+namespace MadWizard.Desomnia.Processes.Configuration
 {
     public class ProcessManagerConfig
     {
@@ -11,8 +11,8 @@ namespace MadWizard.Desomnia.Process.Configuration
 
     public class ProcessMonitorConfig : ProcessManagerConfig
     {
-        public DelayedAction? OnIdle { get; set; }
-        public DelayedAction? OnDemand { get; set; }
+        public DelayedActionInfo? OnIdle { get; set; }
+        public DelayedActionInfo? OnDemand { get; set; }
 
         public IList<ProcessWatchInfo> Process { get; set; } = [];
     }

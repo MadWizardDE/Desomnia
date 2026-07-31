@@ -1,7 +1,7 @@
 ﻿using MadWizard.Desomnia.Pipe;
 using MadWizard.Desomnia.Pipe.Config;
 using MadWizard.Desomnia.Pipe.Messages;
-using MadWizard.Desomnia.Process.Manager;
+using MadWizard.Desomnia.Processes.Manager;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Pipes;

@@ -10,7 +10,7 @@ namespace MadWizard.Desomnia.Network.Naming
     /// actively queried for when it is not already present; an <em>optional</em> one is only picked up if
     /// it happens to be advertised. Disposing the request, or cancelling its token, ends the stream.
     /// </summary>
-    internal sealed class ServiceBrowseRequest : IAsyncEnumerable<ServiceInstance>, IDisposable
+    public sealed class ServiceBrowseRequest : IAsyncEnumerable<ServiceInstance>, IDisposable
     {
         private readonly Channel<ServiceInstance> _channel = Channel.CreateUnbounded<ServiceInstance>(new() { SingleReader = true });
 

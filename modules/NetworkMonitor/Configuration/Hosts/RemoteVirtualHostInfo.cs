@@ -4,7 +4,7 @@
     {
         public RemoteVirtualHostInfo()
         {
-            //OnMagicPacket = new NamedAction("wake");
+            //OnMagicPacket = new ActionInfo("wake");
         }
     }
 }

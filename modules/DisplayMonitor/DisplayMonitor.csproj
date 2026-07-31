@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  <LangVersion>preview</LangVersion>
+
+	  <RootNamespace>MadWizard.Desomnia.Display</RootNamespace>
+    <AssemblyName>DesomniaDisplayMonitor</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\DesomniaCore\DesomniaCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DisplayMonitor.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,5 @@
-Hyper-V Support
-===============
+Microsoft Hyper-V
+=================
 
 :OS: 🪟 *Windows*
 

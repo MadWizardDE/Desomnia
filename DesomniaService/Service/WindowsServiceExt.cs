@@ -11,5 +11,10 @@ namespace MadWizard.Desomnia.Service.Windows
 
             return process.SessionId == 0;
         }
+
+        extension(Environment)
+        {
+            public static bool IsWindowsService => System.Diagnostics.Process.GetCurrentProcess().IsWindowsService();
+        }
     }
 }

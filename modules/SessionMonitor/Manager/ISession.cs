@@ -1,4 +1,4 @@
-﻿using MadWizard.Desomnia.Process.Manager;
+﻿using MadWizard.Desomnia.Processes.Manager;
 
 namespace MadWizard.Desomnia.Session.Manager
 {

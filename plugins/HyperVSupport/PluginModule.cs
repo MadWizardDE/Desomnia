@@ -33,7 +33,6 @@ namespace MadWizard.Desomnia.Network.HyperV
                     args.ComponentRegistration.PipelineBuilding += (_, pipeline) =>
                         pipeline.Use(new HyperVDeviceSelector());
             };
-
         }
     }
 }

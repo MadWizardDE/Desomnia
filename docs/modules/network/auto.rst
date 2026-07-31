@@ -140,7 +140,7 @@ MAC addresses are required for Wake-on-LAN and cannot be obtained from DNS. Deso
 
 The following router integrations are currently available:
 
-- 🚧 :doc:`FRITZ!Box </modules/network/routers/fritzbox>` (planned)
+- :doc:`FRITZ!Box </plugins/fritzbox>` — resolves MACs from the box' host table, including offline hosts; no credentials required
 
 If none of these sources is available for a given host, its MAC address must be configured statically.
 

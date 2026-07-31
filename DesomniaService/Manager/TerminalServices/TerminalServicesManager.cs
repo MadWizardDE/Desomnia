@@ -14,8 +14,14 @@ namespace MadWizard.Desomnia.Session.Manager
 
         public required Func<uint, Owned<TerminalServicesSession>> ConfigureSession { private get; init; }
 
+        // the service is persistent now and outlives this manager, so the subscription must be
+        // released when a rebuild disposes this instance (see Dispose)
+        private readonly WindowsService _service;
+
         public TerminalServicesManager(WindowsService service)
         {
+            _service = service;
+
             service.SessionChanged += Service_SessionChanged;
         }
 
@@ -23,12 +29,11 @@ namespace MadWizard.Desomnia.Session.Manager
         {
             get
             {
-                if (field == null )
+                var ids = EnumerateSessionIDs();
+
+                if (field == null)
                 {
-                    field = EnumerateSessionIDs()
-                        .Select(MaybeConfigureSession)
-                        .Where(s => s != null).Select(s => s!)
-                        .ToDictionary(s => s.Value.Id);
+                    field = ids.Select(MaybeConfigureSession).Where(s => s != null).Select(s => s!).ToDictionary(s => s.Value.Id);
 
                     Logger.LogDebug($"Enumerating existing user sessions:");
 
@@ -38,6 +43,23 @@ namespace MadWizard.Desomnia.Session.Manager
                     }
 
                     Logger.LogDebug($"Startup of {GetType().Name} complete.");
+                }
+                else
+                {
+                    /// Sometimes the Terminal Server removes the session
+                    /// from it's table even before it sent the SessionLogoff event.
+                    /// This produces Win32Exceptions throughout the program.
+                    /// To prevent this from happening, we try to remove 
+                    /// these sessions eagerly here.
+                    foreach (var missing in field.Keys.Except(ids).ToArray())
+                    {
+                        if (field.Remove(missing, out var scope))
+                        {
+                            Logger.LogWarning("WTSSession[id={ID}, name=?, state=Unknown] -> gone", missing);
+
+                            scope.Dispose(); // All that remains for us is to remove them
+                        }
+                    }
                 }
 
                 return field;
@@ -100,11 +122,11 @@ namespace MadWizard.Desomnia.Session.Manager
                     switch (desc.Reason)
                     {
                         case SessionChangeReason.SessionLogoff:
-                            if (Sessions.Remove(sid))
+                            if (Sessions.Remove(sid, out var scope))
                             {
                                 UserLogoff?.Invoke(this, session);
 
-                                session.Dispose();
+                                scope.Dispose();
                             }
                             break;
 
@@ -138,9 +160,9 @@ namespace MadWizard.Desomnia.Session.Manager
                 {
                     Logger.LogError($"WTSSession[id={desc.SessionId}, name=?, state=Unknown] -> {desc.Reason}: {ex.Message}");
 
-                    if (Sessions.Remove(sid))
+                    if (Sessions.Remove(sid, out var scope))
                     {
-                        session.Dispose();
+                        scope.Dispose();
                     }
                 }
             }
@@ -180,6 +202,8 @@ namespace MadWizard.Desomnia.Session.Manager
 
         public virtual void Dispose()
         {
+            _service.SessionChanged -= Service_SessionChanged;
+
             foreach (var session in Sessions.Values)
             {
                 session.Dispose();

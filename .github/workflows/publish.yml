@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         # name: [ FirewallKnockOperator ]
-        name: [ DuoStreamIntegration, HyperVSupport, FirewallKnockOperator ]
+        name: [ DuoStreamIntegration, HyperVSupport, FirewallKnockOperator, FRITZBoxRouter ]
 
         include:
           - name: DuoStreamIntegration
@@ -141,7 +141,7 @@ jobs:
       - name: Publish DesomniaDaemon AOT (${{ matrix.arch }})
         # -p:PublishAot=true is a global property, so it also defines DESOMNIA_AOT and activates the
         # AOT-only settings baked into DesomniaDaemon.csproj (GC hard limit, size-optimized ILC,
-        # statically-linked FirewallKnockOperator). The output is a single self-contained native binary;
+        # statically-linked plugins: FirewallKnockOperator, FRITZBoxRouter). The output is a single self-contained native binary;
         # PublishSingleFile / PublishReadyToRun / --no-self-contained do not apply to an AOT build.
         run: |
           dotnet publish DesomniaDaemon/DesomniaDaemon.csproj \
@@ -268,9 +268,16 @@ jobs:
           images: ${{ vars.DOCKERHUB_IMAGE }}
 
       - name: Download plugins
+        # Only the platform-independent plugins; the -windows8.0 ones can't load on Linux.
         uses: actions/download-artifact@v4
         with:
           pattern: plugin-FirewallKnockOperator
+          path: ${{ runner.temp }}/context/plugins
+          merge-multiple: true
+      - name: Download plugins (FRITZBoxRouter)
+        uses: actions/download-artifact@v4
+        with:
+          pattern: plugin-FRITZBoxRouter
           path: ${{ runner.temp }}/context/plugins
           merge-multiple: true
       - name: Download daemon

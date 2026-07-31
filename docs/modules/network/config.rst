@@ -668,9 +668,11 @@ Specifies whether the router will be allowed to complete demand requests. The de
 allowWakeByProxy
 ++++++++++++++++
 
-:default: ``false``
+:default: *automatic*
 
 Specifies whether or not remote systems, whose packets are forwarded by this router, will be allowed to complete demand requests. Setting this value to ``true`` renders all subsequent attributes unnecessary.
+
+If the attribute is not set — neither here nor network-wide as ``routerAllowWakeByProxy`` — Desomnia decides automatically: it defaults to ``false``, unless the network declares a ``<ForeignHostFilterRule>`` or ``<EveryHostFilterRule>``. Declaring either of these rules signals the intent to process requests from outside the network, so proxy wake-up is then enabled without further configuration. Each of the router attributes can also be set on the ``<NetworkMonitor>`` element with a ``router`` prefix (``routerAllowWake``, ``routerAllowWakeByProxy``, ``routerAllowWakeOnLAN``, ``routerVPNTimeout``) to provide the default for every router of that network.
 
 The difference to the previous setting is, that the router still won't be allowed to successfully trigger a wake on it's own, but will receive responses to address resolution requests in order to enable it to forward IP packets from outside of the local network to a sleeping watched host.
 

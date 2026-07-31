@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using MadWizard.Desomnia.Events;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace MadWizard.Desomnia

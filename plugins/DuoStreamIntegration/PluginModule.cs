@@ -1,6 +1,5 @@
 ﻿using Autofac;
-using Autofac.Core;
-using MadWizard.Desomnia.Network;
+using MadWizard.Desomnia.Events;
 using MadWizard.Desomnia.Service.Duo.Configuration;
 using MadWizard.Desomnia.Service.Duo.Manager;
 using MadWizard.Desomnia.Service.Duo.Sunshine.Listener;
@@ -12,31 +11,31 @@ namespace MadWizard.Desomnia.Service.Duo
 {
     public class PluginModule : Desomnia.ConfigurableModule<DuoConfig>
     {
-        protected override void Load(ContainerBuilder builder)
+        protected override void Load(ContainerBuilder builder, DuoConfig config)
         {
-            if (Config.DuoStreamMonitor is DuoStreamMonitorConfig config)
+            if (config.DuoStreamMonitor is DuoStreamMonitorConfig duo)
             {
                 var monitor = builder.RegisterType<DuoStreamMonitor>()
-                    .WithParameter(TypedParameter.From(config))
+                    .WithParameter(TypedParameter.From(duo))
                     .AsImplementedInterfaces().AsSelf()
                     .SingleInstance();
 
                 monitor.OnActivated(args =>
                 {
-                    args.Instance.AddEventAction(nameof(DuoStreamMonitor.Idle), config.OnIdle);
-                    args.Instance.AddEventAction(nameof(DuoStreamMonitor.Demand), config.OnDemand);
+                    ((IEventSystem)args.Instance)[nameof(DuoStreamMonitor.Idle)].AddAction(duo.OnIdle);
+                    ((IEventSystem)args.Instance)[nameof(DuoStreamMonitor.Demand)].AddAction(duo.OnDemand);
                 });
 
-                if (!config.UsePolling)
+                if (!duo.UsePolling)
                 {
                     try
                     {
-                        using var service = new ServiceController(config.ServiceName);
+                        using var service = new ServiceController(duo.ServiceName);
 
                         if (service.GetVersion() >= DuoEventManager.MinVersion)
                         {
                             builder.RegisterType<DuoEventManager>().As<DuoManager>()
-                                .WithParameter(TypedParameter.From(config))
+                                .WithParameter(TypedParameter.From(duo))
                                 .AsImplementedInterfaces()
                                 .SingleInstance();
 
@@ -50,20 +49,29 @@ namespace MadWizard.Desomnia.Service.Duo
                 }
 
                 builder.RegisterType<DuoPollingManager>().As<DuoManager>()
-                    .WithParameter(TypedParameter.From(config))
+                    .WithParameter(TypedParameter.From(duo))
                     .AsImplementedInterfaces()
                     .SingleInstance();
 
             skipPolling:
 
-                builder.RegisterModule<SunshineListenerModule>()
-                    .OnlyIf(reg => config.UseFallback ||
-                        !reg.IsRegistered(new TypedService(typeof(DynamicNetworkObserver))));
+                // instances are container-created (spec §2: the root assumption that
+                // every eventable object is managed by the container) — the manager
+                // builds them through the auto-generated delegate factory and OWNS
+                // their disposal (container tracking would pin every replaced
+                // generation until application shutdown)
+                builder.RegisterType<DuoInstance>().AsSelf().ExternallyOwned();
 
-                if (!config.UseFallback)
+                if (config.UseFallback)
+                {
+                    builder.RegisterModule<SunshineListenerModule>();
+                }
+                else
+                {
                     builder.RegisterType<NetworkPluginModule>()
                         .As<Desomnia.Network.PluginModule>()
                         .SingleInstance();
+                }
             }
         }
     }

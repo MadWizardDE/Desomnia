@@ -3,9 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-using NativeProcess = System.Diagnostics.Process;
-
-namespace MadWizard.Desomnia.Process.Manager
+namespace MadWizard.Desomnia.Processes.Manager
 {
     public abstract class ProcessManager : IProcessManager, IStartable
     {
@@ -20,29 +18,82 @@ namespace MadWizard.Desomnia.Process.Manager
 
         public virtual void Start() => RefreshProcessList();
 
+        /**
+         * The processes alive right now – the ids are all the refresh below actually compares.
+         *
+         * The default answer comes from the BCL, which is one kernel call on Windows but, on Unix,
+         * builds a complete ProcessInfo for every process – walking every one of its threads – just
+         * to hand back an id. Platform managers that can list ids with a single syscall override
+         * this and yield bare entries, leaving identity to QueryProcess.
+         */
+        protected virtual IEnumerable<ProcessInformation> EnumerateProcesses()
+        {
+            return Process.GetProcesses().Select(p => new ProcessInformation(p));
+        }
+
+        /**
+         * Describes a process the enumeration did not hand over already: a parent discovered through
+         * its child, an id an indexer lookup was asked about, or – for managers whose enumeration
+         * yields bare ids – every newly appeared process.
+         *
+         * The default is the BCL lookup, which is what an enumeration of System.Diagnostics.Process
+         * objects would have produced anyway. A platform that can describe an id more cheaply
+         * overrides this and answers entirely on its own terms – including null, which then means
+         * the platform looked and there was nothing there (an id that has since exited, or a zombie
+         * the enumeration still lists), not "ask somebody else".
+         */
+        protected virtual ProcessInformation? QueryProcess(int pid) => new(Process.GetProcessById(pid));
+
+        protected virtual ProcessInformation? QueryParentProcess(ProcessInformation info) => info.ParentId;
+
+        /// <summary>Builds the <see cref="IProcess"/> behind a freshly discovered entry.</summary>
+        protected virtual IProcess CreateProcess(ProcessInformation info, IProcess? parent) => new ProcessHandle(info, parent);
+
         protected virtual void RefreshProcessList()
         {
             lock (this)
             {
                 var watch = Stopwatch.StartNew();
 
-                var snapshot = NativeProcess.GetProcesses();
+                // Both sides of the diff are keyed by pid. This used to be two nested LINQ scans,
+                // which on a machine with a few hundred processes spent more time comparing the
+                // list than the OS spent producing it – ConcurrentDictionary copies all of its
+                // values on every enumeration, and the inner scan asked for them n times.
+                var snapshot = new Dictionary<int, ProcessInformation>();
+
+                foreach (var entry in EnumerateProcesses())
+                {
+                    snapshot[entry.Id] = entry;
+                }
 
                 var minus = 0;
-                // remove stopped processes
-                foreach (var process in this.Where(p => !snapshot.Any(s => s.Id == p.Id)))
+                // remove stopped processes ('Keys' hands out a snapshot, so removing while we walk it is safe)
+                foreach (var pid in _processList.Keys)
                 {
-                    TriggerStop(process.Id); minus++;
+                    if (!snapshot.ContainsKey(pid))
+                    {
+                        TriggerStop(pid); minus++;
+                    }
                 }
 
                 var plus = 0;
-                // add started processes
-                foreach (var native in snapshot.Where(s => !this.Any(p => p.Id == s.Id)))
+                // add started processes – an id the platform declines to describe is simply not one
+                // (a zombie the enumeration still lists, or a process that exited in between)
+                foreach (var entry in snapshot.Values)
                 {
-                    TriggerStart(native); plus++;
+                    if (!_processList.ContainsKey(entry.Id) && TriggerStart(entry) != null)
+                    {
+                        plus++;
+                    }
                 }
 
-                Logger.LogTrace("Refreshed process list: +{plus}/-{minus} -> {count} [{time} ms]", plus, minus, this.Count(), watch.ElapsedMilliseconds);
+                // ConcurrentDictionary.Count takes every one of its internal bucket locks, so the
+                // total is not a free number to log – and the arguments of a LogTrace call are
+                // evaluated whether or not anybody is listening at that level
+                if (Logger.IsEnabled(LogLevel.Trace))
+                {
+                    Logger.LogTrace("Refreshed process list: +{plus}/-{minus} -> {count} [{time} ms]", plus, minus, _processList.Count, watch.ElapsedMilliseconds);
+                }
 
                 _initialized |= true;
             }
@@ -54,12 +105,12 @@ namespace MadWizard.Desomnia.Process.Manager
             {
                 if (!_processList.TryGetValue((int)pid, out IProcess? process))
                 {
-                    if (TriggerStart(pid: pid) is IProcess created)
+                    if (TriggerStart(pid) is IProcess created)
                     {
                         return created;
                     }
                 }
-                else if (process?.NativeProcess.HasExited ?? false)
+                else if (process?.HasStopped ?? false)
                 {
                     TriggerStop(process.Id);
 
@@ -72,7 +123,7 @@ namespace MadWizard.Desomnia.Process.Manager
 
         public virtual IProcess LaunchProcess(ProcessStartInfo info)
         {
-            var native = NativeProcess.Start(info) ?? throw new Exception("Process could not be started.");
+            var native = Process.Start(info) ?? throw new Exception("Process could not be started.");
 
             return TriggerStart(native)!;
         }
@@ -80,23 +131,37 @@ namespace MadWizard.Desomnia.Process.Manager
         /**
          * The .NET runtime doesn't provide a cross-platform abstraction for this.
          * Therefore the platform managers need to implement this via P/Invoke,
-         * if possible.
+         * if possible – or report it straight from an enumeration that knows it anyway.
          */
-        protected virtual int? FindParentProcessId(NativeProcess p) => null;
 
         #region Internal Process Management
-        protected IProcess? TriggerStart(NativeProcess? native = null, int pid = default)
+        protected IProcess? TriggerStart(ProcessInformation info)
         {
             try
             {
-                native ??= NativeProcess.GetProcessById(pid); pid = native.Id;
+                int pid = info.Id;
+
+                if (info.Name is null) // we need the name
+                {
+                    if (QueryProcess(info.Id) is not ProcessInformation queried)
+                        return null;
+
+                    // Everything the platform just told us, but not how far we still are allowed to
+                    // climb: a description is minted fresh and carries the default depth, so adopting
+                    // it wholesale would hand every level of an ancestry a full budget again – and the
+                    // walk below is the one thing that budget exists to bound.
+                    info = queried with { MaxParents = info.MaxParents };
+                }
 
                 IProcess? parent;
-                if (FindParentProcessId(native) is int pidParent)
+                // pid 0 is nobody's parent, and a process that claims to be its own would loop forever
+                if (info.MaxParents > 0 && (info.ParentId ?? QueryParentProcess(info)) is ProcessInformation infoParent
+                    && infoParent.Id != 0 
+                    && infoParent.Id != pid)
                 {
-                    if (!_processList.TryGetValue(pidParent, out parent))
+                    if (!_processList.TryGetValue(infoParent.Id, out parent))
                     {
-                        parent = TriggerStart(pid: pidParent);
+                        parent = TriggerStart(infoParent with { MaxParents = info.MaxParents - 1 });
                     }
                 }
                 else
@@ -105,8 +170,14 @@ namespace MadWizard.Desomnia.Process.Manager
                 }
 
                 IProcess process;
-                if (_processList.TryAdd(pid, process = new ProcessWrapper(native) { Parent = parent }))
+                if (_processList.TryAdd(pid, process = CreateProcess(info, parent)))
                 {
+                    // A platform may learn that this process is gone long before the next enumeration
+                    // would: Windows by waiting on the process handle, macOS through kqueue, Linux
+                    // through a pidfd. Whichever lane reports first, the manager takes it as its own —
+                    // so a stop is announced the moment it happens rather than at the next poll.
+                    process.Stopped += (sender, @event) => TriggerStop(process.Id);
+
                     if (_initialized)
                     {
                         Logger.LogTrace("Process '{name}' ({pid}) started", process.Name, process.Id);
@@ -116,6 +187,10 @@ namespace MadWizard.Desomnia.Process.Manager
                 }
 
                 return _processList[pid];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null; // stopped directly after it started
             }
             catch (SystemException ex) when (ex is ArgumentException or InvalidOperationException)
             {
@@ -131,9 +206,9 @@ namespace MadWizard.Desomnia.Process.Manager
             {
                 Logger.LogTrace("Process '{name}' ({pid}) stopped", process.Name, process.Id);
 
-                if (process is ProcessWrapper wrapper)
+                if (process is ProcessHandle wrapper)
                 {
-                    wrapper.TriggerStop();
+                    wrapper.TriggerStop(); // a no-op when this stop came from the process itself
                 }
 
                 ProcessStopped?.Invoke(this, process);

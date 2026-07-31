@@ -1,4 +1,4 @@
-﻿using MadWizard.Desomnia.Process.Manager;
+﻿using MadWizard.Desomnia.Processes.Manager;
 using Microsoft.Win32.SafeHandles;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -84,7 +84,7 @@ namespace MadWizard.Desomnia.Session.Manager
 
         private IProcess CreateProcessInSession(ProcessStartInfo startup, uint sid, string processName = "winlogon")
         {
-            uint winlogonPid = (uint)System.Diagnostics.Process.GetProcessesByName(processName).Where(p => (uint)p.SessionId == sid).First().Id;
+            uint winlogonPid = (uint)Process.GetProcessesByName(processName).Where(p => (uint)p.SessionId == sid).First().Id;
 
             nint hProcess = OpenProcess(MAXIMUM_ALLOWED, false, winlogonPid), hProcessToken = 0;
 
@@ -168,7 +168,8 @@ namespace MadWizard.Desomnia.Session.Manager
             {
                 CloseHandle(hWrite); // Close write handle in this process
 
-                process.NativeProcess.AddStandardOutput(new StreamReader(new FileStream(new SafeFileHandle(hRead, true), FileAccess.Read)));
+                // the pipe is handed to the BCL object itself, which only the BCL-backed process has
+                ((ProcessHandle)process).Native.AddStandardOutput(new StreamReader(new FileStream(new SafeFileHandle(hRead, true), FileAccess.Read)));
             }
 
             return process;
@@ -360,10 +361,10 @@ namespace MadWizard.Desomnia.Session.Manager
             }
         }
 
-        internal static System.Diagnostics.Process AddStandardOutput(this System.Diagnostics.Process proc, StreamReader output)
+        internal static Process AddStandardOutput(this Process proc, StreamReader output)
         {
             // Use reflection to set the private _standardOutput field
-            FieldInfo? outputField = typeof(System.Diagnostics.Process).GetField("_standardOutput", BindingFlags.Instance | BindingFlags.NonPublic)
+            FieldInfo? outputField = typeof(Process).GetField("_standardOutput", BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new InvalidOperationException("Could not find _standardOutput field. .NET version may be incompatible.");
 
             outputField.SetValue(proc, output);

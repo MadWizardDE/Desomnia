@@ -1,5 +1,5 @@
 ﻿using MadWizard.Desomnia.Configuration;
-using MadWizard.Desomnia.Process.Configuration;
+using MadWizard.Desomnia.Processes.Configuration;
 
 namespace MadWizard.Desomnia.Session.Configuration
 {
@@ -7,10 +7,10 @@ namespace MadWizard.Desomnia.Session.Configuration
     // otherwise the binder cannot deliver the pattern to this derived type.
     public class SessionProcessWatchInfo(string pattern) : ProcessWatchInfo(pattern) // <- XML text content
     {
-        public DelayedAction? OnSessionIdle { get; set; }
-        public DelayedAction? OnSessionDemand { get; set; }
-        public DelayedAction? OnSessionConsoleConnect { get; set; }
-        public DelayedAction? OnSessionRemoteConnect { get; set; }
-        public DelayedAction? OnSessionDisconnect { get; set; }
+        public DelayedActionInfo? OnSessionIdle { get; set; }
+        public DelayedActionInfo? OnSessionDemand { get; set; }
+        public DelayedActionInfo? OnSessionConsoleConnect { get; set; }
+        public DelayedActionInfo? OnSessionRemoteConnect { get; set; }
+        public DelayedActionInfo? OnSessionDisconnect { get; set; }
     }
 }

@@ -1,17 +1,48 @@
-﻿using MadWizard.Desomnia.Process.Configuration;
-using MadWizard.Desomnia.Process.Manager;
+﻿using MadWizard.Desomnia.Events;
+using MadWizard.Desomnia.Processes.Configuration;
+using MadWizard.Desomnia.Processes.Manager;
+using System.Runtime.InteropServices;
 
 
-namespace MadWizard.Desomnia.Process
+namespace MadWizard.Desomnia.Processes
 {
     public class ProcessWatch : Resource
     {
         readonly ProcessWatchInfo info;
 
-        readonly HashSet<IProcess> _watchedProcesses = [];
+        /**
+         * Mutated by whichever thread reports a process change – the poll loop, an ETW callback, a
+         * kqueue notification, the runtime's Exited event – while the inspection loop reads it.
+         * Every path in and out locks the roster itself, and reads take a snapshot rather than hold
+         * the lock while they work.
+         *
+         * A plain dictionary on purpose: what has to be atomic is not the change but the decision
+         * riding on it – whether this add was the first or this removal the last. A concurrent
+         * collection cannot answer that, and would only suggest it had.
+         *
+         * Keyed by pid, so a process leaves in one step rather than by a scan, and so the same
+         * process cannot be held twice under two objects.
+         *
+         * The 'readonly' is load-bearing now that the dictionary is its own lock: reassign it and
+         * two threads would be locking two different objects, with nothing to show for it. Compare
+         * _lastProcessorTime below, which is replaced wholesale every cycle.
+         */
+        readonly Dictionary<int, IProcess> _watchedProcesses = [];
+
+        /// <summary>The watched processes as they were a moment ago; safe to walk while they change.</summary>
+        private IProcess[] Processes
+        {
+            get
+            {
+                lock (_watchedProcesses)
+                {
+                    return [.. _watchedProcesses.Values];
+                }
+            }
+        }
 
         private DateTime _lastMeasureTime;
-        private TimeSpan _lastProcessorTime;
+        private Dictionary<IProcess, TimeSpan> _lastProcessorTime = [];
 
         public required IProcessManager Manager
         {
@@ -23,9 +54,12 @@ namespace MadWizard.Desomnia.Process
                 field.ProcessStarted += Manager_ProcessStarted;
                 field.ProcessStopped += Manager_ProcessStopped;
 
-                foreach (var process in Manager.Where(WatchProcess))
+                lock (_watchedProcesses)
                 {
-                    _watchedProcesses.Add(process);
+                    foreach (var process in Manager.Where(ShouldWatchProcess))
+                    {
+                        _watchedProcesses.TryAdd(process.Id, process);
+                    }
                 }
             }
         }
@@ -37,67 +71,134 @@ namespace MadWizard.Desomnia.Process
         {
             this.info = info;
 
-            AddEventAction(nameof(Started), info.OnStart);
-            AddEventAction(nameof(Stopped), info.OnStop);
+            ((IEventSystem)this)[nameof(Idle)].AddAction(info.OnIdle);
+            ((IEventSystem)this)[nameof(Demand)].AddAction(info.OnDemand);
+
+            Started.AddAction(info.OnStart);
+            Stopped.AddAction(info.OnStop);
         }
 
-        protected virtual bool WatchProcess(IProcess process)
+        protected virtual bool ShouldWatchProcess(IProcess process)
         {
-            if (info.Pattern.Matches(process.Name).Count > 0)
-                return true;
+            if (info.IsFilePathPattern)
+            {
+                if (process.ImagePath is string path)
+                {
+                    if (info.Pattern.Count(path) > 0)
+                        return true;
+                }
+            }
+            else
+            {
+                if (info.Pattern.Count(process.Name) > 0)
+                    return true;
+            }
 
             if (info.WatchChildren)
             {
-                foreach (var watched in _watchedProcesses)
-                    if (process.HasParent(watched))
-                        return true;
+                lock (_watchedProcesses)
+                {
+                    foreach (var watched in _watchedProcesses.Values)
+                        if (process.HasParent(watched))
+                            return true;
+                }
             }
 
             return false;
         }
 
         #region Inspection
+        /**
+         * The processor time the group consumed since the last measurement.
+         *
+         * Kept per process rather than as one group total, because the group is not a stable set:
+         * a browser closing a tab used to subtract that process' entire lifetime from the sum, and
+         * the group would report itself idle for a cycle while the rest of it was busy. A process
+         * that has just joined has no previous reading and therefore contributes nothing yet – its
+         * time before this interval was never ours to count.
+         *
+         * A process that has died between the manager's last poll and this inspection reports no
+         * time at all. Its share of the interval is lost, but it must not abort the inspection:
+         * the tokens of every resource behind it in the cycle would go with it.
+         */
         private double MeasureUsage(out TimeSpan time)
         {
             DateTime measureTime = DateTime.UtcNow;
 
-            var processorTime = _watchedProcesses.Aggregate(TimeSpan.Zero, (time, process) => time + process.NativeProcess.TotalProcessorTime);
+            var measured = new Dictionary<IProcess, TimeSpan>(_lastProcessorTime.Count);
+
+            time = TimeSpan.Zero;
+
+            foreach (var process in Processes)
+            {
+                if (process.ProcessorTime is not TimeSpan total)
+                    continue;
+
+                if (_lastProcessorTime.TryGetValue(process, out TimeSpan last))
+                    time += total - last;
+
+                measured[process] = total;
+            }
 
             try
             {
-                time = (processorTime - _lastProcessorTime);
                 var timeElapsed = (measureTime - _lastMeasureTime);
 
-                return time.TotalMilliseconds / (Environment.ProcessorCount * timeElapsed.TotalMilliseconds);
+                /// There are difference between the platforms, in how the relative CPU usage is displayed:
+                /// - The Windows Task-Manager shows CPU usage in relation to all the available multi-core CPU capacity.
+                /// - The macOS Activity-Monitor shows CPU usage in relation to the single-core CPU capacity.
+                /// 
+                /// In order to make it easier for the user to specify an approriate relative usage,
+                /// we consider this difference when calculating the usage.
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return time.TotalMilliseconds / (Environment.ProcessorCount * timeElapsed.TotalMilliseconds);
+                }
+                else
+                {
+                    return time.TotalMilliseconds / (timeElapsed.TotalMilliseconds);
+                }
             }
             finally
             {
-                _lastProcessorTime = processorTime;
+                _lastProcessorTime = measured; // whatever left the group takes its history with it
                 _lastMeasureTime = measureTime;
             }
         }
 
         protected override IEnumerable<UsageToken> InspectResource(TimeSpan interval)
         {
+            // Without a threshold the mere existence of a process is the demand. Sampling the
+            // processor time anyway costs a syscall per watched process, every cycle, for a number
+            // nobody reads – which is what made this module expensive where polling already is.
+            if (info.MinCPU is not CPUThreshold threshold)
+            {
+                lock (_watchedProcesses)
+                {
+                    if (_watchedProcesses.Count > 0)
+                    {
+                        yield return new ProcessUsage(info.Name);
+                    }
+                }
+
+                yield break;
+            }
+
             var usage = MeasureUsage(out TimeSpan time);
 
-            if (info.MinCPU.AbsoluteTime is TimeSpan minTime)
+            if (threshold.AbsoluteTime is TimeSpan minTime)
             {
                 if (time > minTime)
                 {
                     yield return new ProcessUsage(info.Name, time);
                 }
             }
-            else if (info.MinCPU.RelativeUsage is double minUsage)
+            else if (threshold.RelativeUsage is double minUsage)
             {
                 if (usage > minUsage)
                 {
                     yield return new ProcessUsage(info.Name, usage);
                 }
-            }
-            else if (_watchedProcesses.Count > 0)
-            {
-                yield return new ProcessUsage(info.Name);
             }
         }
         #endregion
@@ -105,40 +206,33 @@ namespace MadWizard.Desomnia.Process
         #region Process events
         private void Manager_ProcessStarted(object? sender, IProcess process)
         {
-            if (WatchProcess(process))
+            if (ShouldWatchProcess(process))
             {
-                var stopped = _watchedProcesses.Count == 0;
+                lock (_watchedProcesses)
+                    if (!_watchedProcesses.TryAdd(process.Id, process) || _watchedProcesses.Count > 1)
+                        return; 
 
-                _watchedProcesses.Add(process);
-
-                if (stopped)
-                {
-                    TriggerEvent(nameof(Started));
-                }
+                Started.TriggerEvent();
             }
         }
 
         private void Manager_ProcessStopped(object? sender, IProcess process)
         {
-            if (_watchedProcesses.Where(watched => watched.Id == process.Id).FirstOrDefault() is IProcess stopped)
-            {
-                _watchedProcesses.Remove(stopped);
+            lock (_watchedProcesses)
+                if (!_watchedProcesses.Remove(process.Id) || _watchedProcesses.Count > 0)
+                    return; // there are more processes to watch
 
-                if (_watchedProcesses.Count == 0)
-                {
-                    TriggerEvent(nameof(Stopped));
-                }
-            }
+            Stopped.TriggerEvent();
         }
         #endregion
 
         #region Action handlers
         [ActionHandler("stop")]
-        internal void HandleActionStop(TimeSpan timeout = default) // TODO implement passing of timeout
+        internal async Task HandleActionStop(TimeSpan timeout = default) // TODO implement passing of timeout
         {
-            foreach (var process in _watchedProcesses)
+            foreach (var process in Processes)
             {
-                process.Stop(timeout);
+                await process.Stop(timeout);
             }
         }
         #endregion
