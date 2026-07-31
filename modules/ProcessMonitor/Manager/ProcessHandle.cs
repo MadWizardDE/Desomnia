@@ -19,7 +19,19 @@ namespace MadWizard.Desomnia.Processes.Manager
         /// The BCL process object, created once and kept – callers write state into this very
         /// instance (redirected output handles) and read it back through a later access.
         /// </summary>
-        public Process Native { get => field ??= Process.GetProcessById(info.Id); } = info.Native;
+        public Process Native
+        {
+            get
+            {   try
+                {
+                    return field ??= Process.GetProcessById(info.Id);
+                }
+                catch (ArgumentException)
+                {
+                    throw new ProcessNotFoundException(info.Id);
+                }
+            }
+        } = info.Native;
 
         public IProcess? Parent => parent;
 
@@ -60,7 +72,7 @@ namespace MadWizard.Desomnia.Processes.Manager
                 {
                     return Native.TotalProcessorTime;
                 }
-                catch (SystemException ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+                catch (SystemException ex) when (ex is ProcessNotFoundException or InvalidOperationException or Win32Exception)
                 {
                     return null; // gone, or never ours to ask
                 }
@@ -75,7 +87,7 @@ namespace MadWizard.Desomnia.Processes.Manager
                 {
                     return Native.HasExited;
                 }
-                catch (ArgumentException)
+                catch (ProcessNotFoundException)
                 {
                     return true; // the pid is gone, so there is nothing left to materialize
                 }
@@ -100,26 +112,33 @@ namespace MadWizard.Desomnia.Processes.Manager
          */
         public virtual async Task Stop(TimeSpan timeout = default)
         {
-            if (HasStopped)
-                return;
-
-            if (timeout > TimeSpan.Zero && RequestStop())
+            try
             {
-                using var grace = new CancellationTokenSource(timeout);
+                if (HasStopped)
+                    return;
 
-                try
+                if (timeout > TimeSpan.Zero && RequestStop())
                 {
-                    await Native.WaitForExitAsync(grace.Token);
+                    using var grace = new CancellationTokenSource(timeout);
+
+                    try
+                    {
+                        await Native.WaitForExitAsync(grace.Token);
+                    }
+                    catch (OperationCanceledException) 
+                    {
+                        // timeout, let's kill
+                    }
                 }
-                catch (SystemException ex) when (ex is ArgumentException or InvalidOperationException or OperationCanceledException)
+
+                if (!HasStopped)
                 {
-                    // it went between being asked and being waited for, which is what we asked for
+                    Native.Kill();
                 }
             }
-
-            if (!HasStopped)
+            catch (ProcessNotFoundException)
             {
-                Native.Kill();
+                // there is nothing to stop (anymore)
             }
         }
 

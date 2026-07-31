@@ -13,7 +13,7 @@ namespace MadWizard.Desomnia.Session.Manager
         public required ProcessManager Manager { private get; init; }
 
         IProcess IProcessManager.this[int pid] => Manager[pid] is IProcess process && process.SessionId == Id ? process 
-            : throw new KeyNotFoundException("Process with pid = " + pid + " and sid = " + Id + " not found");
+            : throw new KeyNotFoundException("Process with pid = " + pid + " and sid = " + Id + " not found"); // TODO fix with ProcessNotFoundException
 
         #region Event filtering
         readonly Dictionary<EventHandler<IProcess>, EventHandler<IProcess>> _handlers = [];

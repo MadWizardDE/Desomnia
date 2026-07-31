@@ -117,7 +117,7 @@ namespace MadWizard.Desomnia.Processes.Manager
                     process = null;
                 }
 
-                return process ?? throw new KeyNotFoundException("Process with pid = " + pid + " not found");
+                return process ?? throw new ProcessNotFoundException(pid);
             }
         }
 
